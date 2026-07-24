@@ -7,11 +7,12 @@ import {
   OrgGuard,
   SupabaseMembershipsRepository,
 } from "./common/guards/org.guard";
+import { AdminOpsModule } from "./modules/admin-ops/admin-ops.module";
 import { HealthModule } from "./modules/health/health.module";
 import { IdentityModule } from "./modules/identity/identity.module";
 
 @Module({
-  imports: [HealthModule, IdentityModule],
+  imports: [HealthModule, IdentityModule, AdminOpsModule],
   providers: [
     {
       provide: MEMBERSHIPS_REPOSITORY,

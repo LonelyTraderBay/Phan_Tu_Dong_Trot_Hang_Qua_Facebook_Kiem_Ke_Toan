@@ -1,0 +1,187 @@
+import { describe, expect, it } from "vitest";
+
+import { AdminOpsService, type SupabaseLike } from "./admin-ops.service";
+
+const ORG_ID = "11111111-1111-1111-1111-111111111111";
+
+type QueryResult = {
+  data: unknown;
+  error: null;
+};
+
+type SupabaseCall = {
+  op: string;
+  table?: string;
+  values?: unknown;
+  field?: string;
+  value?: unknown;
+};
+
+function mockSupabase(input: {
+  listResult?: QueryResult;
+  updateResults?: QueryResult[];
+  insertResults?: QueryResult[];
+}) {
+  const calls: SupabaseCall[] = [];
+  const updateResults = [...(input.updateResults ?? [])];
+  const insertResults = [...(input.insertResults ?? [])];
+
+  const client = {
+    from(table: string) {
+      return {
+        select() {
+          calls.push({ op: "select", table });
+          return {
+            order: async (field: string, value: unknown) => {
+              calls.push({ op: "order", field, value });
+              return input.listResult ?? { data: [], error: null };
+            },
+          };
+        },
+        update(values: unknown) {
+          calls.push({ op: "update", table, values });
+          const query = {
+            eq(field: string, value: unknown) {
+              calls.push({ op: "eq", field, value });
+              return query;
+            },
+            is(field: string, value: unknown) {
+              calls.push({ op: "is", field, value });
+              return query;
+            },
+            select() {
+              calls.push({ op: "select", table });
+              return {
+                maybeSingle: async () =>
+                  updateResults.shift() ?? { data: null, error: null },
+              };
+            },
+          };
+          return query;
+        },
+        insert(values: unknown) {
+          calls.push({ op: "insert", table, values });
+          return {
+            select() {
+              calls.push({ op: "select", table });
+              return {
+                single: async () => {
+                  const result = insertResults.shift();
+                  if (!result) {
+                    throw new Error("Unexpected Supabase insert");
+                  }
+                  return result;
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  } as unknown as SupabaseLike;
+
+  return { calls, client };
+}
+
+function orgRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: ORG_ID,
+    name: "Shop A",
+    slug: "shop-a",
+    plan: "free",
+    settings_json: {},
+    timezone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
+    suspended_at: null,
+    created_at: "2026-07-24T10:00:00.000Z",
+    updated_at: "2026-07-24T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function flagRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "22222222-2222-2222-2222-222222222222",
+    key: "kill_ai_all",
+    org_id: null,
+    enabled: true,
+    payload_json: {},
+    ...overrides,
+  };
+}
+
+describe("AdminOpsService", () => {
+  it("lists organizations for platform admin ops", async () => {
+    const { client } = mockSupabase({
+      listResult: { data: [orgRow()], error: null },
+    });
+    const service = new AdminOpsService(client);
+
+    const result = await service.listOrganizations();
+
+    expect(result.organizations).toEqual([
+      expect.objectContaining({ id: ORG_ID, slug: "shop-a" }),
+    ]);
+  });
+
+  it("sets suspended_at on an organization", async () => {
+    const suspendedAt = new Date("2026-07-24T11:00:00.000Z");
+    const { calls, client } = mockSupabase({
+      updateResults: [
+        {
+          data: orgRow({ suspended_at: suspendedAt.toISOString() }),
+          error: null,
+        },
+      ],
+    });
+    const service = new AdminOpsService(client);
+
+    const result = await service.suspendOrganization(ORG_ID, suspendedAt);
+
+    expect(calls).toContainEqual({
+      op: "update",
+      table: "organizations",
+      values: {
+        suspended_at: suspendedAt.toISOString(),
+        updated_at: suspendedAt.toISOString(),
+      },
+    });
+    expect(result.organization.suspendedAt).toBe(suspendedAt.toISOString());
+  });
+
+  it("updates a global kill switch flag", async () => {
+    const { calls, client } = mockSupabase({
+      updateResults: [
+        {
+          data: flagRow({ enabled: false }),
+          error: null,
+        },
+      ],
+    });
+    const service = new AdminOpsService(client);
+
+    const result = await service.setGlobalFlag("kill_ai_all", {
+      enabled: false,
+      payloadJson: {},
+    });
+
+    expect(calls).toContainEqual({ op: "is", field: "org_id", value: null });
+    expect(result.flag).toMatchObject({
+      key: "kill_ai_all",
+      orgId: null,
+      enabled: false,
+    });
+  });
+
+  it("rejects unsupported global flags", async () => {
+    const { client } = mockSupabase({});
+    const service = new AdminOpsService(client);
+
+    await expect(
+      service.setGlobalFlag("random_flag", {
+        enabled: true,
+        payloadJson: {},
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+});

@@ -1,0 +1,12 @@
+Task 12 complete: Admin ops `/ops/v1`.
+- Added `PlatformAdminGuard` backed by `platform_admins`.
+- Wired `AdminOpsModule` into API; `OrgGuard` already skips `/ops`.
+- Added `GET /ops/v1/orgs`.
+- Added `POST /ops/v1/orgs/:orgId/suspend`.
+- Added `POST /ops/v1/flags/:key` for global kill switches.
+- Owner JWT not in `platform_admins` is tested as 403.
+- Service tests cover org listing, suspend, flag update, invalid flag.
+- Local `platform_admins` manual seed note added after auth users exist.
+- `PLATFORM_ADMIN_EMAILS` sync helper was not wired in this task.
+- Verified: `pnpm --filter @omni/api test`.
+- Verified: `pnpm --filter @omni/api typecheck`.

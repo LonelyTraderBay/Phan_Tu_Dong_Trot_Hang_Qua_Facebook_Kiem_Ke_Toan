@@ -175,6 +175,92 @@ paths:
       responses:
         '200':
           description: Deleted
+  /v1/orders:
+    get:
+      summary: List orders for current org
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOrdersResponse'
+    post:
+      summary: Create a staff draft order
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDraftOrderRequest'
+      responses:
+        '201':
+          description: Draft order created, or confirmed when org settings auto_confirm is true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: Invalid request or insufficient stock during auto-confirm
+  /v1/orders/{orderId}:
+    get:
+      summary: Get one order with items
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderEnvelope'
+  /v1/orders/{orderId}/confirm:
+    post:
+      summary: Confirm an order and atomically decrement stock
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: Invalid order status or insufficient stock
+  /v1/orders/{orderId}/cancel:
+    post:
+      summary: Cancel an order; confirmed unshipped orders restore stock
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+  /v1/orders/{orderId}/ship:
+    post:
+      summary: Mark a confirmed order as shipped
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Shipped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
   /v1/inbox/conversations:
     get:
       summary: List inbox conversations for current org
@@ -400,6 +486,21 @@ components:
       schema:
         type: string
         format: uuid
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
   schemas:
     KnowledgeChunkWrite:
       type: object
@@ -490,6 +591,231 @@ components:
         attrs:
           type: object
           additionalProperties: true
+    OrderStatus:
+      type: string
+      enum:
+        - draft
+        - confirmed
+        - shipped
+        - done
+        - cancelled
+        - returned
+    OrderItemWrite:
+      type: object
+      required:
+        - variantId
+        - qty
+      properties:
+        variantId:
+          type: string
+          format: uuid
+        qty:
+          type: integer
+          minimum: 1
+          maximum: 999
+    CreateDraftOrderRequest:
+      type: object
+      required:
+        - items
+      properties:
+        conversationId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        contactId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        paymentMethod:
+          type: string
+          enum:
+            - cod
+            - bank_transfer
+            - other
+          default: cod
+        customerName:
+          type:
+            - string
+            - 'null'
+        phoneE164:
+          type:
+            - string
+            - 'null'
+          pattern: '^\+[1-9][0-9]{1,14}$'
+        addressText:
+          type:
+            - string
+            - 'null'
+        addressJson:
+          type: object
+          additionalProperties: true
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/OrderItemWrite'
+    OrderItem:
+      type: object
+      required:
+        - id
+        - productId
+        - variantId
+        - titleSnapshot
+        - skuSnapshot
+        - qty
+        - unitPriceVnd
+        - lineTotalVnd
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+        titleSnapshot:
+          type: string
+        skuSnapshot:
+          type: string
+        qty:
+          type: integer
+          minimum: 1
+        unitPriceVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Whole VND amount as a bigint string.
+        lineTotalVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Whole VND amount as a bigint string.
+    Order:
+      type: object
+      required:
+        - id
+        - status
+        - paymentMethod
+        - currency
+        - subtotalVnd
+        - totalVnd
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversationId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        contactId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        paymentMethod:
+          type: string
+          enum:
+            - cod
+            - bank_transfer
+            - other
+        customerName:
+          type:
+            - string
+            - 'null'
+        phoneE164:
+          type:
+            - string
+            - 'null'
+          pattern: '^\+[1-9][0-9]{1,14}$'
+        addressText:
+          type:
+            - string
+            - 'null'
+        addressJson:
+          type: object
+          additionalProperties: true
+        currency:
+          type: string
+          enum:
+            - VND
+        subtotalVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Whole VND amount as a bigint string.
+        totalVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Whole VND amount as a bigint string.
+        idempotencyKey:
+          type:
+            - string
+            - 'null'
+        confirmedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        shippedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        cancelledAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        doneAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+    OrderEnvelope:
+      type: object
+      required:
+        - order
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+    OrderResponse:
+      type: object
+      required:
+        - order
+        - items
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+    ListOrdersResponse:
+      type: object
+      required:
+        - orders
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
     AiProduct:
       type: object
       required:

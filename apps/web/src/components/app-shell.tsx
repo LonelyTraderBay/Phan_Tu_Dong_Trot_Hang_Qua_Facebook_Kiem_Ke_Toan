@@ -22,7 +22,10 @@ import { getActiveOrgId, setActiveOrgId } from '../lib/org-context';
 const navItems = [
   { href: '/dashboard', label: 'Tổng quan' },
   { href: '/inbox', label: 'Hộp thư' },
+  { href: '/catalog', label: 'Sản phẩm' },
+  { href: '/orders', label: 'Đơn hàng' },
   { href: '/settings/channels', label: 'Kênh' },
+  { href: '/settings', label: 'Cài đặt' },
   { href: '/settings/invites', label: 'Lời mời' },
 ];
 
@@ -125,7 +128,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {navItems.map((item) => {
-              const active = pathname === item.href;
+              const active =
+                pathname === item.href ||
+                (item.href !== '/settings' &&
+                  pathname.startsWith(`${item.href}/`));
               return (
                 <Link
                   key={item.href}

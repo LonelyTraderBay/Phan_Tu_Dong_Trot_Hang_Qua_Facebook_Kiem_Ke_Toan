@@ -48,6 +48,92 @@ export type InboxMessage = {
   createdAt: string;
 };
 
+export type ProductStatus = 'active' | 'archived';
+
+export type CatalogProduct = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: ProductStatus;
+  attrs: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+  variants?: CatalogVariant[];
+};
+
+export type CatalogVariant = {
+  id: string;
+  productId: string;
+  sku: string;
+  title: string;
+  priceVnd: string;
+  stockQty: number;
+  attrs: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProductInput = {
+  title: string;
+  description?: string | null;
+  status?: ProductStatus;
+  attrs?: Record<string, unknown>;
+  variants?: VariantInput[];
+};
+
+export type VariantInput = {
+  sku: string;
+  title: string;
+  priceVnd: string;
+  stockQty: number;
+  attrs?: Record<string, unknown>;
+};
+
+export type OrderStatus =
+  | 'draft'
+  | 'confirmed'
+  | 'shipped'
+  | 'done'
+  | 'cancelled'
+  | 'returned';
+
+export type Order = {
+  id: string;
+  conversationId: string | null;
+  contactId: string | null;
+  status: OrderStatus;
+  paymentMethod: 'cod' | 'bank_transfer' | 'other' | string;
+  customerName: string | null;
+  phoneE164: string | null;
+  addressText: string | null;
+  addressJson: Record<string, unknown>;
+  currency: 'VND' | string;
+  subtotalVnd: string;
+  totalVnd: string;
+  idempotencyKey: string | null;
+  confirmedAt: string | null;
+  shippedAt: string | null;
+  cancelledAt: string | null;
+  doneAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items?: OrderItem[];
+};
+
+export type OrderItem = {
+  id: string;
+  productId: string;
+  variantId: string;
+  titleSnapshot: string;
+  skuSnapshot: string;
+  qty: number;
+  unitPriceVnd: string;
+  lineTotalVnd: string;
+};
+
+export type OrdersExportFormat = 'csv' | 'xlsx' | 'pdf';
+
 export type ApiAuthContext = {
   accessToken: string;
   orgId: string;
@@ -59,6 +145,7 @@ export type OrganizationMembership = {
     name: string;
     slug: string;
     plan: string;
+    settingsJson?: Record<string, unknown>;
     timezone: string;
     locale: string;
     suspendedAt: string | null;
@@ -198,6 +285,169 @@ export async function listInboxMessages(
   return messages;
 }
 
+export async function listProducts(): Promise<CatalogProduct[]> {
+  const { products } = await apiFetch<{ products: CatalogProduct[] }>(
+    '/v1/catalog/products',
+  );
+
+  return products;
+}
+
+export async function getProduct(productId: string): Promise<CatalogProduct> {
+  const { product } = await apiFetch<{ product: CatalogProduct }>(
+    `/v1/catalog/products/${encodeURIComponent(productId)}`,
+  );
+
+  return product;
+}
+
+export async function createProduct(
+  input: ProductInput,
+): Promise<CatalogProduct> {
+  const { product } = await apiFetch<{ product: CatalogProduct }>(
+    '/v1/catalog/products',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+
+  return product;
+}
+
+export async function updateProduct(
+  productId: string,
+  input: ProductInput,
+): Promise<CatalogProduct> {
+  const { product } = await apiFetch<{ product: CatalogProduct }>(
+    `/v1/catalog/products/${encodeURIComponent(productId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    },
+  );
+
+  return product;
+}
+
+export async function deleteProduct(productId: string): Promise<CatalogProduct> {
+  const { product } = await apiFetch<{ product: CatalogProduct }>(
+    `/v1/catalog/products/${encodeURIComponent(productId)}`,
+    { method: 'DELETE' },
+  );
+
+  return product;
+}
+
+export async function createVariant(
+  productId: string,
+  input: VariantInput,
+): Promise<CatalogVariant> {
+  const { variant } = await apiFetch<{ variant: CatalogVariant }>(
+    `/v1/catalog/products/${encodeURIComponent(productId)}/variants`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+
+  return variant;
+}
+
+export async function updateVariant(
+  productId: string,
+  variantId: string,
+  input: VariantInput,
+): Promise<CatalogVariant> {
+  const { variant } = await apiFetch<{ variant: CatalogVariant }>(
+    `/v1/catalog/products/${encodeURIComponent(
+      productId,
+    )}/variants/${encodeURIComponent(variantId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    },
+  );
+
+  return variant;
+}
+
+export async function deleteVariant(
+  productId: string,
+  variantId: string,
+): Promise<CatalogVariant> {
+  const { variant } = await apiFetch<{ variant: CatalogVariant }>(
+    `/v1/catalog/products/${encodeURIComponent(
+      productId,
+    )}/variants/${encodeURIComponent(variantId)}`,
+    { method: 'DELETE' },
+  );
+
+  return variant;
+}
+
+export async function listOrders(status?: OrderStatus): Promise<Order[]> {
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  const { orders } = await apiFetch<{ orders: Order[] }>(`/v1/orders${query}`);
+
+  return orders;
+}
+
+export async function getOrder(orderId: string): Promise<Order> {
+  const { order } = await apiFetch<{ order: Order }>(
+    `/v1/orders/${encodeURIComponent(orderId)}`,
+  );
+
+  return order;
+}
+
+export async function confirmOrder(orderId: string): Promise<Order> {
+  const { order } = await apiFetch<{ order: Order }>(
+    `/v1/orders/${encodeURIComponent(orderId)}/confirm`,
+    { method: 'POST' },
+  );
+
+  return order;
+}
+
+export async function cancelOrder(orderId: string): Promise<Order> {
+  const { order } = await apiFetch<{ order: Order }>(
+    `/v1/orders/${encodeURIComponent(orderId)}/cancel`,
+    { method: 'POST' },
+  );
+
+  return order;
+}
+
+export async function shipOrder(orderId: string): Promise<Order> {
+  const { order } = await apiFetch<{ order: Order }>(
+    `/v1/orders/${encodeURIComponent(orderId)}/ship`,
+    { method: 'POST' },
+  );
+
+  return order;
+}
+
+export async function downloadOrdersExport(input: {
+  format: OrdersExportFormat;
+  status?: OrderStatus;
+}): Promise<{ blob: Blob; filename: string }> {
+  const params = new URLSearchParams({ format: input.format });
+  if (input.status) {
+    params.set('status', input.status);
+  }
+
+  const response = await rawApiFetch(`/v1/orders/export?${params.toString()}`);
+  const disposition = response.headers.get('content-disposition');
+
+  return {
+    blob: await response.blob(),
+    filename:
+      disposition?.match(/filename="([^"]+)"/i)?.[1] ??
+      `orders.${input.format}`,
+  };
+}
+
 export async function takeoverInboxConversation(
   conversationId: string,
 ): Promise<InboxConversation> {
@@ -262,4 +512,34 @@ export async function completeMetaOAuth(
       body: JSON.stringify({ code, state }),
     },
   );
+}
+
+async function rawApiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const accessToken = getAccessToken();
+  const orgId = getActiveOrgId();
+  if (!accessToken || !orgId) {
+    throw new ApiClientError('missing_auth', 'Thiếu phiên đăng nhập.');
+  }
+
+  const headers = new Headers(init.headers);
+  for (const [key, value] of Object.entries(
+    buildApiHeaders({ accessToken, orgId }),
+  )) {
+    headers.set(key, headers.get(key) ?? value);
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    ...init,
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new ApiClientError(
+      'api_error',
+      `Yêu cầu API thất bại (${response.status})`,
+      response.status,
+    );
+  }
+
+  return response;
 }

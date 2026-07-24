@@ -24,6 +24,7 @@ const navItems = [
   { href: '/inbox', label: 'Hộp thư' },
   { href: '/catalog', label: 'Sản phẩm' },
   { href: '/inventory', label: 'Kho' },
+  { href: '/warehouses', label: 'Kho chi nhánh' },
   { href: '/orders', label: 'Đơn hàng' },
   { href: '/cod', label: 'COD' },
   { href: '/pnl', label: 'Lãi gộp' },

@@ -75,6 +75,23 @@ export type CatalogVariant = {
   updatedAt: string;
 };
 
+export type Warehouse = {
+  id: string;
+  orgId: string;
+  name: string;
+  code: string;
+  isDefault: boolean;
+  createdAt: string;
+};
+
+export type WarehouseStock = {
+  orgId: string;
+  warehouseId: string;
+  variantId: string;
+  qty: number;
+  variant: CatalogVariant | null;
+};
+
 export type ProductInput = {
   title: string;
   description?: string | null;
@@ -622,6 +639,7 @@ export async function deleteVariant(
 export type StockMovement = {
   id: string;
   orgId: string;
+  warehouseId: string | null;
   variantId: string;
   movementType: string;
   qtyDelta: number;
@@ -676,6 +694,59 @@ export async function adjustStock(input: {
       body: JSON.stringify(input),
     },
   );
+}
+
+export async function listWarehouses(): Promise<Warehouse[]> {
+  const { warehouses } = await apiFetch<{ warehouses: Warehouse[] }>(
+    '/v1/warehouses',
+  );
+  return warehouses;
+}
+
+export async function createWarehouse(input: {
+  name: string;
+  code: string;
+}): Promise<Warehouse> {
+  const { warehouse } = await apiFetch<{ warehouse: Warehouse }>(
+    '/v1/warehouses',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+  return warehouse;
+}
+
+export async function getWarehouseStock(warehouseId: string): Promise<{
+  warehouse: Warehouse;
+  stock: WarehouseStock[];
+}> {
+  return apiFetch<{ warehouse: Warehouse; stock: WarehouseStock[] }>(
+    `/v1/warehouses/${encodeURIComponent(warehouseId)}/stock`,
+  );
+}
+
+export async function transferWarehouseStock(input: {
+  fromWarehouseId: string;
+  toWarehouseId: string;
+  variantId: string;
+  qty: number;
+  reason?: string;
+}): Promise<{
+  variant: CatalogVariant;
+  fromStock: { warehouseId: string; variantId: string; qty: number };
+  toStock: { warehouseId: string; variantId: string; qty: number };
+  movements: StockMovement[];
+}> {
+  return apiFetch<{
+    variant: CatalogVariant;
+    fromStock: { warehouseId: string; variantId: string; qty: number };
+    toStock: { warehouseId: string; variantId: string; qty: number };
+    movements: StockMovement[];
+  }>('/v1/warehouses/transfer', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export async function listOrders(status?: OrderStatus): Promise<Order[]> {

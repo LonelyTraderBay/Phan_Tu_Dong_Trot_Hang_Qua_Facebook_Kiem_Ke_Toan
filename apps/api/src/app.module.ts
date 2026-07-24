@@ -26,6 +26,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { PnlModule } from './modules/pnl/pnl.module';
 import { PublicApiModule } from './modules/public-api/public-api.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
+import { WarehousesModule } from './modules/warehouses/warehouses.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { ShippingModule } from './modules/shipping/shipping.module';
     AdvisorModule,
     ContentCalendarModule,
     PublicApiModule,
+    WarehousesModule,
     FeatureFlagsModule,
     InternalModule,
   ],

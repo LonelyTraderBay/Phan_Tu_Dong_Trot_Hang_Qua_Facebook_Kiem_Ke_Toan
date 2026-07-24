@@ -2,7 +2,7 @@
 
 Detailed bite-sized plans are written **just-in-time** before each plan starts (same standard as Plan A–D). This file is the ordered backlog only.
 
-**Hiện tại:** Plan E code+docs DONE ([DoD](./plan-e-dod-evidence.md), paid AMBER); Plan F DONE ([DoD](./plan-f-dod-evidence.md)). **Plan G IN PROGRESS** ([playbook](./2026-07-24-plan-g-priority-execution.md), [plan](./2026-07-24-plan-g-phase3-intelligence.md)).
+**Hiện tại:** Plan E code+docs DONE ([DoD](./plan-e-dod-evidence.md), paid AMBER); Plan F DONE ([DoD](./plan-f-dod-evidence.md)); Plan G DONE ([DoD](./plan-g-dod-evidence.md)). **Plan H IN PROGRESS** ([playbook](./2026-07-24-plan-h-priority-execution.md), [plan](./2026-07-24-plan-h-phase4-erp-lite.md)).
 **Đường hoàn thiện:** [path-to-completion-priority](./2026-07-24-path-to-completion-priority.md)  
 Wave details: [master-roadmap-commercial-complete](../specs/2026-07-24-master-roadmap-commercial-complete.md).
 
@@ -10,8 +10,8 @@ Wave details: [master-roadmap-commercial-complete](../specs/2026-07-24-master-ro
 |------|-------|---------|----------------------|
 | **E** | M3.1–M3.7 | Bán pilot an toàn | [DoD](./plan-e-dod-evidence.md) — code/docs DONE |
 | **F** | Phase 2: 2A–2H | Inventory, carrier, COD, returns, P&L, channel#2, billing packaging | **DONE** → [DoD](./plan-f-dod-evidence.md) |
-| **G** | Phase 3: 3A–3F | Ads, attribution, advisor, calendar, public API | **IN PROGRESS** → [DoD](./plan-g-dod-evidence.md) |
-| **H** | Phase 4: 4A–4F | Multi-warehouse, PO, e-invoice, mobile → **CPC** | After Plan G DoD |
+| **G** | Phase 3: 3A–3F | Ads, attribution, advisor, calendar, public API | **DONE** → [DoD](./plan-g-dod-evidence.md) |
+| **H** | Phase 4: 4A–4F | Multi-warehouse, PO, e-invoice, mobile → **CPC** | **IN PROGRESS** → [DoD](./plan-h-dod-evidence.md) |
 | **I** | M4.1–M4.8 | SSO, SOC2/pen, SLA, status page → **E100** | Overlap from late F |
 
 **Rule:** Expand F–I into code only with a JIT full plan file; do not skip wave order inside a plan.

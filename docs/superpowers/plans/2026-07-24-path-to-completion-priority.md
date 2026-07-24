@@ -22,7 +22,7 @@ DONE  P0   docs/legal/ADR (live staging/Review = owner AMBER)
 AMBER P3  E    M3 code+docs GREEN · paid drills AMBER  → [plan-e-dod-evidence]
 DONE  P4a F    Phase 2 Operations
 DONE  P4b G    Phase 3 Intelligence
-▶ P4c H    Phase 4 ERP-lite     → CPC
+▶ P4c H    Phase 4 ERP-lite IN PROGRESS → CPC
   P5  I    M4                   → E100
   P6  Epoch 5 (optional)
 ```
@@ -109,11 +109,13 @@ Evidence E: [plan-e-dod-evidence](./plan-e-dod-evidence.md). Paid drills AMBER k
 
 ---
 
-## P4c — Plan H · Phase 4 ERP-lite → **CPC**
+## P4c — Plan H · Phase 4 ERP-lite → **CPC** — **IN PROGRESS**
+
+**Playbook:** [plan-h-priority-execution](./2026-07-24-plan-h-priority-execution.md) · [plan](./2026-07-24-plan-h-phase4-erp-lite.md) · [evidence](./plan-h-dod-evidence.md)
 
 | Ưu tiên | Wave | Bước | DoD wave |
 |--------:|------|------|----------|
-| **H0** | 4A Multi-warehouse | 4A.1–4A.4 branches/warehouses, transfer, RLS | 2 kho / org đúng |
+| **H0** | 4A Multi-warehouse | 4A.1–4A.4 branches/warehouses, transfer, RLS | 2 kho / org đúng — IN PROGRESS |
 | **H1** | 4B Supplier & PO | 4B.1–4B.4 suppliers, PO → nhập kho | PO → tồn có truy vết |
 | **H2** | 4C E-invoice | 4C.1–4C.4 provider hooks, DLQ | 1 provider sandbox |
 | **H3** | 4D Staff mobile | 4D.1–4D.3 PWA/app mỏng inbox+ship | CSKH/kho dùng mobile |
@@ -179,6 +181,7 @@ OWNER parallel: §12.1 · Meta Review submit · Pro+PITR drill · always-on
 | Plan E playbook | [plan-e-priority-execution](./2026-07-24-plan-e-priority-execution.md) |
 | Plan E DoD | [plan-e-dod-evidence](./plan-e-dod-evidence.md) |
 | Plan F playbook | [plan-f-priority-execution](./2026-07-24-plan-f-priority-execution.md) |
+| Plan H playbook | [plan-h-priority-execution](./2026-07-24-plan-h-priority-execution.md) |
 | F–I index | [plans-f-i-post-phase1-index](./2026-07-24-plans-f-i-post-phase1-index.md) |
 | Wave chi tiết gốc | [master-roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) |
 | Pilot DoD | [plan-d-dod-evidence](./plan-d-dod-evidence.md) |

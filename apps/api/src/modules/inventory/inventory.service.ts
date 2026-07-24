@@ -28,6 +28,7 @@ type SupabaseError = {
 type MovementRow = {
   id: string;
   org_id: string;
+  warehouse_id: string | null;
   variant_id: string;
   movement_type: string;
   qty_delta: number;
@@ -57,7 +58,7 @@ type OrgRow = {
 };
 
 const MOVEMENT_SELECT =
-  'id, org_id, variant_id, movement_type, qty_delta, stock_after, order_id, reason, actor_user_id, created_at';
+  'id, org_id, warehouse_id, variant_id, movement_type, qty_delta, stock_after, order_id, reason, actor_user_id, created_at';
 const VARIANT_SELECT =
   'id, org_id, product_id, sku, title, price_vnd, stock_qty, cogs_vnd, attrs_json, created_at, updated_at';
 
@@ -234,6 +235,7 @@ function mapMovement(row: MovementRow) {
   return {
     id: row.id,
     orgId: row.org_id,
+    warehouseId: row.warehouse_id,
     variantId: row.variant_id,
     movementType: row.movement_type,
     qtyDelta: row.qty_delta,

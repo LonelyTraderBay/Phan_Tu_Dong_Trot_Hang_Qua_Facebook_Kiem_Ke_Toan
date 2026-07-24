@@ -515,6 +515,72 @@ paths:
           description: Adjusted
         '200':
           description: Adjusted
+  /v1/warehouses:
+    get:
+      summary: List warehouses for current org
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWarehousesResponse'
+    post:
+      summary: Create a warehouse for current org
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWarehouseRequest'
+      responses:
+        '201':
+          description: Warehouse created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseEnvelope'
+        '400':
+          description: Invalid warehouse input or duplicate warehouse code
+  /v1/warehouses/{warehouseId}/stock:
+    get:
+      summary: List variant stock for one warehouse
+      parameters:
+        - name: warehouseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseStockResponse'
+        '404':
+          description: Warehouse not found for current org
+  /v1/warehouses/transfer:
+    post:
+      summary: Transfer stock between two warehouses and write ledger rows
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferStockRequest'
+      responses:
+        '201':
+          description: Transfer posted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferStockResponse'
+        '400':
+          description: Invalid quantity, same warehouse, or insufficient stock
+        '404':
+          description: Warehouse or variant not found for current org
   /v1/catalog/products:
     get:
       summary: List products for current org
@@ -1504,6 +1570,270 @@ components:
         attrs:
           type: object
           additionalProperties: true
+    WarehouseProductVariant:
+      type: object
+      required:
+        - id
+        - orgId
+        - productId
+        - sku
+        - title
+        - priceVnd
+        - stockQty
+        - cogsVnd
+        - attrs
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        title:
+          type: string
+        priceVnd:
+          type: string
+          pattern: '^[0-9]+$'
+        stockQty:
+          type: integer
+          minimum: 0
+        cogsVnd:
+          type: string
+          pattern: '^[0-9]+$'
+        attrs:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Warehouse:
+      type: object
+      required:
+        - id
+        - orgId
+        - name
+        - code
+        - isDefault
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+        isDefault:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    WarehouseEnvelope:
+      type: object
+      required:
+        - warehouse
+      properties:
+        warehouse:
+          $ref: '#/components/schemas/Warehouse'
+    ListWarehousesResponse:
+      type: object
+      required:
+        - warehouses
+      properties:
+        warehouses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Warehouse'
+    CreateWarehouseRequest:
+      type: object
+      required:
+        - name
+        - code
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        isDefault:
+          type: boolean
+          default: false
+      additionalProperties: false
+    WarehouseStock:
+      type: object
+      required:
+        - orgId
+        - warehouseId
+        - variantId
+        - qty
+        - variant
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+        qty:
+          type: integer
+          minimum: 0
+        variant:
+          oneOf:
+            - $ref: '#/components/schemas/WarehouseProductVariant'
+            - type: 'null'
+    WarehouseStockResponse:
+      type: object
+      required:
+        - warehouse
+        - stock
+      properties:
+        warehouse:
+          $ref: '#/components/schemas/Warehouse'
+        stock:
+          type: array
+          items:
+            $ref: '#/components/schemas/WarehouseStock'
+    TransferStockRequest:
+      type: object
+      required:
+        - fromWarehouseId
+        - toWarehouseId
+        - variantId
+        - qty
+      properties:
+        fromWarehouseId:
+          type: string
+          format: uuid
+        toWarehouseId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+        qty:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          maxLength: 500
+      additionalProperties: false
+    TransferStockSide:
+      type: object
+      required:
+        - warehouseId
+        - variantId
+        - qty
+      properties:
+        warehouseId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+        qty:
+          type: integer
+          minimum: 0
+    WarehouseStockMovement:
+      type: object
+      required:
+        - id
+        - orgId
+        - warehouseId
+        - variantId
+        - movementType
+        - qtyDelta
+        - stockAfter
+        - orderId
+        - reason
+        - actorUserId
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        warehouseId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+        movementType:
+          type: string
+          enum:
+            - confirm
+            - cancel_restore
+            - return_restock
+            - adjust
+            - inbound
+            - outbound
+            - transfer_out
+            - transfer_in
+        qtyDelta:
+          type: integer
+        stockAfter:
+          type: integer
+          minimum: 0
+        orderId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        reason:
+          type:
+            - string
+            - 'null'
+        actorUserId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+    TransferStockResponse:
+      type: object
+      required:
+        - variant
+        - fromStock
+        - toStock
+        - movements
+      properties:
+        variant:
+          $ref: '#/components/schemas/WarehouseProductVariant'
+        fromStock:
+          $ref: '#/components/schemas/TransferStockSide'
+        toStock:
+          $ref: '#/components/schemas/TransferStockSide'
+        movements:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/WarehouseStockMovement'
     OrderStatus:
       type: string
       enum:

@@ -1,7 +1,7 @@
 # Priority Execution Roadmap — tới CPC / E100
 
 **Date:** 2026-07-25  
-**Status:** Active backlog — Plans A–D DONE; **Pilot Phase 1 ready**; Plan E **code+docs DONE** (`plan-e-dod-evidence.md`, paid AMBER); Plan F **DONE**; Plan G **DONE**; **Plan H NEXT**
+**Status:** Active backlog — Plans A–D DONE; **Pilot Phase 1 ready**; Plan E **code+docs DONE** (`plan-e-dod-evidence.md`, paid AMBER); Plan F **DONE**; Plan G **DONE**; **Plan H IN PROGRESS**
 
 **Authority:** [CANONICAL](../specs/2026-07-24-CANONICAL-LOCKED-DECISIONS.md) · [master roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) · [WBS](../specs/2026-07-24-implementation-work-breakdown.md)  
 **Kế hoạch chi tiết từng bước (SoT ưu tiên còn lại):** [path-to-completion-priority](./2026-07-24-path-to-completion-priority.md)
@@ -32,7 +32,7 @@ Paid/live Plan E drills có thể AMBER song song với code Plan F; **không** 
 | **E** | Gate M3 — Commercial ops | **CODE+DOCS DONE** (paid AMBER) → [DoD](./plan-e-dod-evidence.md) · [playbook](./2026-07-24-plan-e-priority-execution.md) |
 | **F** | Phase 2 Operations (2A–2H) | **DONE** → [DoD](./plan-f-dod-evidence.md) · [playbook](./2026-07-24-plan-f-priority-execution.md) |
 | **G** | Phase 3 Intelligence (3A–3F) | **DONE** → [DoD](./plan-g-dod-evidence.md) |
-| **H** | Phase 4 ERP-lite (4A–4F) → **CPC** | **NEXT** |
+| **H** | Phase 4 ERP-lite (4A–4F) → **CPC** | **IN PROGRESS** → [DoD](./plan-h-dod-evidence.md) |
 | **I** | M4 Procurement → **E100** | Overlap from late F |
 
 ---
@@ -46,7 +46,7 @@ DONE  Plan D  Orders + Web + Hardening     → Pilot Phase 1 READY
 AMBER Plan E  M3 code+docs GREEN · paid drills AMBER
 DONE  Plan F  Phase 2 Operations
 DONE  Plan G  Phase 3 Intelligence
-P4c   Plan H  Phase 4 ERP-lite                   → CPC ← NEXT eng
+P4c   Plan H  Phase 4 ERP-lite                   → CPC ← IN PROGRESS
 P5    Plan I  M4                                  → E100
 P6    Epoch 5 (optional)
 ```
@@ -105,7 +105,7 @@ P6    Epoch 5 (optional)
 2. ~~P0 docs + Plan E code/docs~~ — [DoD E](./plan-e-dod-evidence.md) (paid AMBER)  
 3. ~~Plan F 2A→2H~~ — **DONE** → [DoD F](./plan-f-dod-evidence.md)
 4. ~~Plan G 3A→3F~~ — **DONE** → [DoD G](./plan-g-dod-evidence.md)
-5. **NEXT:** Write Plan H JIT plan, then execute 4A→4F
+5. **NOW:** Execute Plan H 4A→4F → [playbook](./2026-07-24-plan-h-priority-execution.md)
 6. Owner parallel: live §12.1 · Meta Review · Pro+PITR · always-on
 7. Sau H: **CPC**; rồi I → **E100**
 

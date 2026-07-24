@@ -1,11 +1,22 @@
 # Eval stubs
 
-Adversarial prompt fixtures for future AI safety evaluation.
+Golden Vietnamese grounding cases and adversarial prompt fixtures for AI evaluation.
 
-Run the current stub:
+Run the eval harness:
 
 ```powershell
-python tests/eval/run_stub.py
+pnpm test:eval
 ```
 
-The stub only verifies that at least 10 markdown cases exist under `tests/eval/adversarial`.
+Or from the AI app venv:
+
+```powershell
+cd apps/ai
+uv run python ../../tests/eval/run_stub.py
+```
+
+The runner verifies:
+
+- at least 10 adversarial markdown cases under `tests/eval/adversarial`
+- at least 5 golden grounded VI cases under `tests/eval/golden`
+- mocked orchestrator expectations for each golden case

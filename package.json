@@ -8,6 +8,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:isolation": "pnpm --dir apps/api exec vitest run --root ../../tests/isolation cross-tenant",
+    "test:eval": "uv run --directory apps/ai python ../../tests/eval/run_stub.py",
     "dev": "turbo run dev --parallel"
   },
   "devDependencies": {

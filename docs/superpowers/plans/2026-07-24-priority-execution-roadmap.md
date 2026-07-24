@@ -1,7 +1,7 @@
 # Priority Execution Roadmap — tới CPC / E100
 
 **Date:** 2026-07-24  
-**Status:** Active backlog after Plan A merge to `main` (`397601f`)  
+**Status:** Active backlog — Plan B DONE on `main` (`2176559`); Plan C NEXT  
 **Authority:** [CANONICAL](../specs/2026-07-24-CANONICAL-LOCKED-DECISIONS.md) · [master roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) · [WBS](../specs/2026-07-24-implementation-work-breakdown.md)
 
 ---
@@ -24,8 +24,8 @@
 | Plan | Scope | Status |
 |------|-------|--------|
 | **A** | Waves A+B+C — Platform | **DONE** (merged + pushed `main`) |
-| **B** | Wave D — Meta channels | **DONE** (`feat/plan-b-meta-channels`) → [DoD evidence](./plan-b-dod-evidence.md) · [chi tiết task](./2026-07-24-plan-b-meta-channels.md) |
-| **C** | Waves E+F — Catalog + AI | **NEXT** → [plan file](./2026-07-24-plan-c-catalog-ai.md) |
+| **B** | Wave D — Meta channels | **DONE** (merged `main` @ `2176559`) → [DoD evidence](./plan-b-dod-evidence.md) · [chi tiết](./2026-07-24-plan-b-meta-channels.md) |
+| **C** | Waves E+F — Catalog + AI | **NEXT — C0→C9** → [playbook ưu tiên](./2026-07-24-plan-c-priority-execution.md) · [chi tiết task](./2026-07-24-plan-c-catalog-ai.md) |
 | **D** | Waves G+H+I — Orders + Web + Hardening | Queued → [plan file](./2026-07-24-plan-d-orders-web-hardening.md) |
 | **E** | Gate M3 — Commercial ops | Queued → [outline](./2026-07-24-plan-e-m3-commercial-ops.md) |
 | **F** | Phase 2 Operations (2A–2H) | After E / pilot |
@@ -102,7 +102,7 @@ P6  Epoch 5 (optional)
 ## 5. Hành động ngay
 
 1. ~~Execute Plan B~~ — **DONE** ([DoD evidence](./plan-b-dod-evidence.md))  
-2. Đọc + duyệt [Plan C](./2026-07-24-plan-c-catalog-ai.md)  
-3. Execute Plan C (Subagent-Driven khuyến nghị)  
+2. Đọc [playbook Plan C](./2026-07-24-plan-c-priority-execution.md) + [chi tiết task](./2026-07-24-plan-c-catalog-ai.md)  
+3. Execute Plan C C0→C9 (Subagent-Driven khuyến nghị)  
 
-**Không** viết/code Phase 2 trong lúc làm C.
+**Không** viết/code Phase 2 / Plan D critical path trong lúc làm C.

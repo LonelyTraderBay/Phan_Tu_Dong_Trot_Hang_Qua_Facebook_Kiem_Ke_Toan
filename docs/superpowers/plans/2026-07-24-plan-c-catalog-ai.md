@@ -8,8 +8,9 @@
 
 **Tech Stack:** NestJS · FastAPI · Gemini (`LlmProvider`) · pgvector · Inngest · Vitest · pytest
 
-**Depends on:** Plan B DoD  
-**Next:** [Plan D](./2026-07-24-plan-d-orders-web-hardening.md)
+**Depends on:** Plan B DoD (`main` @ `2176559`+)  
+**Next:** [Plan D](./2026-07-24-plan-d-orders-web-hardening.md)  
+**Playbook ưu tiên (đọc trước khi code):** [plan-c-priority-execution](./2026-07-24-plan-c-priority-execution.md)
 
 ## Global Constraints
 
@@ -118,6 +119,28 @@
 - Export Excel (Plan D)  
 - Meta App Review package (Plan D)  
 
+## Thứ tự ưu tiên *trong* Plan C (không đảo)
+
+| Ưu tiên | Task | Vì sao trước |
+|--------:|------|----------------|
+| **C0** | Task 1 Migration | Schema trước CRUD/RAG |
+| **C1** | Task 2 Catalog CRUD | Nguồn knowledge |
+| **C2** | Task 3 Reindex | Chunks trước retrieve |
+| **C3** | Task 4 LlmProvider | LLM trước orchestrator (∥ C2 OK) |
+| **C4** | Task 5 Orchestrator | Grounded reply |
+| **C5** | Task 6 Tools + ai_runs | Core mutations + persistence |
+| **C6** | Task 7 process_inbound + send gate | Critical path tin → AI → Meta |
+| **C7** | Task 8 Quota | An toàn chi phí |
+| **C8** | Task 9 Eval | Chất lượng grounding |
+| **C9** | Task 10 DoD | Đóng Plan C |
+
+Chi tiết cổng giai đoạn: [plan-c-priority-execution](./2026-07-24-plan-c-priority-execution.md).
+
 ## Execution handoff
 
-After Plan B DoD → execute Plan C with Subagent-Driven. Then Plan D.
+**Thứ tự ưu tiên + cổng giai đoạn:** [plan-c-priority-execution](./2026-07-24-plan-c-priority-execution.md)  
+**Chi tiết file/code:** file này (Task 1–10).
+
+Sau Plan B DoD → execute Plan C (Subagent-Driven khuyến nghị). Rồi Plan D.
+
+**Which approach?**

@@ -17,6 +17,14 @@ describe("roleHasPermission", () => {
     expect(roleHasPermission("cskh", "orders.approve")).toBe(true);
     expect(roleHasPermission("kho", "orders.approve")).toBe(false);
   });
+  it("only owner can request PDPA export or deletion", () => {
+    expect(roleHasPermission("owner", "org.pdpa.export")).toBe(true);
+    expect(roleHasPermission("owner", "org.pdpa.delete_request")).toBe(true);
+    expect(roleHasPermission("cskh", "org.pdpa.export")).toBe(false);
+    expect(roleHasPermission("cskh", "org.pdpa.delete_request")).toBe(false);
+    expect(roleHasPermission("kho", "org.pdpa.export")).toBe(false);
+    expect(roleHasPermission("kho", "org.pdpa.delete_request")).toBe(false);
+  });
   it("platform ops.suspend only via platform admin path later", () => {
     expect(roleHasPermission("owner", "ops.org.suspend")).toBe(false);
   });

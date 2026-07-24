@@ -29,6 +29,30 @@ paths:
       responses:
         '201':
           description: Created
+  /v1/orgs/me/export:
+    post:
+      summary: Export a practical PDPA JSON bundle for the current org
+      responses:
+        '200':
+          description: Export bundle
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PdpaExportBundle'
+        '403':
+          description: Owner permission required
+  /v1/orgs/me/delete-request:
+    post:
+      summary: Record a pending PDPA delete/anonymize request for the current org
+      responses:
+        '202':
+          description: Delete request recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PdpaDeleteRequestResponse'
+        '403':
+          description: Owner permission required
   /v1/channels:
     get:
       summary: List channel connections for current org
@@ -550,6 +574,79 @@ components:
         minLength: 1
         maxLength: 128
   schemas:
+    PdpaExportBundle:
+      type: object
+      required:
+        - exportedAt
+        - orgId
+        - generatedByUserId
+        - organization
+        - memberships
+        - contacts
+        - conversations
+        - orders
+      properties:
+        exportedAt:
+          type: string
+          format: date-time
+        orgId:
+          type: string
+          format: uuid
+        generatedByUserId:
+          type: string
+          format: uuid
+        organization:
+          type: object
+          additionalProperties: true
+        memberships:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        contacts:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        conversations:
+          type: array
+          description: Conversation summaries only; message bodies are excluded.
+          items:
+            type: object
+            additionalProperties: true
+        orders:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    PdpaDeleteRequest:
+      type: object
+      required:
+        - orgId
+        - status
+        - requestedByUserId
+        - requestedAt
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - pending
+        requestedByUserId:
+          type: string
+          format: uuid
+        requestedAt:
+          type: string
+          format: date-time
+    PdpaDeleteRequestResponse:
+      type: object
+      required:
+        - deleteRequest
+      properties:
+        deleteRequest:
+          $ref: '#/components/schemas/PdpaDeleteRequest'
     KnowledgeChunkWrite:
       type: object
       required:

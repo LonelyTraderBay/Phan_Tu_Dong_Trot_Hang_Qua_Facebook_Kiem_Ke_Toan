@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
   Param,
   Post,
   UnauthorizedException,
@@ -80,6 +81,34 @@ export class IdentityController {
       parseBody(CreateInviteBodySchema, body),
     );
   }
+
+  @Post("me/export")
+  @HttpCode(200)
+  @UseGuards(PermissionsGuard)
+  @RequirePermission("org.pdpa.export")
+  exportOrganizationData(
+    @OrgId() orgId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser | undefined,
+  ) {
+    return this.identity.exportOrganizationData({
+      orgId: requireOrgId(orgId),
+      actorUserId: requireUserId(user),
+    });
+  }
+
+  @Post("me/delete-request")
+  @HttpCode(202)
+  @UseGuards(PermissionsGuard)
+  @RequirePermission("org.pdpa.delete_request")
+  requestOrganizationDelete(
+    @OrgId() orgId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser | undefined,
+  ) {
+    return this.identity.requestOrganizationDelete({
+      orgId: requireOrgId(orgId),
+      actorUserId: requireUserId(user),
+    });
+  }
 }
 
 function parseBody<TSchema extends z.ZodTypeAny>(
@@ -99,6 +128,28 @@ function parseBody<TSchema extends z.ZodTypeAny>(
   }
 
   return parsed.data;
+}
+
+function requireOrgId(orgId: string | undefined) {
+  if (!orgId) {
+    throw new BadRequestException({
+      code: "missing_org_context",
+      message: "Organization context is required",
+    });
+  }
+
+  return orgId;
+}
+
+function requireUserId(user: AuthenticatedUser | undefined) {
+  if (!user?.id) {
+    throw new UnauthorizedException({
+      code: "user_required",
+      message: "Authenticated user is required",
+    });
+  }
+
+  return user.id;
 }
 
 function getBearerToken(authorization: string | string[] | undefined) {

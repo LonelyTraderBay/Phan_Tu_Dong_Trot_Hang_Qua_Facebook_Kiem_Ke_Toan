@@ -4,6 +4,8 @@ export type Role = "owner" | "cskh" | "kho";
 export type Permission =
   | "org.settings.read"
   | "org.settings.write"
+  | "org.pdpa.export"
+  | "org.pdpa.delete_request"
   | "members.invite"
   | "channels.connect"
   | "catalog.read"
@@ -28,6 +30,8 @@ const MATRIX: Record<Role, readonly Permission[]> = {
   owner: [
     "org.settings.read",
     "org.settings.write",
+    "org.pdpa.export",
+    "org.pdpa.delete_request",
     "members.invite",
     "channels.connect",
     "catalog.read",

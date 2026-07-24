@@ -216,7 +216,7 @@ export class OrdersService {
       throwOrdersError(error, 'Could not list orders');
     }
 
-    return (data ?? []) as OrderRow[];
+    return (data ?? []) as unknown as OrderRow[];
   }
 
   async getOrder(input: { orgId: string; orderId: string }) {

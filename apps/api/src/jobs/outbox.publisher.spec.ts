@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   enqueueOutbox,
@@ -9,6 +9,7 @@ import {
 
 const ORG_ID = "11111111-1111-1111-1111-111111111111";
 const OUTBOX_ID = "22222222-2222-2222-2222-222222222222";
+const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
 
 type QueryResult = {
   data: unknown;
@@ -113,6 +114,16 @@ function outboxRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe("outbox publisher", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    if (ORIGINAL_NODE_ENV === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+    }
+  });
+
   it("inserts the expected outbox event shape", async () => {
     const { calls, client } = mockSupabase({
       insertResults: [{ data: outboxRow(), error: null }],
@@ -213,5 +224,29 @@ describe("outbox publisher", () => {
         attempts: 1,
       }),
     });
+  });
+
+  it("publishes on an interval outside test env and clears on destroy", async () => {
+    vi.useFakeTimers();
+    process.env.NODE_ENV = "development";
+    const { client } = mockSupabase({});
+    const publisher = new OutboxPublisher(
+      client,
+      { send: async () => ({ ids: [] }) },
+      { publishIntervalMs: 2_000 },
+    );
+    const publishPending = vi
+      .spyOn(publisher, "publishPending")
+      .mockResolvedValue({ published: 0, failed: 0, deadLettered: 0 });
+
+    publisher.onModuleInit();
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    expect(publishPending).toHaveBeenCalledTimes(1);
+
+    publisher.onModuleDestroy();
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    expect(publishPending).toHaveBeenCalledTimes(1);
   });
 });

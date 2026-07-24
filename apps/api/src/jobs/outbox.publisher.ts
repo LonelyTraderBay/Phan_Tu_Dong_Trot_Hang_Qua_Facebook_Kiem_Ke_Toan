@@ -2,6 +2,9 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
   Optional,
 } from "@nestjs/common";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -17,6 +20,7 @@ const OUTBOX_SELECT =
   "id, org_id, event_name, payload_json, created_at, published_at, attempts";
 const DEFAULT_BATCH_SIZE = 25;
 const DEFAULT_MAX_ATTEMPTS = 5;
+const DEFAULT_PUBLISH_INTERVAL_MS = 2_000;
 
 export type SupabaseLike = Pick<SupabaseClient, "from">;
 export type JsonObject = Record<string, unknown>;
@@ -49,6 +53,7 @@ type OutboxRow = {
 type OutboxPublisherOptions = {
   maxAttempts?: number;
   now?: () => Date;
+  publishIntervalMs?: number;
 };
 
 export async function enqueueOutbox(
@@ -75,11 +80,15 @@ export async function enqueueOutbox(
 }
 
 @Injectable()
-export class OutboxPublisher {
+export class OutboxPublisher implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(OutboxPublisher.name);
   private readonly supabase: SupabaseLike;
   private readonly inngestClient: InngestSender;
   private readonly maxAttempts: number;
   private readonly now: () => Date;
+  private readonly publishIntervalMs: number;
+  private publishTimer: ReturnType<typeof setInterval> | undefined;
+  private isPublishing = false;
 
   constructor(
     @Optional()
@@ -96,6 +105,30 @@ export class OutboxPublisher {
     this.inngestClient = inngestClient ?? inngest;
     this.maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
     this.now = options.now ?? (() => new Date());
+    this.publishIntervalMs =
+      options.publishIntervalMs ?? DEFAULT_PUBLISH_INTERVAL_MS;
+  }
+
+  onModuleInit() {
+    if (process.env.NODE_ENV === "test" || this.publishTimer) {
+      return;
+    }
+
+    this.publishTimer = setInterval(() => {
+      void this.publishPendingOnce();
+    }, this.publishIntervalMs);
+
+    const timer = this.publishTimer as { unref?: () => void };
+    timer.unref?.();
+  }
+
+  onModuleDestroy() {
+    if (!this.publishTimer) {
+      return;
+    }
+
+    clearInterval(this.publishTimer);
+    this.publishTimer = undefined;
   }
 
   async publishPending(batchSize = DEFAULT_BATCH_SIZE) {
@@ -141,6 +174,24 @@ export class OutboxPublisher {
     }
 
     return { published, failed, deadLettered };
+  }
+
+  private async publishPendingOnce() {
+    if (this.isPublishing) {
+      return;
+    }
+
+    this.isPublishing = true;
+    try {
+      await this.publishPending();
+    } catch (error) {
+      this.logger.error(
+        "Outbox publish interval failed",
+        error instanceof Error ? error.stack : String(error),
+      );
+    } finally {
+      this.isPublishing = false;
+    }
   }
 
   private async markPublished(id: string, publishedAt: string) {

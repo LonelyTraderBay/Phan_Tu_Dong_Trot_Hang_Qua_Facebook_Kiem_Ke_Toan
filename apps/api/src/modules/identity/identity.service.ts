@@ -25,7 +25,7 @@ const ENTITLEMENTS_SELECT =
   "org_id, max_pages, ai_monthly_token_limit, auto_confirm_allowed, updated_at";
 const INVITE_SELECT = "id, org_id, email, role, expires_at, created_at";
 
-export type SupabaseLike = Pick<SupabaseClient, "from">;
+export type SupabaseLike = Pick<SupabaseClient, "from" | "rpc">;
 type UserSupabaseFactory = (accessToken: string) => SupabaseLike;
 
 type SupabaseError = {
@@ -74,6 +74,12 @@ type MembershipWithOrganizationRow = MembershipRow & {
   organizations: OrganizationRow | OrganizationRow[] | null;
 };
 
+type CreateOrganizationWithOwnerRow = {
+  organization: OrganizationRow;
+  membership: MembershipRow;
+  entitlements: EntitlementsRow;
+};
+
 @Injectable()
 export class IdentityService {
   private readonly serviceSupabase: SupabaseLike;
@@ -95,49 +101,25 @@ export class IdentityService {
   async createOrganization(user: AuthenticatedUser, body: CreateOrgBody) {
     // RLS cannot authorize the very first organization insert because the owner
     // membership does not exist yet. Keep service-role writes scoped to this
-    // bootstrap sequence after JwtAuthGuard has resolved the user.
-    const { data: organizationData, error: organizationError } =
-      await this.serviceSupabase
-        .from("organizations")
-        .insert({ name: body.name, slug: body.slug })
-        .select(ORGANIZATION_SELECT)
-        .single();
+    // atomic bootstrap RPC after JwtAuthGuard has resolved the user.
+    const { data, error } = await this.serviceSupabase
+      .rpc("create_organization_with_owner", {
+        p_name: body.name,
+        p_owner_user_id: user.id,
+        p_slug: body.slug,
+      })
+      .single();
 
-    if (organizationError) {
-      throwIdentityError(organizationError, "Could not create organization");
+    if (error) {
+      throwIdentityError(error, "Could not create organization");
     }
 
-    const organization = organizationData as OrganizationRow;
-    const { data: membershipData, error: membershipError } =
-      await this.serviceSupabase
-        .from("memberships")
-        .insert({
-          org_id: organization.id,
-          user_id: user.id,
-          role: "owner" satisfies MembershipRole,
-        })
-        .select(MEMBERSHIP_SELECT)
-        .single();
-
-    if (membershipError) {
-      throwIdentityError(membershipError, "Could not create owner membership");
-    }
-
-    const { data: entitlementsData, error: entitlementsError } =
-      await this.serviceSupabase
-        .from("entitlements")
-        .insert({ org_id: organization.id })
-        .select(ENTITLEMENTS_SELECT)
-        .single();
-
-    if (entitlementsError) {
-      throwIdentityError(entitlementsError, "Could not create entitlements");
-    }
+    const row = data as CreateOrganizationWithOwnerRow;
 
     return {
-      organization: mapOrganization(organization),
-      membership: mapMembership(membershipData as MembershipRow),
-      entitlements: mapEntitlements(entitlementsData as EntitlementsRow),
+      organization: mapOrganization(row.organization),
+      membership: mapMembership(row.membership),
+      entitlements: mapEntitlements(row.entitlements),
     };
   }
 

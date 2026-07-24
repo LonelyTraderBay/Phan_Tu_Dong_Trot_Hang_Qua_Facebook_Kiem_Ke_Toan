@@ -19,7 +19,7 @@ import { OrgId } from "../../common/decorators/org-id.decorator";
 import { RequirePermission } from "../../common/decorators/require-permission.decorator";
 import { PermissionsGuard } from "../authz/permissions.guard";
 import { ChannelsService } from "./channels.service";
-import { CompleteMetaOAuthBodySchema } from "./dto";
+import { CompleteMetaOAuthBodySchema, ConnectZaloBodySchema } from "./dto";
 
 @Controller("v1/channels")
 export class ChannelsController {
@@ -52,6 +52,24 @@ export class ChannelsController {
       userId: requireUserId(user),
       code: parsedBody.code,
       state: parsedBody.state,
+    });
+  }
+
+  @Post("zalo/connect")
+  @UseGuards(PermissionsGuard)
+  @RequirePermission("channels.connect")
+  connectZalo(
+    @OrgId() orgId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser | undefined,
+    @Body() body: unknown,
+  ) {
+    const parsedBody = parseBody(ConnectZaloBodySchema, body);
+    return this.channels.connectZalo({
+      orgId: requireOrgId(orgId),
+      userId: requireUserId(user),
+      oaId: parsedBody.oaId,
+      accessToken: parsedBody.accessToken,
+      displayName: parsedBody.displayName,
     });
   }
 

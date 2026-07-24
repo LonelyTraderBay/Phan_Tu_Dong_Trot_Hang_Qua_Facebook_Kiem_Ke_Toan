@@ -11,7 +11,7 @@
 | **2C COD** | **GREEN (code)** | COD expectations/collections/discrepancies; report + reconcile APIs; VI `/cod`; bigint-string VND only |
 | **2D Returns** | **GREEN (code)** | `return_order` RPC; `order_returns`; `return_restock` ledger movement; COD open write-off/discrepancy note; API + VI order action |
 | **2E P&L** | **GREEN (code)** | Variant `cogs_vnd`; order item `cogs_unit_vnd` snapshot; API `/v1/pnl/summary` + `/v1/pnl/by-sku`; VI `/pnl`; CSV download |
-| 2F Channel #2 | Pending | |
+| **2F Channel #2** | **GREEN (connect) / AMBER (webhook processing)** | Zalo OA encrypted-token connect; optional-secret webhook receipt + atomic outbox stub `zalo/inbound.received`; full Zalo OAuth and persistence worker deferred |
 | 2G Billing packaging | Pending | |
 | 2H Hardening | Pending | |
 
@@ -78,4 +78,16 @@
 | OpenAPI | GREEN | `packages/contracts/openapi.yaml` includes P&L paths and COGS fields |
 | API unit tests | GREEN | `pnpm --filter api test` — 128 passing; `apps/api/src/modules/pnl/pnl.service.spec.ts` covers summary and SKU aggregate math |
 
-**Next:** Wave 2F Channel #2.
+## 2F evidence
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Zalo provider schema | GREEN | `supabase/migrations/20260727140000_zalo_oa_channel.sql` adds `zalo_oa` provider and `zalo` conversation channel |
+| Encrypted OA token connect | GREEN | `POST /v1/channels/zalo/connect`; `ChannelsService.connectZalo` uses `encryptToken` and returns no secret |
+| Webhook intake | GREEN/AMBER | `POST /v1/channels/zalo/webhook`; optional `ZALO_WEBHOOK_SECRET`; records `webhook_receipts` and enqueues `zalo/inbound.received`; no full Zalo persistence worker yet |
+| Web VI | GREEN | Settings form `Kết nối Zalo OA`; connected channel list labels `Zalo OA`; inbox channel label handles `zalo` |
+| OpenAPI | GREEN | `packages/contracts/openapi.yaml` includes Zalo connect/webhook paths and channel schemas |
+| Runbook | GREEN/AMBER | `docs/runbooks/zalo-oa-connect.md` documents setup and AMBER production limitation |
+| API unit tests | GREEN | Zalo connect encryption test and Zalo webhook happy path mock included in `pnpm --filter api test` |
+
+**Next:** Wave 2G Billing packaging.

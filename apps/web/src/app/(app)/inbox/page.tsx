@@ -387,6 +387,9 @@ function formatChannel(channel: string) {
   if (channel === 'instagram') {
     return 'Instagram';
   }
+  if (channel === 'zalo') {
+    return 'Zalo';
+  }
 
   return channel;
 }

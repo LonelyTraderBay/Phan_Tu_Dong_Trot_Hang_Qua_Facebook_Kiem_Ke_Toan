@@ -69,7 +69,15 @@ type CompleteOAuthInput = {
   userId: string;
 };
 
-type ChannelProvider = "meta_page" | "meta_ig";
+type ConnectZaloInput = {
+  accessToken: string;
+  displayName?: string;
+  oaId: string;
+  orgId: string;
+  userId: string;
+};
+
+type ChannelProvider = "meta_page" | "meta_ig" | "zalo_oa";
 type ChannelStatus = "active" | "needs_reauth" | "revoked";
 
 type ChannelConnectionRow = {
@@ -260,6 +268,64 @@ export class ChannelsService {
     }
 
     return ((data ?? []) as ChannelConnectionRow[]).map(mapConnection);
+  }
+
+  async connectZalo(input: ConnectZaloInput) {
+    const now = new Date().toISOString();
+    const row: ChannelConnectionUpsert = {
+      org_id: input.orgId,
+      provider: "zalo_oa",
+      external_page_id: input.oaId,
+      external_ig_id: null,
+      access_token_enc: encryptToken(
+        input.accessToken,
+        this.env.TOKEN_ENCRYPTION_KEY,
+      ),
+      refresh_token_enc: null,
+      token_expires_at: null,
+      status: "active",
+      metadata_json: {
+        channel: "zalo",
+        connectedByUserId: input.userId,
+        displayName: input.displayName ?? null,
+      },
+      updated_at: now,
+    };
+
+    await this.ensureWithinMaxPages(input.orgId, [row]);
+
+    const { data, error } = await this.supabase
+      .from("channel_connections")
+      .upsert([row], { onConflict: "org_id,provider,external_page_id" })
+      .select(CHANNEL_SELECT);
+
+    if (error) {
+      throwChannelsError(error, "Could not connect Zalo OA channel");
+    }
+
+    const connection = ((data ?? []) as ChannelConnectionRow[])[0];
+    if (!connection) {
+      throwChannelsError(
+        { message: "Zalo OA upsert returned no connection" },
+        "Could not connect Zalo OA channel",
+      );
+    }
+
+    await this.audit?.writeAudit({
+      orgId: connection.org_id,
+      actorUserId: input.userId,
+      actorType: "user",
+      action: "channel.connected",
+      entityType: "channel_connection",
+      entityId: connection.id,
+      meta: {
+        provider: connection.provider,
+        externalPageId: connection.external_page_id,
+        externalIgId: connection.external_ig_id,
+      },
+    });
+
+    return { connection: mapConnection(connection) };
   }
 
   async revokeConnection(

@@ -17,7 +17,12 @@ export function isAuthishPath(path: string) {
 }
 
 export function isWebhookPath(path: string) {
-  return path === "/v1/webhooks/meta" || path.startsWith("/v1/webhooks/meta/");
+  return (
+    path === "/v1/webhooks/meta" ||
+    path.startsWith("/v1/webhooks/meta/") ||
+    path === "/v1/channels/zalo/webhook" ||
+    path.startsWith("/v1/channels/zalo/webhook/")
+  );
 }
 
 export function isToolsPath(path: string) {

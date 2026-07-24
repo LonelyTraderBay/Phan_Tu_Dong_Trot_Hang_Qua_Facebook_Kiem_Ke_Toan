@@ -74,4 +74,23 @@ describe("JwtAuthGuard", () => {
       ),
     ).resolves.toBe(true);
   });
+
+  it("skips the Zalo webhook endpoint", async () => {
+    const guard = new JwtAuthGuard({
+      auth: {
+        getUser: async () => {
+          throw new Error("JWT lookup should be skipped");
+        },
+      },
+    } as unknown as SupabaseClient);
+
+    await expect(
+      guard.canActivate(
+        mockContext({
+          headers: {},
+          originalUrl: "/v1/channels/zalo/webhook",
+        }),
+      ),
+    ).resolves.toBe(true);
+  });
 });

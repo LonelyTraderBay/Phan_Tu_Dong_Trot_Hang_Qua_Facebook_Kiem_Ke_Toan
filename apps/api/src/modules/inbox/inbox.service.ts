@@ -39,7 +39,7 @@ type ChannelConnectionProjection = {
 type ConversationRow = {
   id: string;
   org_id: string;
-  channel: 'messenger' | 'instagram';
+  channel: 'messenger' | 'instagram' | 'zalo';
   channel_connection_id: string;
   contact_id: string;
   status: string;

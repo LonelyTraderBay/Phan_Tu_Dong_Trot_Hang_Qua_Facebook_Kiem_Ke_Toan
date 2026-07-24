@@ -8,13 +8,16 @@ import { ChannelsController } from "./channels.controller";
 import { CHANNELS_GRAPH, ChannelsService } from "./channels.service";
 import { MetaWebhookController } from "./meta-webhook.controller";
 import { MetaWebhookService } from "./meta-webhook.service";
+import { ZaloWebhookController } from "./zalo-webhook.controller";
+import { ZaloWebhookService } from "./zalo-webhook.service";
 
 @Module({
   imports: [BillingModule],
-  controllers: [ChannelsController, MetaWebhookController],
+  controllers: [ChannelsController, MetaWebhookController, ZaloWebhookController],
   providers: [
     ChannelsService,
     MetaWebhookService,
+    ZaloWebhookService,
     PermissionsGuard,
     AuditService,
     {

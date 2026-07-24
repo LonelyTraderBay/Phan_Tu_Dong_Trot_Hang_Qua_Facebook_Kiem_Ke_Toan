@@ -27,6 +27,7 @@ export const EnvSchema = z.object({
   META_VERIFY_TOKEN: z.string().min(8),
   META_REDIRECT_URI: z.string().url(),
   META_GRAPH_VERSION: z.string().default("v21.0"),
+  ZALO_WEBHOOK_SECRET: z.string().optional(),
   RATE_LIMIT_ENABLED: z.coerce.boolean().default(true),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().int().positive().default(30),
   RATE_LIMIT_AUTH_WINDOW_MS: z.coerce.number().int().positive().default(60_000),

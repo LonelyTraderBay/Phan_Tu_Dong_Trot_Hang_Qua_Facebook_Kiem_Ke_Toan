@@ -10,3 +10,13 @@ export const CompleteMetaOAuthBodySchema = z
 export type CompleteMetaOAuthBody = z.infer<
   typeof CompleteMetaOAuthBodySchema
 >;
+
+export const ConnectZaloBodySchema = z
+  .object({
+    oaId: z.string().trim().min(1),
+    accessToken: z.string().trim().min(1),
+    displayName: z.string().trim().min(1).optional(),
+  })
+  .strict();
+
+export type ConnectZaloBody = z.infer<typeof ConnectZaloBodySchema>;

@@ -15,7 +15,7 @@ export type ChannelConnection = {
 
 export type InboxConversation = {
   id: string;
-  channel: 'messenger' | 'instagram' | string;
+  channel: 'messenger' | 'instagram' | 'zalo' | string;
   status: string;
   botPaused: boolean;
   botEpoch: number;
@@ -793,6 +793,18 @@ export async function completeMetaOAuth(
       body: JSON.stringify({ code, state }),
     },
   );
+}
+
+export async function connectZalo(input: {
+  oaId: string;
+  accessToken: string;
+  displayName?: string;
+}): Promise<{ connection: ChannelConnection }> {
+  return apiFetch<{ connection: ChannelConnection }>('/v1/channels/zalo/connect', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
 }
 
 function dateRangeQuery(input: { from?: string; to?: string }) {

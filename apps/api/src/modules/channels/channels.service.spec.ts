@@ -268,6 +268,77 @@ describe("ChannelsService", () => {
     ]);
   });
 
+  it("connects Zalo OA with encrypted token and no secret in DTO", async () => {
+    const { client, upserts } = channelsSupabaseMock({
+      connectionRows: [
+        connectionRow({
+          provider: "zalo_oa",
+          external_page_id: "oa-1",
+        }),
+      ],
+    });
+    const auditCalls: unknown[] = [];
+    const service = new ChannelsService(
+      client,
+      graphMock(),
+      {
+        writeAudit: async (input) => {
+          auditCalls.push(input);
+          return { audit: { id: "audit-1" } };
+        },
+      },
+      env,
+    );
+
+    const result = await service.connectZalo({
+      orgId: ORG_ID,
+      userId: USER_ID,
+      oaId: "oa-1",
+      accessToken: "ZALO_PLAIN_TOKEN",
+      displayName: "Zalo Shop",
+    });
+
+    expect(JSON.stringify(upserts)).not.toContain("ZALO_PLAIN_TOKEN");
+    expect(JSON.stringify(result)).not.toContain("ZALO_PLAIN_TOKEN");
+    expect(result.connection).toMatchObject({
+      provider: "zalo_oa",
+      externalPageId: "oa-1",
+      status: "active",
+    });
+    const upsertRows = (upserts[0] as { values: unknown }).values as Array<{
+      access_token_enc: string;
+      metadata_json: Record<string, unknown>;
+      provider: string;
+    }>;
+    expect(upsertRows[0]).toMatchObject({
+      provider: "zalo_oa",
+      metadata_json: {
+        channel: "zalo",
+        connectedByUserId: USER_ID,
+        displayName: "Zalo Shop",
+      },
+    });
+    expect(decryptToken(upsertRows[0].access_token_enc, TOKEN_KEY)).toBe(
+      "ZALO_PLAIN_TOKEN",
+    );
+    expect(upsertRows[0].metadata_json).not.toHaveProperty("accessToken");
+    expect(auditCalls).toEqual([
+      {
+        orgId: ORG_ID,
+        actorUserId: USER_ID,
+        actorType: "user",
+        action: "channel.connected",
+        entityType: "channel_connection",
+        entityId: CONNECTION_ID,
+        meta: {
+          provider: "zalo_oa",
+          externalPageId: "oa-1",
+          externalIgId: null,
+        },
+      },
+    ]);
+  });
+
   it("rejects Meta connect when active channels would exceed max_pages", async () => {
     const { client, upserts } = channelsSupabaseMock({
       oauthStates: [oauthState()],

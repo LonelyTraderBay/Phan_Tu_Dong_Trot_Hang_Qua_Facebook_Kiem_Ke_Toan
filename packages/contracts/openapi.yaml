@@ -59,6 +59,10 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListChannelConnectionsResponse'
   /v1/channels/meta/oauth-url:
     get:
       summary: Build Meta OAuth connect URL
@@ -95,6 +99,46 @@ paths:
       responses:
         '201':
           description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetaConnectResponse'
+  /v1/channels/zalo/connect:
+    post:
+      summary: Connect a Zalo Official Account using an existing access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectZaloRequest'
+      responses:
+        '201':
+          description: Zalo OA connected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelConnectionEnvelope'
+  /v1/channels/zalo/webhook:
+    post:
+      summary: Receive Zalo OA inbound webhook and enqueue processing stub
+      parameters:
+        - name: x-zalo-webhook-secret
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Required only when ZALO_WEBHOOK_SECRET is configured.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Receipt recorded and outbox event enqueued when OA maps to an org
   /v1/channels/{id}/revoke:
     post:
       summary: Revoke a channel connection
@@ -856,6 +900,70 @@ components:
         minLength: 1
         maxLength: 128
   schemas:
+    ChannelProvider:
+      type: string
+      enum:
+        - meta_page
+        - meta_ig
+        - zalo_oa
+    ChannelConnection:
+      type: object
+      required:
+        - id
+        - provider
+        - externalPageId
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          $ref: '#/components/schemas/ChannelProvider'
+        externalPageId:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - needs_reauth
+            - revoked
+        createdAt:
+          type: string
+          format: date-time
+    ListChannelConnectionsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/ChannelConnection'
+    MetaConnectResponse:
+      type: object
+      required:
+        - connections
+      properties:
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChannelConnection'
+    ConnectZaloRequest:
+      type: object
+      required:
+        - oaId
+        - accessToken
+      properties:
+        oaId:
+          type: string
+        accessToken:
+          type: string
+          writeOnly: true
+        displayName:
+          type: string
+    ChannelConnectionEnvelope:
+      type: object
+      required:
+        - connection
+      properties:
+        connection:
+          $ref: '#/components/schemas/ChannelConnection'
     PlanSlug:
       type: string
       enum:

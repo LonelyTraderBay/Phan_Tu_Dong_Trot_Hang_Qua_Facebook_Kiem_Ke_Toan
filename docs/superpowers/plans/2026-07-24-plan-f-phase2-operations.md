@@ -121,9 +121,9 @@
 
 ## Wave 2F — Channel #2 (F5)
 
-- [ ] Zalo OA **or** one marketplace connector (pattern like Meta)
-- [ ] Inbox multi-channel
-- [ ] Commit: `feat: channel two connector`
+- [x] Zalo OA connector skeleton (pattern like Meta): encrypted token connect + webhook receipt/outbox stub
+- [x] Inbox multi-channel labels include Zalo
+- [x] Commit: `feat: plan F wave 2F zalo oa channel`
 
 **DoD 2F:** Inbox đa kênh.
 

@@ -1,0 +1,12 @@
+node_modules/
+.worktrees/
+.superpowers/
+.env
+.env.local
+.turbo/
+dist/
+.next/
+apps/ai/.venv/
+__pycache__/
+.pytest_cache/
+coverage/

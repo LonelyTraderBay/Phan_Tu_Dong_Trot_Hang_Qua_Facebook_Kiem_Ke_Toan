@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -13,36 +13,43 @@ const SOURCE_ID = "22222222-2222-2222-2222-222222222222";
 type SupabaseCall = {
   op: string;
   table?: string;
+  fn?: string;
+  args?: unknown;
   values?: unknown;
   field?: string;
   value?: unknown;
 };
 
-function mockSupabase() {
+function mockSupabase(input: { productFound?: boolean } = {}) {
   const calls: SupabaseCall[] = [];
-  let deleteEqCalls = 0;
   const client = {
     from(table: string) {
       return {
-        delete() {
-          calls.push({ op: "delete", table });
+        select(values: string) {
+          calls.push({ op: "select", table, values });
           const query = {
             eq(field: string, value: unknown) {
               calls.push({ op: "eq", field, value });
-              deleteEqCalls += 1;
-              return deleteEqCalls === 3
-                ? Promise.resolve({ data: null, error: null })
-                : query;
+              return query;
             },
+            is(field: string, value: unknown) {
+              calls.push({ op: "is", field, value });
+              return query;
+            },
+            maybeSingle: async () => ({
+              data: input.productFound === false ? null : { id: SOURCE_ID },
+              error: null,
+            }),
           };
           return query;
         },
-        insert(values: unknown) {
-          calls.push({ op: "insert", table, values });
-          return {
-            select: async () => ({ data: [{ id: "chunk_1" }], error: null }),
-          };
-        },
+      };
+    },
+    rpc(fn: string, args: unknown) {
+      calls.push({ op: "rpc", fn, args });
+      return {
+        data: { ok: true, deletedOld: true, inserted: 1 },
+        error: null,
       };
     },
   } as unknown as SupabaseLike;
@@ -50,8 +57,56 @@ function mockSupabase() {
   return { calls, client };
 }
 
+function mockSupabaseForFaq() {
+  const calls: SupabaseCall[] = [];
+  const client = {
+    from(table: string) {
+      calls.push({ op: "unexpected_from", table });
+      return {};
+    },
+    rpc(fn: string, args: unknown) {
+      calls.push({ op: "rpc", fn, args });
+      return {
+        data: { ok: true, deletedOld: true, inserted: 0 },
+        error: null,
+      };
+    },
+  } as unknown as SupabaseLike;
+
+  return { calls, client };
+}
+
+function mockSupabaseWithOwnershipError() {
+  const calls: SupabaseCall[] = [];
+  const client = {
+    from(table: string) {
+      return {
+        select(values: string) {
+          calls.push({ op: "select", table, values });
+          const query = {
+            eq() {
+              return query;
+            },
+            is() {
+              return query;
+            },
+            maybeSingle: async () => ({ data: null, error: null }),
+          };
+          return query;
+        },
+      };
+    },
+    rpc(fn: string, args: unknown) {
+      calls.push({ op: "rpc", fn, args });
+      return { data: null, error: null };
+    },
+  } as unknown as SupabaseLike;
+
+  return { calls, client };
+}
+
 describe("KnowledgeIngestService", () => {
-  it("deletes stale chunks and inserts replacement chunks", async () => {
+  it("verifies product ownership and replaces chunks via RPC", async () => {
     const { calls, client } = mockSupabase();
     const service = new KnowledgeIngestService(client);
     const embedding = Array.from({ length: 768 }, () => 0.01);
@@ -72,27 +127,92 @@ describe("KnowledgeIngestService", () => {
       }),
     ).resolves.toMatchObject({ ok: true, inserted: 1 });
 
-    expect(calls).toContainEqual({ op: "delete", table: "knowledge_chunks" });
-    expect(calls).toContainEqual({ op: "eq", field: "org_id", value: ORG_ID });
+    expect(calls).toContainEqual({
+      op: "select",
+      table: "products",
+      values: "id",
+    });
+    expect(calls).toContainEqual({ op: "eq", field: "id", value: SOURCE_ID });
     expect(calls).toContainEqual({
       op: "eq",
-      field: "source_type",
-      value: "product",
+      field: "org_id",
+      value: ORG_ID,
     });
     expect(calls).toContainEqual({
-      op: "insert",
-      table: "knowledge_chunks",
-      values: [
-        expect.objectContaining({
-          org_id: ORG_ID,
-          source_type: "product",
-          source_id: SOURCE_ID,
-          chunk_index: 0,
-          content_hash: "abc123",
-          embedding: `[${embedding.join(",")}]`,
-        }),
-      ],
+      op: "is",
+      field: "deleted_at",
+      value: null,
     });
+    expect(calls).toContainEqual({
+      op: "rpc",
+      fn: "replace_knowledge_chunks",
+      args: {
+        p_org_id: ORG_ID,
+        p_source_type: "product",
+        p_source_id: SOURCE_ID,
+        p_chunks: [
+          {
+            chunk_index: 0,
+            content: "Product\nTitle: T-shirt",
+            content_hash: "abc123",
+            embedding: `[${embedding.join(",")}]`,
+          },
+        ],
+      },
+    });
+  });
+
+  it("does not replace chunks when a product is missing from the org", async () => {
+    const { calls, client } = mockSupabaseWithOwnershipError();
+    const service = new KnowledgeIngestService(client);
+    const embedding = Array.from({ length: 768 }, () => 0.01);
+
+    await expect(
+      service.replaceChunks({
+        orgId: ORG_ID,
+        sourceType: "product",
+        sourceId: SOURCE_ID,
+        chunks: [
+          {
+            chunkIndex: 0,
+            content: "Product",
+            contentHash: "abc123",
+            embedding,
+          },
+        ],
+      }),
+    ).rejects.toThrow(NotFoundException);
+
+    expect(calls).not.toContainEqual(
+      expect.objectContaining({ op: "rpc" }),
+    );
+  });
+
+  it("replaces non-product chunks through the RPC without product lookup", async () => {
+    const { calls, client } = mockSupabaseForFaq();
+    const service = new KnowledgeIngestService(client);
+
+    await expect(
+      service.replaceChunks({
+        orgId: ORG_ID,
+        sourceType: "faq",
+        sourceId: SOURCE_ID,
+        chunks: [],
+      }),
+    ).resolves.toMatchObject({ ok: true, inserted: 0 });
+
+    expect(calls).toEqual([
+      {
+        op: "rpc",
+        fn: "replace_knowledge_chunks",
+        args: {
+          p_org_id: ORG_ID,
+          p_source_type: "faq",
+          p_source_id: SOURCE_ID,
+          p_chunks: [],
+        },
+      },
+    ]);
   });
 
   it("rejects embeddings with the wrong dimension", () => {

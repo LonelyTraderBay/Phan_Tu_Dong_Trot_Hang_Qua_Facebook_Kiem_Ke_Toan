@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   Optional,
 } from "@nestjs/common";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -12,7 +13,7 @@ import { loadEnv } from "../../config/env";
 
 export const KNOWLEDGE_INGEST_SUPABASE = Symbol("KNOWLEDGE_INGEST_SUPABASE");
 
-export type SupabaseLike = Pick<SupabaseClient, "from">;
+export type SupabaseLike = Pick<SupabaseClient, "from" | "rpc">;
 
 const EMBEDDING_DIMENSIONS = 768;
 
@@ -54,51 +55,51 @@ export class KnowledgeIngestService {
   }
 
   async replaceChunks(input: ReplaceKnowledgeChunksInput) {
-    const { error: deleteError } = await this.supabase
-      .from("knowledge_chunks")
-      .delete()
-      .eq("org_id", input.orgId)
-      .eq("source_type", input.sourceType)
-      .eq("source_id", input.sourceId);
+    await this.verifySourceOwnership(input);
 
-    if (deleteError) {
-      throwKnowledgeError(deleteError, "Could not delete stale knowledge chunks");
-    }
-
-    if (input.chunks.length === 0) {
-      return {
-        ok: true,
-        deletedOld: true,
-        inserted: 0,
-      };
-    }
-
-    const now = new Date().toISOString();
-    const rows = input.chunks.map((chunk) => ({
-      org_id: input.orgId,
-      source_type: input.sourceType,
-      source_id: input.sourceId,
+    const chunks = input.chunks.map((chunk) => ({
       chunk_index: chunk.chunkIndex,
       content: chunk.content,
       content_hash: chunk.contentHash,
       embedding: toPgVector(chunk.embedding),
-      updated_at: now,
     }));
 
-    const { error: insertError } = await this.supabase
-      .from("knowledge_chunks")
-      .insert(rows)
-      .select("id");
+    const { data, error } = await this.supabase.rpc("replace_knowledge_chunks", {
+      p_org_id: input.orgId,
+      p_source_type: input.sourceType,
+      p_source_id: input.sourceId,
+      p_chunks: chunks,
+    });
 
-    if (insertError) {
-      throwKnowledgeError(insertError, "Could not insert knowledge chunks");
+    if (error) {
+      if (error.code === "P0002") {
+        throwSourceNotFound(input);
+      }
+      throwKnowledgeError(error, "Could not replace knowledge chunks");
     }
 
-    return {
-      ok: true,
-      deletedOld: true,
-      inserted: rows.length,
-    };
+    return data ?? { ok: true, deletedOld: true, inserted: chunks.length };
+  }
+
+  private async verifySourceOwnership(input: ReplaceKnowledgeChunksInput) {
+    if (input.sourceType !== "product") {
+      return;
+    }
+
+    const { data: product, error } = await this.supabase
+      .from("products")
+      .select("id")
+      .eq("id", input.sourceId)
+      .eq("org_id", input.orgId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (error) {
+      throwKnowledgeError(error, "Could not verify knowledge source ownership");
+    }
+    if (!product) {
+      throwSourceNotFound(input);
+    }
   }
 }
 
@@ -126,6 +127,13 @@ function throwKnowledgeError(error: SupabaseError, message: string): never {
   throw new InternalServerErrorException({
     code: "knowledge_ingest_failed",
     message,
+  });
+}
+
+function throwSourceNotFound(input: ReplaceKnowledgeChunksInput): never {
+  throw new NotFoundException({
+    code: "knowledge_source_not_found",
+    message: `${input.sourceType} source was not found for this organization`,
   });
 }
 

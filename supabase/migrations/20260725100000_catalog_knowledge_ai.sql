@@ -47,6 +47,8 @@ create table public.knowledge_chunks (
   content_hash text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  constraint knowledge_chunks_source_chunk_key
+    unique (org_id, source_type, source_id, chunk_index),
   constraint knowledge_chunks_source_type_check
     check (source_type in ('product', 'faq', 'policy'))
 );
@@ -125,4 +127,71 @@ grant all on table
   public.product_variants,
   public.knowledge_chunks,
   public.ai_runs
+to service_role;
+
+create or replace function public.replace_knowledge_chunks(
+  p_org_id uuid,
+  p_source_type text,
+  p_source_id uuid,
+  p_chunks jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_inserted int := 0;
+begin
+  if p_source_type = 'product' and not exists (
+    select 1
+    from public.products
+    where id = p_source_id
+      and org_id = p_org_id
+      and deleted_at is null
+  ) then
+    raise exception 'knowledge source not found'
+      using errcode = 'P0002';
+  end if;
+
+  delete from public.knowledge_chunks
+  where org_id = p_org_id
+    and source_type = p_source_type
+    and source_id = p_source_id;
+
+  insert into public.knowledge_chunks (
+    org_id,
+    source_type,
+    source_id,
+    chunk_index,
+    content,
+    embedding,
+    content_hash,
+    updated_at
+  )
+  select
+    p_org_id,
+    p_source_type,
+    p_source_id,
+    (chunk->>'chunk_index')::int,
+    chunk->>'content',
+    (chunk->>'embedding')::extensions.vector(768),
+    chunk->>'content_hash',
+    now()
+  from jsonb_array_elements(coalesce(p_chunks, '[]'::jsonb)) as chunks(chunk);
+
+  get diagnostics v_inserted = row_count;
+
+  return jsonb_build_object(
+    'ok', true,
+    'deletedOld', true,
+    'inserted', v_inserted
+  );
+end;
+$$;
+
+revoke all on function public.replace_knowledge_chunks(uuid, text, uuid, jsonb)
+from public, anon, authenticated;
+
+grant execute on function public.replace_knowledge_chunks(uuid, text, uuid, jsonb)
 to service_role;

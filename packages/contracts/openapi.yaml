@@ -276,6 +276,34 @@ paths:
       responses:
         '200':
           description: OK
+  /internal/v1/knowledge/chunks:
+    post:
+      summary: Atomically replace RAG chunks for one knowledge source (service key)
+      parameters:
+        - name: x-service-key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceKnowledgeChunksRequest'
+      responses:
+        '201':
+          description: Chunks replaced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplaceKnowledgeChunksResponse'
+        '400':
+          description: Invalid request
+        '401':
+          description: Invalid service key
+        '404':
+          description: Knowledge source not found for organization
 components:
   parameters:
     ProductId:
@@ -293,6 +321,71 @@ components:
         type: string
         format: uuid
   schemas:
+    KnowledgeChunkWrite:
+      type: object
+      required:
+        - chunkIndex
+        - content
+        - contentHash
+        - embedding
+      properties:
+        chunkIndex:
+          type: integer
+          minimum: 0
+        content:
+          type: string
+          minLength: 1
+          maxLength: 20000
+        contentHash:
+          type: string
+          minLength: 1
+          maxLength: 128
+        embedding:
+          type: array
+          minItems: 768
+          maxItems: 768
+          items:
+            type: number
+            format: double
+    ReplaceKnowledgeChunksRequest:
+      type: object
+      required:
+        - orgId
+        - sourceType
+        - sourceId
+        - chunks
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        sourceType:
+          type: string
+          enum:
+            - product
+            - faq
+            - policy
+        sourceId:
+          type: string
+          format: uuid
+        chunks:
+          type: array
+          maxItems: 200
+          items:
+            $ref: '#/components/schemas/KnowledgeChunkWrite'
+    ReplaceKnowledgeChunksResponse:
+      type: object
+      required:
+        - ok
+        - deletedOld
+        - inserted
+      properties:
+        ok:
+          type: boolean
+        deletedOld:
+          type: boolean
+        inserted:
+          type: integer
+          minimum: 0
     ProductVariantWrite:
       type: object
       required:

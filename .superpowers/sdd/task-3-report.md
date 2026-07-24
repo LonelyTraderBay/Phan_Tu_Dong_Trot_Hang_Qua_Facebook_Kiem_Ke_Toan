@@ -17,3 +17,21 @@ Verification:
 
 Concerns:
 - Core replacement is implemented as delete-then-insert via the internal service endpoint as requested; a future RPC can make this fully transactional if needed.
+
+---
+
+### Review fixes - important findings
+
+Status: completed.
+
+Implemented:
+- Added `replace_knowledge_chunks` SQL RPC for atomic delete+insert by `(org_id, source_type, source_id)`.
+- Added unique constraint on `(org_id, source_type, source_id, chunk_index)`.
+- Updated Nest knowledge ingest to verify product ownership/non-deleted state before replacement and call the RPC.
+- Added `/internal/v1/knowledge/chunks` to `packages/contracts/openapi.yaml`.
+- Switched AI reindex service-key check to `hmac.compare_digest`.
+
+Verification:
+- `pnpm --dir apps/api exec vitest run src/modules/internal/knowledge-ingest.service.spec.ts src/jobs/functions/knowledge-reindex.spec.ts` (pass, 6 tests)
+- `python -m pytest tests/test_reindex.py` in `apps/ai` (pass, 3 tests, existing warnings)
+- `pnpm --dir apps/api run typecheck` (pass)

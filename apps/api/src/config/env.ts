@@ -16,6 +16,11 @@ export const EnvSchema = z.object({
   SENTRY_DSN: z.string().optional(),
   PLATFORM_ADMIN_EMAILS: z.string().default(""),
   AI_MODEL_ALLOWLIST: z.string().default("gemini-2.0-flash"),
+  META_APP_ID: z.string().min(1),
+  META_APP_SECRET: z.string().min(1),
+  META_VERIFY_TOKEN: z.string().min(8),
+  META_REDIRECT_URI: z.string().url(),
+  META_GRAPH_VERSION: z.string().default("v21.0"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

@@ -17,6 +17,7 @@ export type Permission =
   | "orders.write"
   | "orders.approve"
   | "orders.export"
+  | "public_api.keys.manage"
   | "ai.settings.write"
   | "ops.org.suspend"
   | "ops.global_flags";
@@ -43,6 +44,7 @@ const MATRIX: Record<Role, readonly Permission[]> = {
     "orders.write",
     "orders.approve",
     "orders.export",
+    "public_api.keys.manage",
     "ai.settings.write",
   ],
   cskh: [

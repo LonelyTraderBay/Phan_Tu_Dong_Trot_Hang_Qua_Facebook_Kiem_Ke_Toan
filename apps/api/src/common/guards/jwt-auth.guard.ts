@@ -40,6 +40,7 @@ function isPublicPath(path: string) {
     path === "/api/inngest" ||
     path === "/v1/webhooks/meta" ||
     path === "/v1/channels/zalo/webhook" ||
+    path.startsWith("/public/v1/") ||
     path === "/internal" ||
     path.startsWith("/internal/")
   );

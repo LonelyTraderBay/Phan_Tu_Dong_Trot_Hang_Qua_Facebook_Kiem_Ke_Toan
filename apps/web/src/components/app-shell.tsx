@@ -30,6 +30,7 @@ const navItems = [
   { href: '/ads', label: 'Ads' },
   { href: '/attribution', label: 'Attribution' },
   { href: '/advisor', label: 'Advisor' },
+  { href: '/calendar', label: 'Lịch nội dung' },
   { href: '/settings/channels', label: 'Kênh' },
   { href: '/settings/billing', label: 'Thanh toán' },
   { href: '/settings', label: 'Cài đặt' },

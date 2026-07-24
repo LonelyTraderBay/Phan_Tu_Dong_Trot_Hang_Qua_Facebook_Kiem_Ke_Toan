@@ -15,6 +15,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { ChannelsModule } from './modules/channels/channels.module';
 import { CodModule } from './modules/cod/cod.module';
+import { ContentCalendarModule } from './modules/content-calendar/content-calendar.module';
 import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
 import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
@@ -23,6 +24,7 @@ import { InternalModule } from './modules/internal/internal.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PnlModule } from './modules/pnl/pnl.module';
+import { PublicApiModule } from './modules/public-api/public-api.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
 
 @Module({
@@ -42,6 +44,8 @@ import { ShippingModule } from './modules/shipping/shipping.module';
     AdSpendModule,
     AttributionModule,
     AdvisorModule,
+    ContentCalendarModule,
+    PublicApiModule,
     FeatureFlagsModule,
     InternalModule,
   ],

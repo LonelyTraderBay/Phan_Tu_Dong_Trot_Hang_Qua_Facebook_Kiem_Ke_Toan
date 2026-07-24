@@ -338,6 +338,34 @@ export type AdvisorSuggestion = {
   };
 };
 
+export type ContentCalendarStatus =
+  | 'idea'
+  | 'scheduled'
+  | 'posted'
+  | 'cancelled';
+
+export type ContentCalendarItem = {
+  id: string;
+  orgId: string;
+  title: string;
+  body: string | null;
+  plannedAt: string;
+  status: ContentCalendarStatus;
+  channelHint: string | null;
+  autoPostEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ContentCalendarInput = {
+  title: string;
+  body?: string | null;
+  plannedAt: string;
+  status?: ContentCalendarStatus;
+  channelHint?: string | null;
+  autoPostEnabled?: boolean;
+};
+
 export type OrdersExportFormat = 'csv' | 'xlsx' | 'pdf';
 
 export type ApiAuthContext = {
@@ -871,6 +899,53 @@ export async function getAdvisorSuggestion(
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+export async function listContentCalendarItems(
+  status?: ContentCalendarStatus,
+): Promise<ContentCalendarItem[]> {
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  const { items } = await apiFetch<{ items: ContentCalendarItem[] }>(
+    `/v1/content-calendar${query}`,
+  );
+  return items;
+}
+
+export async function createContentCalendarItem(
+  input: ContentCalendarInput,
+): Promise<ContentCalendarItem> {
+  const { item } = await apiFetch<{ item: ContentCalendarItem }>(
+    '/v1/content-calendar',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+  return item;
+}
+
+export async function updateContentCalendarItem(
+  itemId: string,
+  input: Partial<ContentCalendarInput>,
+): Promise<ContentCalendarItem> {
+  const { item } = await apiFetch<{ item: ContentCalendarItem }>(
+    `/v1/content-calendar/${encodeURIComponent(itemId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    },
+  );
+  return item;
+}
+
+export async function deleteContentCalendarItem(
+  itemId: string,
+): Promise<ContentCalendarItem> {
+  const { item } = await apiFetch<{ item: ContentCalendarItem }>(
+    `/v1/content-calendar/${encodeURIComponent(itemId)}`,
+    { method: 'DELETE' },
+  );
+  return item;
 }
 
 export async function getBillingPlan(): Promise<BillingPlan> {

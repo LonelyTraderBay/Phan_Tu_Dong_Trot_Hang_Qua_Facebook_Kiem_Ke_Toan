@@ -21,8 +21,8 @@ DONE  A→D  Pilot
 DONE  P0   docs/legal/ADR (live staging/Review = owner AMBER)
 AMBER P3  E    M3 code+docs GREEN · paid drills AMBER  → [plan-e-dod-evidence]
 DONE  P4a F    Phase 2 Operations
-▶ P4b G    Phase 3 Intelligence — IN PROGRESS
-  P4c H    Phase 4 ERP-lite     → CPC
+DONE  P4b G    Phase 3 Intelligence
+▶ P4c H    Phase 4 ERP-lite     → CPC
   P5  I    M4                   → E100
   P6  Epoch 5 (optional)
 ```
@@ -92,7 +92,7 @@ Evidence E: [plan-e-dod-evidence](./plan-e-dod-evidence.md). Paid drills AMBER k
 
 ---
 
-## P4b — Plan G · Phase 3 Intelligence → **IN PROGRESS**
+## P4b — Plan G · Phase 3 Intelligence → **DONE**
 
 **Playbook:** [plan-g-priority-execution](./2026-07-24-plan-g-priority-execution.md) · [plan](./2026-07-24-plan-g-phase3-intelligence.md) · [evidence](./plan-g-dod-evidence.md)
 
@@ -104,6 +104,8 @@ Evidence E: [plan-e-dod-evidence](./plan-e-dod-evidence.md). Paid drills AMBER k
 | **G3** | 3D Content calendar | 3D.1–3D.4 lịch bài; auto-post **off** mặc định | Calendar dùng được |
 | **G4** | 3E Public API | 3E.1–3E.4 API keys, webhooks ký, docs | Enterprise kéo order |
 | **G5** | 3F Hardening | 3F.1–3F.3 connector #2 optional, SLOs, eval | Phase 3 checklist |
+
+**Evidence G:** [plan-g-dod-evidence](./plan-g-dod-evidence.md) — code path DONE; advisor quality and public API breadth AMBER by design. CPC vẫn chưa claim.
 
 ---
 
@@ -161,8 +163,8 @@ Với mỗi plan E→I:
 ```
 DONE P0 docs + P3 Plan E code/docs (paid/live AMBER = owner parallel)
 DONE Plan F 2A→2H
-▶ NOW eng: Execute Plan G 3A→3F
-THEN Plan H → CPC
+DONE Plan G 3A→3F
+▶ NOW eng: Execute Plan H → CPC
 THEN Plan I → E100
 OWNER parallel: §12.1 · Meta Review submit · Pro+PITR drill · always-on
 ```

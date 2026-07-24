@@ -9,6 +9,7 @@ import {
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { loadEnv } from "../../config/env";
+import { AuditService, type WriteAuditInput } from "../audit/audit.service";
 import type { SetGlobalFlagBody } from "./dto";
 
 export const ADMIN_OPS_SUPABASE = Symbol("ADMIN_OPS_SUPABASE");
@@ -23,6 +24,9 @@ const GLOBAL_KILL_SWITCH_KEYS = [
 ] as const;
 
 export type SupabaseLike = Pick<SupabaseClient, "from">;
+export type AuditWriter = {
+  writeAudit(input: WriteAuditInput): Promise<unknown>;
+};
 
 type SupabaseError = {
   code?: string;
@@ -53,13 +57,18 @@ type FeatureFlagRow = {
 @Injectable()
 export class AdminOpsService {
   private readonly supabase: SupabaseLike;
+  private readonly audit?: AuditWriter;
 
   constructor(
     @Optional()
     @Inject(ADMIN_OPS_SUPABASE)
     supabase?: SupabaseLike,
+    @Optional()
+    @Inject(AuditService)
+    audit?: AuditWriter,
   ) {
     this.supabase = supabase ?? createSupabaseServiceClient();
+    this.audit = audit;
   }
 
   async listOrganizations() {
@@ -95,6 +104,14 @@ export class AdminOpsService {
         message: "Organization was not found",
       });
     }
+
+    await this.audit?.writeAudit({
+      orgId,
+      action: "organization.suspended",
+      entityType: "organization",
+      entityId: orgId,
+      meta: { suspendedAt: timestamp },
+    });
 
     return { organization: mapOrganization(data as OrganizationRow) };
   }

@@ -126,6 +126,7 @@ describe("AdminOpsService", () => {
 
   it("sets suspended_at on an organization", async () => {
     const suspendedAt = new Date("2026-07-24T11:00:00.000Z");
+    const auditCalls: unknown[] = [];
     const { calls, client } = mockSupabase({
       updateResults: [
         {
@@ -134,7 +135,12 @@ describe("AdminOpsService", () => {
         },
       ],
     });
-    const service = new AdminOpsService(client);
+    const service = new AdminOpsService(client, {
+      writeAudit: async (input) => {
+        auditCalls.push(input);
+        return { audit: { id: "audit-1" } };
+      },
+    });
 
     const result = await service.suspendOrganization(ORG_ID, suspendedAt);
 
@@ -146,6 +152,15 @@ describe("AdminOpsService", () => {
         updated_at: suspendedAt.toISOString(),
       },
     });
+    expect(auditCalls).toEqual([
+      {
+        orgId: ORG_ID,
+        action: "organization.suspended",
+        entityType: "organization",
+        entityId: ORG_ID,
+        meta: { suspendedAt: suspendedAt.toISOString() },
+      },
+    ]);
     expect(result.organization.suspendedAt).toBe(suspendedAt.toISOString());
   });
 

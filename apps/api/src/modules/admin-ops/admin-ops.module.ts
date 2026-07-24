@@ -5,6 +5,7 @@ import {
   PlatformAdminGuard,
   SupabasePlatformAdminsRepository,
 } from "../../common/guards/platform-admin.guard";
+import { AuditService } from "../audit/audit.service";
 import { AdminOpsController } from "./admin-ops.controller";
 import { AdminOpsService } from "./admin-ops.service";
 
@@ -12,6 +13,7 @@ import { AdminOpsService } from "./admin-ops.service";
   controllers: [AdminOpsController],
   providers: [
     AdminOpsService,
+    AuditService,
     PlatformAdminGuard,
     {
       provide: PLATFORM_ADMINS_REPOSITORY,

@@ -9,6 +9,7 @@ import {
   Post,
   Query,
   Req,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import type { z } from 'zod';
@@ -23,6 +24,7 @@ import type { RequestWithIdempotencyKey } from '../../common/middleware/idempote
 import { PermissionsGuard } from '../authz/permissions.guard';
 import {
   CreateDraftOrderBodySchema,
+  ExportOrdersQuerySchema,
   ListOrdersQuerySchema,
 } from './dto';
 import { OrdersService } from './orders.service';
@@ -47,6 +49,27 @@ export class OrdersController {
     return this.orders.listOrders({
       orgId: requireOrgId(orgId),
       status: parsed.status,
+    });
+  }
+
+  @Get('export')
+  @RequirePermission('orders.export')
+  async exportOrders(
+    @OrgId() orgId: string | undefined,
+    @Query() query: unknown,
+  ) {
+    const parsed = parseBody(ExportOrdersQuerySchema, query);
+    const file = await this.orders.exportOrders({
+      orgId: requireOrgId(orgId),
+      format: parsed.format,
+      status: parsed.status,
+      createdFrom: parsed.createdFrom,
+      createdTo: parsed.createdTo,
+    });
+
+    return new StreamableFile(file.buffer, {
+      type: file.contentType,
+      disposition: `attachment; filename="${file.filename}"`,
     });
   }
 

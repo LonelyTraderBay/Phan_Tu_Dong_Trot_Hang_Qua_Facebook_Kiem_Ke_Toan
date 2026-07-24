@@ -38,6 +38,14 @@ export const ListOrdersQuerySchema = z.object({
   status: OrderStatusSchema.optional(),
 });
 
+export const ExportOrdersQuerySchema = z.object({
+  format: z.enum(['csv', 'xlsx', 'pdf']),
+  status: OrderStatusSchema.optional(),
+  createdFrom: z.string().datetime().optional(),
+  createdTo: z.string().datetime().optional(),
+});
+
 export type CreateDraftOrderBody = z.output<typeof CreateDraftOrderBodySchema>;
 export type ListOrdersQuery = z.output<typeof ListOrdersQuerySchema>;
+export type ExportOrdersQuery = z.output<typeof ExportOrdersQuerySchema>;
 export type OrderStatus = z.output<typeof OrderStatusSchema>;

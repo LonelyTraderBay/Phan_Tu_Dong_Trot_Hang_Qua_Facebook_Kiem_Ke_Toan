@@ -12,6 +12,12 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { loadEnv } from '../../config/env';
 import { AuditService, type WriteAuditInput } from '../audit/audit.service';
 import type { CreateDraftOrderBody, OrderStatus } from './dto';
+import {
+  buildOrdersExport,
+  type ExportFile,
+  type ExportFormat,
+  type ExportOrderRow,
+} from './orders-export';
 
 export const ORDERS_SUPABASE = Symbol('ORDERS_SUPABASE');
 
@@ -135,6 +141,40 @@ export class OrdersService {
   }
 
   async listOrders(input: { orgId: string; status?: OrderStatus }) {
+    const rows = await this.fetchOrderRows({ ...input, limit: 100 });
+    return { orders: rows.map((row) => mapOrder(row)) };
+  }
+
+  async exportOrders(input: {
+    orgId: string;
+    format: ExportFormat;
+    status?: OrderStatus;
+    createdFrom?: string;
+    createdTo?: string;
+  }): Promise<ExportFile> {
+    const rows = await this.fetchOrderRows({ ...input, limit: 5_000 });
+    const exportRows: ExportOrderRow[] = rows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      customerName: row.customer_name,
+      phoneE164: row.phone_e164,
+      paymentMethod: row.payment_method,
+      totalVnd: row.total_vnd.toString(),
+      createdAt: row.created_at,
+      confirmedAt: row.confirmed_at,
+      shippedAt: row.shipped_at,
+    }));
+
+    return buildOrdersExport(input.format, exportRows);
+  }
+
+  private async fetchOrderRows(input: {
+    orgId: string;
+    status?: OrderStatus;
+    createdFrom?: string;
+    createdTo?: string;
+    limit: number;
+  }) {
     let query = this.supabase
       .from('orders')
       .select(ORDER_SELECT)
@@ -143,16 +183,22 @@ export class OrdersService {
     if (input.status) {
       query = query.eq('status', input.status);
     }
+    if (input.createdFrom) {
+      query = query.gte('created_at', input.createdFrom);
+    }
+    if (input.createdTo) {
+      query = query.lte('created_at', input.createdTo);
+    }
 
     const { data, error } = await query
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(input.limit);
 
     if (error) {
       throwOrdersError(error, 'Could not list orders');
     }
 
-    return { orders: ((data ?? []) as OrderRow[]).map((row) => mapOrder(row)) };
+    return (data ?? []) as OrderRow[];
   }
 
   async getOrder(input: { orgId: string; orderId: string }) {

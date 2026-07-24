@@ -285,3 +285,73 @@ describe('OrdersService idempotency', () => {
     expect(audit.writeAudit).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('OrdersService export', () => {
+  it('returns a non-empty CSV buffer scoped to org filters', async () => {
+    const orderRow = {
+      id: ORDER_ID,
+      org_id: ORG_ID,
+      conversation_id: null,
+      contact_id: null,
+      status: 'confirmed',
+      payment_method: 'cod',
+      customer_name: 'Nguyen Van A',
+      phone_e164: '+84901234567',
+      address_text: null,
+      address_json: {},
+      currency: 'VND',
+      subtotal_vnd: '1000',
+      total_vnd: '1000',
+      idempotency_key: null,
+      confirmed_at: '2026-07-24T10:05:00.000Z',
+      shipped_at: null,
+      cancelled_at: null,
+      done_at: null,
+      created_at: '2026-07-24T10:00:00.000Z',
+      updated_at: '2026-07-24T10:05:00.000Z',
+    };
+    const client = {
+      rpc: vi.fn(),
+      from(table: string) {
+        expect(table).toBe('orders');
+        const filters: Record<string, unknown> = {};
+        const chain = {
+          select() {
+            return chain;
+          },
+          eq(column: string, value: unknown) {
+            filters[column] = value;
+            return chain;
+          },
+          gte(column: string, value: unknown) {
+            filters[column] = value;
+            return chain;
+          },
+          lte(column: string, value: unknown) {
+            filters[column] = value;
+            return chain;
+          },
+          order() {
+            return chain;
+          },
+          limit() {
+            return Promise.resolve({ data: [orderRow], error: null });
+          },
+        };
+        return chain;
+      },
+    } as unknown as SupabaseLike;
+    const service = new OrdersService(client, auditMock());
+
+    const file = await service.exportOrders({
+      orgId: ORG_ID,
+      format: 'csv',
+      status: 'confirmed',
+    });
+
+    expect(file.buffer.length).toBeGreaterThan(0);
+    expect(file.contentType).toContain('text/csv');
+    expect(file.buffer.toString('utf8')).toContain(ORDER_ID);
+    expect(file.buffer.toString('utf8')).toContain('Nguyen Van A');
+  });
+});

@@ -261,6 +261,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
+  /v1/orders/export:
+    get:
+      summary: Export orders for current org as xlsx, csv, or pdf
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - csv
+              - xlsx
+              - pdf
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - name: createdFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: createdTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Export file download
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid query
   /v1/inbox/conversations:
     get:
       summary: List inbox conversations for current org

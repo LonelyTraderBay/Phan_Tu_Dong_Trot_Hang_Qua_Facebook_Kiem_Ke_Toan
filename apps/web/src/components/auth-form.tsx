@@ -254,6 +254,15 @@ export function AuthForm({ mode }: AuthFormProps) {
             {isSignup ? 'Đăng nhập' : 'Mở trang tạo phiên'}
           </Link>
         </p>
+        <p style={{ color: '#94a3b8', fontSize: 13, margin: '16px 0 0' }}>
+          <Link href="/legal/terms" style={{ color: '#64748b' }}>
+            Điều khoản
+          </Link>
+          {' · '}
+          <Link href="/legal/privacy" style={{ color: '#64748b' }}>
+            Bảo mật
+          </Link>
+        </p>
       </section>
     </main>
   );

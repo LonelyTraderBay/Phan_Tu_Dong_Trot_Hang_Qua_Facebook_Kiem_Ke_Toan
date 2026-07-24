@@ -75,6 +75,15 @@ export default function HomePage() {
             Vào dashboard
           </Link>
         </div>
+        <p style={{ color: '#94a3b8', fontSize: 14, margin: '40px 0 0' }}>
+          <Link href="/legal/terms" style={{ color: '#64748b' }}>
+            Điều khoản
+          </Link>
+          {' · '}
+          <Link href="/legal/privacy" style={{ color: '#64748b' }}>
+            Bảo mật
+          </Link>
+        </p>
       </section>
     </main>
   );

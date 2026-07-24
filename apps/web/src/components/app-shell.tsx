@@ -25,6 +25,7 @@ const navItems = [
   { href: '/catalog', label: 'Sản phẩm' },
   { href: '/inventory', label: 'Kho' },
   { href: '/orders', label: 'Đơn hàng' },
+  { href: '/cod', label: 'COD' },
   { href: '/settings/channels', label: 'Kênh' },
   { href: '/settings', label: 'Cài đặt' },
   { href: '/settings/invites', label: 'Lời mời' },

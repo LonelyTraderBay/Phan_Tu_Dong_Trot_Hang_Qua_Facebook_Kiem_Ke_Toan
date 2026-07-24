@@ -151,6 +151,63 @@ export type Shipment = {
   updatedAt: string;
 };
 
+export type CodExpectation = {
+  id: string;
+  orgId: string;
+  orderId: string;
+  expectedVnd: string;
+  collectedVnd: string;
+  deltaVnd: string;
+  status: 'open' | 'matched' | 'discrepancy' | 'written_off' | string;
+  createdAt: string;
+  order: {
+    id: string;
+    status: OrderStatus | string;
+    paymentMethod: string;
+    customerName: string | null;
+    phoneE164: string | null;
+    totalVnd: string;
+    shippedAt: string | null;
+    createdAt: string;
+  } | null;
+};
+
+export type CodCollection = {
+  id: string;
+  orgId: string;
+  orderId: string;
+  amountVnd: string;
+  collectedAt: string;
+  source: 'manual' | 'carrier_file' | 'carrier_api' | string;
+  note: string | null;
+  createdAt: string;
+};
+
+export type CodDiscrepancy = {
+  id: string;
+  orgId: string;
+  orderId: string;
+  expectedVnd: string;
+  collectedVnd: string;
+  deltaVnd: string;
+  status: 'open' | 'resolved' | string;
+  note: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+};
+
+export type CodReport = {
+  summary: {
+    openCount: number;
+    discrepancyCount: number;
+    expectedVnd: string;
+    collectedVnd: string;
+    deltaVnd: string;
+  };
+  expectations: CodExpectation[];
+  discrepancies: CodDiscrepancy[];
+};
+
 export type OrderItem = {
   id: string;
   productId: string;
@@ -537,6 +594,56 @@ export async function listShipments(orderId: string): Promise<Shipment[]> {
   );
 
   return shipments;
+}
+
+export async function getCodReport(): Promise<CodReport> {
+  return apiFetch<CodReport>('/v1/cod/report');
+}
+
+export async function recordCodCollection(input: {
+  orderId: string;
+  amountVnd: string;
+  note?: string;
+}): Promise<CodCollection> {
+  const { collection } = await apiFetch<{ collection: CodCollection }>(
+    '/v1/cod/collections',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        orderId: input.orderId,
+        amountVnd: input.amountVnd,
+        source: 'manual',
+        ...(input.note ? { note: input.note } : {}),
+      }),
+    },
+  );
+
+  return collection;
+}
+
+export async function reconcileCodOrder(orderId: string) {
+  return apiFetch<{
+    expectation: CodExpectation;
+    discrepancy: CodDiscrepancy | null;
+    summary: {
+      expectedVnd: string;
+      collectedVnd: string;
+      deltaVnd: string;
+    };
+  }>('/v1/cod/reconcile', {
+    method: 'POST',
+    body: JSON.stringify({ orderId }),
+  });
+}
+
+export async function reconcileCodBatch(orderIds?: string[]) {
+  return apiFetch<{ reconciled: number; results: unknown[] }>(
+    '/v1/cod/reconcile/batch',
+    {
+      method: 'POST',
+      body: JSON.stringify(orderIds ? { orderIds } : {}),
+    },
+  );
 }
 
 export async function downloadOrdersExport(input: {

@@ -90,10 +90,10 @@
 
 ## Wave 2C — COD reconciliation (F2)
 
-- [ ] Expected COD vs collected events; discrepancy queue
-- [ ] Report API + VI list
-- [ ] No float
-- [ ] Commit: `feat: cod reconciliation`
+- [x] Expected COD vs collected events; discrepancy queue
+- [x] Report API + VI list
+- [x] No float
+- [x] Commit: `feat: plan F wave 2C COD reconciliation`
 
 **DoD 2C:** Báo cáo đối soát dùng được.
 

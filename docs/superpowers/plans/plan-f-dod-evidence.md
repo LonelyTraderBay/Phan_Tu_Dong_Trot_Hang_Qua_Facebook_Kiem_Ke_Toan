@@ -8,7 +8,7 @@
 |------|--------|-------|
 | **2A Inventory depth** | **GREEN (code)** | `stock_movements` + adjust RPC; confirm/cancel write ledger; API `/v1/inventory/*`; Web `/inventory`; catalog `stockQty` via ledger |
 | **2B Carrier** | **GREEN (code)** | Shipping provider interface; encrypted per-org connections; manual + GHN sandbox/mock providers; shipment API + VI order action; export fallback runbook |
-| 2C COD | Pending | |
+| **2C COD** | **GREEN (code)** | COD expectations/collections/discrepancies; report + reconcile APIs; VI `/cod`; bigint-string VND only |
 | 2D Returns | Pending | |
 | 2E P&L | Pending | |
 | 2F Channel #2 | Pending | |
@@ -40,4 +40,17 @@
 | Export fallback | GREEN | Existing export code untouched; runbook `docs/runbooks/shipping-carrier-fallback.md` |
 | API unit tests | GREEN | Shipping provider/service specs included in `pnpm --filter api test` |
 
-**Next:** Wave 2C COD.
+## 2C evidence
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| COD schema + RLS | GREEN | `supabase/migrations/20260727110000_cod_reconciliation.sql` |
+| Expected COD on ship | GREEN | `OrdersService.shipOrder` and `ShippingService.createShipment` call `CodService.ensureExpectationForOrder` for shipped COD orders |
+| Expected amount choice | GREEN | Uses `orders.total_vnd` consistently; shipping fee remains tracked separately as `shipping_fee_vnd`/shipment fee |
+| Collections + reconcile | GREEN | `POST /v1/cod/collections`, `POST /v1/cod/reconcile`, `POST /v1/cod/reconcile/batch` |
+| Report API + VI | GREEN | `GET /v1/cod/report`; `apps/web/src/app/(app)/cod/page.tsx`; nav link `COD` |
+| No float money | GREEN | DB `bigint`; API accepts/returns VND strings matching `^[0-9]+$` or signed delta strings |
+| Audit money events | GREEN | COD expectation upsert, collection record, and reconcile write audit logs |
+| API unit tests | GREEN | `apps/api/src/modules/cod/cod.service.spec.ts` plus shipping expectation hook spec |
+
+**Next:** Wave 2D Returns.

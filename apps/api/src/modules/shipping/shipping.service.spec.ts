@@ -50,10 +50,12 @@ function orderRow(status = 'confirmed') {
     id: ORDER_ID,
     org_id: ORG_ID,
     status,
+    payment_method: 'cod',
     customer_name: 'Nguyen Van A',
     phone_e164: '+84901234567',
     address_text: '1 Nguyen Hue, Q1',
     address_json: {},
+    total_vnd: '100000',
     items: [
       {
         id: '66666666-6666-6666-6666-666666666666',
@@ -218,7 +220,16 @@ describe('ShippingService', () => {
         throw new Error(`unexpected table ${table}`);
       },
     } as unknown as SupabaseLike;
-    const service = new ShippingService(client, env);
+    const cod = {
+      ensureExpectationForOrder: vi.fn(async () => null),
+    };
+    const service = new ShippingService(
+      client,
+      env,
+      undefined,
+      undefined,
+      cod,
+    );
 
     const result = await service.createShipment({
       orgId: ORG_ID,
@@ -238,6 +249,16 @@ describe('ShippingService', () => {
       p_org_id: ORG_ID,
       p_order_id: ORDER_ID,
       p_shipped_at: expect.any(String),
+    });
+    expect(cod.ensureExpectationForOrder).toHaveBeenCalledWith({
+      orgId: ORG_ID,
+      orderId: ORDER_ID,
+      actorUserId: USER_ID,
+      order: {
+        status: 'shipped',
+        paymentMethod: 'cod',
+        totalVnd: '100000',
+      },
     });
     expect(result.shipment.trackingCode).toBe('MANUAL-22222222');
     expect(result.order).toMatchObject({ status: 'shipped' });

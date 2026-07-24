@@ -12,6 +12,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { loadEnv } from '../../config/env';
 import { AuditService, type WriteAuditInput } from '../audit/audit.service';
 import { EntitlementsService } from '../billing/entitlements.service';
+import { CodService } from '../cod/cod.service';
 import type { CreateDraftOrderBody, OrderStatus } from './dto';
 import {
   buildOrdersExport,
@@ -135,6 +136,7 @@ export class OrdersService {
   private readonly supabase: SupabaseLike;
   private readonly audit: AuditWriter;
   private readonly entitlements?: EntitlementsReader;
+  private readonly cod?: Pick<CodService, 'ensureExpectationForOrder'>;
 
   constructor(
     @Optional()
@@ -145,10 +147,14 @@ export class OrdersService {
     @Optional()
     @Inject(EntitlementsService)
     entitlements?: EntitlementsReader,
+    @Optional()
+    @Inject(CodService)
+    cod?: Pick<CodService, 'ensureExpectationForOrder'>,
   ) {
     this.supabase = supabase ?? createSupabaseServiceClient();
     this.audit = audit;
     this.entitlements = entitlements;
+    this.cod = cod;
   }
 
   async listOrders(input: { orgId: string; status?: OrderStatus }) {
@@ -361,6 +367,13 @@ export class OrdersService {
       p_org_id: input.orgId,
       p_order_id: input.orderId,
       p_shipped_at: (input.now ?? new Date()).toISOString(),
+    });
+
+    await this.cod?.ensureExpectationForOrder({
+      orgId: input.orgId,
+      orderId: input.orderId,
+      actorUserId: input.actorUserId,
+      order: payload.order,
     });
 
     await this.audit.writeAudit({

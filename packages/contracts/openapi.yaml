@@ -167,6 +167,68 @@ paths:
                 $ref: '#/components/schemas/CreateShipmentResponse'
         '400':
           description: Carrier not configured, disabled, or invalid order status
+  /v1/cod/report:
+    get:
+      summary: List open COD expectations, open discrepancies, and summary totals
+      responses:
+        '200':
+          description: COD reconciliation report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodReportResponse'
+  /v1/cod/collections:
+    post:
+      summary: Record a COD collection event for one order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordCodCollectionRequest'
+      responses:
+        '201':
+          description: COD collection recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodCollectionEnvelope'
+        '404':
+          description: COD expectation not found for order
+  /v1/cod/reconcile:
+    post:
+      summary: Reconcile one COD order expected amount against collected events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileCodOrderRequest'
+      responses:
+        '200':
+          description: COD order reconciled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodReconcileResponse'
+        '404':
+          description: COD expectation not found for order
+  /v1/cod/reconcile/batch:
+    post:
+      summary: Reconcile a batch of COD orders, or all open COD expectations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileCodBatchRequest'
+      responses:
+        '200':
+          description: COD batch reconciled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodReconcileBatchResponse'
   /v1/inventory/movements:
     get:
       summary: List stock movements for current org
@@ -1343,6 +1405,319 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Shipment'
+    CodExpectationStatus:
+      type: string
+      enum:
+        - open
+        - matched
+        - discrepancy
+        - written_off
+    CodDiscrepancyStatus:
+      type: string
+      enum:
+        - open
+        - resolved
+    CodCollectionSource:
+      type: string
+      enum:
+        - manual
+        - carrier_file
+        - carrier_api
+    CodOrderSummary:
+      type: object
+      required:
+        - id
+        - status
+        - paymentMethod
+        - totalVnd
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        paymentMethod:
+          type: string
+          enum:
+            - cod
+            - bank_transfer
+            - other
+        customerName:
+          type:
+            - string
+            - 'null'
+        phoneE164:
+          type:
+            - string
+            - 'null'
+        totalVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Whole VND amount as a bigint string.
+        shippedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    CodExpectation:
+      type: object
+      required:
+        - id
+        - orgId
+        - orderId
+        - expectedVnd
+        - collectedVnd
+        - deltaVnd
+        - status
+        - createdAt
+        - order
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        expectedVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Expected COD VND from orders.total_vnd as a bigint string.
+        collectedVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Sum of COD collection events as a bigint string.
+        deltaVnd:
+          type: string
+          pattern: '^-?[0-9]+$'
+          description: collectedVnd minus expectedVnd as a bigint string.
+        status:
+          $ref: '#/components/schemas/CodExpectationStatus'
+        createdAt:
+          type: string
+          format: date-time
+        order:
+          anyOf:
+            - $ref: '#/components/schemas/CodOrderSummary'
+            - type: 'null'
+    CodCollection:
+      type: object
+      required:
+        - id
+        - orgId
+        - orderId
+        - amountVnd
+        - collectedAt
+        - source
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        amountVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Whole VND amount as a bigint string.
+        collectedAt:
+          type: string
+          format: date-time
+        source:
+          $ref: '#/components/schemas/CodCollectionSource'
+        note:
+          type:
+            - string
+            - 'null'
+        createdAt:
+          type: string
+          format: date-time
+    CodDiscrepancy:
+      type: object
+      required:
+        - id
+        - orgId
+        - orderId
+        - expectedVnd
+        - collectedVnd
+        - deltaVnd
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        expectedVnd:
+          type: string
+          pattern: '^[0-9]+$'
+        collectedVnd:
+          type: string
+          pattern: '^[0-9]+$'
+        deltaVnd:
+          type: string
+          pattern: '^-?[0-9]+$'
+          description: collectedVnd minus expectedVnd as a bigint string.
+        status:
+          $ref: '#/components/schemas/CodDiscrepancyStatus'
+        note:
+          type:
+            - string
+            - 'null'
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+    CodReportSummary:
+      type: object
+      required:
+        - openCount
+        - discrepancyCount
+        - expectedVnd
+        - collectedVnd
+        - deltaVnd
+      properties:
+        openCount:
+          type: integer
+          minimum: 0
+        discrepancyCount:
+          type: integer
+          minimum: 0
+        expectedVnd:
+          type: string
+          pattern: '^[0-9]+$'
+        collectedVnd:
+          type: string
+          pattern: '^[0-9]+$'
+        deltaVnd:
+          type: string
+          pattern: '^-?[0-9]+$'
+    CodReportResponse:
+      type: object
+      required:
+        - summary
+        - expectations
+        - discrepancies
+      properties:
+        summary:
+          $ref: '#/components/schemas/CodReportSummary'
+        expectations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodExpectation'
+        discrepancies:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodDiscrepancy'
+    RecordCodCollectionRequest:
+      type: object
+      required:
+        - orderId
+        - amountVnd
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        amountVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Whole VND amount as a bigint string.
+        collectedAt:
+          type: string
+          format: date-time
+        source:
+          $ref: '#/components/schemas/CodCollectionSource'
+          default: manual
+        note:
+          type: string
+          maxLength: 500
+    CodCollectionEnvelope:
+      type: object
+      required:
+        - collection
+      properties:
+        collection:
+          $ref: '#/components/schemas/CodCollection'
+    ReconcileCodOrderRequest:
+      type: object
+      required:
+        - orderId
+      properties:
+        orderId:
+          type: string
+          format: uuid
+    CodReconcileSummary:
+      type: object
+      required:
+        - expectedVnd
+        - collectedVnd
+        - deltaVnd
+      properties:
+        expectedVnd:
+          type: string
+          pattern: '^[0-9]+$'
+        collectedVnd:
+          type: string
+          pattern: '^[0-9]+$'
+        deltaVnd:
+          type: string
+          pattern: '^-?[0-9]+$'
+    CodReconcileResponse:
+      type: object
+      required:
+        - expectation
+        - discrepancy
+        - summary
+      properties:
+        expectation:
+          $ref: '#/components/schemas/CodExpectation'
+        discrepancy:
+          anyOf:
+            - $ref: '#/components/schemas/CodDiscrepancy'
+            - type: 'null'
+        summary:
+          $ref: '#/components/schemas/CodReconcileSummary'
+    ReconcileCodBatchRequest:
+      type: object
+      properties:
+        orderIds:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+            format: uuid
+    CodReconcileBatchResponse:
+      type: object
+      required:
+        - reconciled
+        - results
+      properties:
+        reconciled:
+          type: integer
+          minimum: 0
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodReconcileResponse'
     AiProduct:
       type: object
       required:

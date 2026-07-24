@@ -15,6 +15,7 @@ import {
 } from '../../common/crypto/token-crypto';
 import { loadEnv, type Env } from '../../config/env';
 import { AuditService, type WriteAuditInput } from '../audit/audit.service';
+import { CodService } from '../cod/cod.service';
 import type {
   CreateShipmentBody,
   ShippingProviderBody,
@@ -57,15 +58,18 @@ type CarrierConnectionRow = {
 };
 
 type OrderStatus = 'draft' | 'confirmed' | 'shipped' | 'done' | 'cancelled' | 'returned';
+type PaymentMethod = 'cod' | 'bank_transfer' | 'other';
 
 type OrderRow = {
   id: string;
   org_id: string;
   status: OrderStatus;
+  payment_method: PaymentMethod;
   customer_name: string | null;
   phone_e164: string | null;
   address_text: string | null;
   address_json: JsonObject;
+  total_vnd: string | number;
   items?: OrderItemRow[] | null;
 };
 
@@ -112,7 +116,7 @@ const CONNECTION_SELECT =
 const ORDER_ITEM_SELECT =
   'id, product_id, variant_id, title_snapshot, sku_snapshot, qty, unit_price_vnd, line_total_vnd';
 const ORDER_WITH_ITEMS_SELECT =
-  `id, org_id, status, customer_name, phone_e164, address_text, address_json, items:order_items(${ORDER_ITEM_SELECT})`;
+  `id, org_id, status, payment_method, customer_name, phone_e164, address_text, address_json, total_vnd, items:order_items(${ORDER_ITEM_SELECT})`;
 const SHIPMENT_SELECT =
   'id, org_id, order_id, carrier_connection_id, provider, external_shipment_id, tracking_code, status, fee_vnd, label_url, raw_json, created_at, updated_at';
 
@@ -135,6 +139,9 @@ export class ShippingService {
     @Optional()
     @Inject(SHIPPING_FETCH)
     private readonly fetchImpl?: FetchLike,
+    @Optional()
+    @Inject(CodService)
+    private readonly cod?: Pick<CodService, 'ensureExpectationForOrder'>,
   ) {
     this.env = env ?? loadEnv();
     this.supabase = supabase ?? createSupabaseServiceClient(this.env);
@@ -286,6 +293,17 @@ export class ShippingService {
         },
       });
     }
+
+    await this.cod?.ensureExpectationForOrder({
+      orgId: input.orgId,
+      orderId: order.id,
+      actorUserId: input.actorUserId,
+      order: {
+        status: orderPayload?.order.status ?? order.status,
+        paymentMethod: orderPayload?.order.paymentMethod ?? order.payment_method,
+        totalVnd: orderPayload?.order.totalVnd ?? order.total_vnd,
+      },
+    });
 
     await this.audit?.writeAudit({
       orgId: input.orgId,

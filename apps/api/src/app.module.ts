@@ -8,9 +8,10 @@ import {
   SupabaseMembershipsRepository,
 } from "./common/guards/org.guard";
 import { HealthModule } from "./modules/health/health.module";
+import { IdentityModule } from "./modules/identity/identity.module";
 
 @Module({
-  imports: [HealthModule],
+  imports: [HealthModule, IdentityModule],
   providers: [
     {
       provide: MEMBERSHIPS_REPOSITORY,

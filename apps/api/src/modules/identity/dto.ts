@@ -1,0 +1,26 @@
+import { z } from "zod";
+
+export const RoleSchema = z.enum(["owner", "cskh", "kho"]);
+
+export const CreateOrgBodySchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    slug: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(1)
+      .max(63)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  })
+  .strict();
+
+export const CreateInviteBodySchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email(),
+    role: RoleSchema.default("cskh"),
+  })
+  .strict();
+
+export type CreateOrgBody = z.infer<typeof CreateOrgBodySchema>;
+export type CreateInviteBody = z.infer<typeof CreateInviteBodySchema>;

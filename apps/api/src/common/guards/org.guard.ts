@@ -46,6 +46,7 @@ type MembershipRow = {
 type RequestWithOrg = {
   headers: IncomingHttpHeaders;
   membership?: Membership;
+  method?: string;
   orgId?: string;
   originalUrl?: string;
   url?: string;
@@ -68,7 +69,14 @@ function getPath(request: Pick<RequestWithOrg, "originalUrl" | "url">) {
   return (request.originalUrl ?? request.url ?? "").split("?")[0];
 }
 
-function isSkippedPath(path: string) {
+function isSkippedPath(path: string, method = "GET") {
+  if (
+    path === "/v1/orgs" &&
+    (method.toUpperCase() === "POST" || method.toUpperCase() === "GET")
+  ) {
+    return true;
+  }
+
   return (
     path === "/health" ||
     path === "/ready" ||
@@ -141,7 +149,7 @@ export class OrgGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<RequestWithOrg>();
-    if (isSkippedPath(getPath(request))) {
+    if (isSkippedPath(getPath(request), request.method)) {
       return true;
     }
 

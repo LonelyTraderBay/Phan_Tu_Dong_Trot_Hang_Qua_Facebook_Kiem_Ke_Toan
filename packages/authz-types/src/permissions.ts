@@ -19,6 +19,11 @@ export type Permission =
   | "ops.org.suspend"
   | "ops.global_flags";
 
+export const PLATFORM_ADMIN_PERMISSIONS = [
+  "ops.org.suspend",
+  "ops.global_flags",
+] as const satisfies readonly Permission[];
+
 const MATRIX: Record<Role, readonly Permission[]> = {
   owner: [
     "org.settings.read",

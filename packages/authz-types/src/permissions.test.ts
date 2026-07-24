@@ -1,6 +1,6 @@
 // packages/authz-types/src/permissions.test.ts
 import { describe, expect, it } from "vitest";
-import { roleHasPermission } from "./permissions";
+import { PLATFORM_ADMIN_PERMISSIONS, roleHasPermission } from "./permissions";
 
 describe("roleHasPermission", () => {
   it("owner can invite members", () => {
@@ -13,6 +13,16 @@ describe("roleHasPermission", () => {
     expect(roleHasPermission("kho", "inbox.reply")).toBe(false);
   });
   it("platform ops.suspend only via platform admin path later", () => {
+    expect(roleHasPermission("owner", "ops.org.suspend")).toBe(false);
+  });
+});
+
+describe("PLATFORM_ADMIN_PERMISSIONS", () => {
+  it("includes ops.org.suspend", () => {
+    expect(PLATFORM_ADMIN_PERMISSIONS).toContain("ops.org.suspend");
+  });
+
+  it("owner cannot ops.org.suspend via roleHasPermission", () => {
     expect(roleHasPermission("owner", "ops.org.suspend")).toBe(false);
   });
 });

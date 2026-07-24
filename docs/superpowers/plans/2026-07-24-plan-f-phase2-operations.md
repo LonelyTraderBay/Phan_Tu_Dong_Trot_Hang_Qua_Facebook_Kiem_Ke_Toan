@@ -131,8 +131,8 @@
 
 ## Wave 2G — Billing packaging (F6)
 
-- [ ] Build on ADR 0004 invoice+flags: plans UI, meters, portal, dunning stubs
-- [ ] Commit: `feat: billing packaging`
+- [x] Build on ADR 0004 invoice+flags: plans UI, meters, portal, dunning stubs
+- [x] Commit: `feat: billing packaging`
 
 **DoD 2G:** Subscription/invoice path chặt hơn E4.
 

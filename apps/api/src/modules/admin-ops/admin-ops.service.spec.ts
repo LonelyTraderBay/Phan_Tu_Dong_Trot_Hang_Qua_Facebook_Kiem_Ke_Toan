@@ -110,6 +110,21 @@ function flagRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function invoiceRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "33333333-3333-3333-3333-333333333333",
+    org_id: ORG_ID,
+    period_start: "2026-07-01T00:00:00.000Z",
+    period_end: "2026-08-01T00:00:00.000Z",
+    amount_vnd: "1500000",
+    status: "issued",
+    issued_at: "2026-07-25T00:00:00.000Z",
+    note: "Pilot thang 7",
+    created_at: "2026-07-25T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 describe("AdminOpsService", () => {
   it("lists organizations for platform admin ops", async () => {
     const { client } = mockSupabase({
@@ -250,6 +265,64 @@ describe("AdminOpsService", () => {
       key: "kill_ai_all",
       orgId: null,
       enabled: false,
+    });
+  });
+
+  it("issues a manual billing invoice", async () => {
+    const issuedAt = new Date("2026-07-25T00:00:00.000Z");
+    const auditCalls: unknown[] = [];
+    const { calls, client } = mockSupabase({
+      insertResults: [{ data: invoiceRow(), error: null }],
+    });
+    const service = new AdminOpsService(client, {
+      writeAudit: async (input) => {
+        auditCalls.push(input);
+        return { audit: { id: "audit-1" } };
+      },
+    });
+
+    const result = await service.issueInvoice(
+      ORG_ID,
+      {
+        periodStart: "2026-07-01T00:00:00.000Z",
+        periodEnd: "2026-08-01T00:00:00.000Z",
+        amountVnd: "1500000",
+        note: "Pilot thang 7",
+      },
+      issuedAt,
+    );
+
+    expect(calls).toContainEqual({
+      op: "insert",
+      table: "billing_invoices",
+      values: {
+        org_id: ORG_ID,
+        period_start: "2026-07-01T00:00:00.000Z",
+        period_end: "2026-08-01T00:00:00.000Z",
+        amount_vnd: "1500000",
+        status: "issued",
+        issued_at: issuedAt.toISOString(),
+        note: "Pilot thang 7",
+      },
+    });
+    expect(auditCalls).toEqual([
+      {
+        orgId: ORG_ID,
+        actorType: "platform",
+        action: "billing.invoice_issued",
+        entityType: "billing_invoice",
+        entityId: "33333333-3333-3333-3333-333333333333",
+        meta: {
+          periodStart: "2026-07-01T00:00:00.000Z",
+          periodEnd: "2026-08-01T00:00:00.000Z",
+          amountVnd: "1500000",
+        },
+      },
+    ]);
+    expect(result.invoice).toMatchObject({
+      orgId: ORG_ID,
+      amountVnd: "1500000",
+      status: "issued",
     });
   });
 

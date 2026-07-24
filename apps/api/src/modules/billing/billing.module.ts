@@ -1,10 +1,13 @@
 import { Module } from "@nestjs/common";
 
 import { AiTokenUsageService } from "./ai-token-usage.service";
+import { BillingController } from "./billing.controller";
+import { BillingService } from "./billing.service";
 import { EntitlementsService } from "./entitlements.service";
 
 @Module({
-  providers: [AiTokenUsageService, EntitlementsService],
-  exports: [AiTokenUsageService, EntitlementsService],
+  controllers: [BillingController],
+  providers: [AiTokenUsageService, BillingService, EntitlementsService],
+  exports: [AiTokenUsageService, BillingService, EntitlementsService],
 })
 export class BillingModule {}

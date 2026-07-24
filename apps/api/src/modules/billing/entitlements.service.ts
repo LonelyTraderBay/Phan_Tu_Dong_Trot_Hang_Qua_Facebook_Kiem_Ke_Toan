@@ -14,6 +14,7 @@ export const ENTITLEMENTS_SUPABASE = Symbol("ENTITLEMENTS_SUPABASE");
 
 const ENTITLEMENTS_SELECT =
   "org_id, max_pages, ai_monthly_token_limit, auto_confirm_allowed, updated_at";
+const ORGANIZATION_BILLING_SELECT = "id, billing_status";
 
 export type SupabaseLike = Pick<SupabaseClient, "from">;
 
@@ -29,6 +30,13 @@ type EntitlementsRow = {
   auto_confirm_allowed: boolean;
   updated_at: string;
 };
+
+type OrganizationBillingRow = {
+  id: string;
+  billing_status: BillingStatus | null;
+};
+
+export type BillingStatus = "active" | "past_due" | "suspended";
 
 @Injectable()
 export class EntitlementsService {
@@ -59,7 +67,9 @@ export class EntitlementsService {
       });
     }
 
-    return mapEntitlements(data as EntitlementsRow);
+    const billingStatus = await this.getBillingStatus(orgId);
+
+    return mapEntitlements(data as EntitlementsRow, billingStatus);
   }
 
   async syncPlanEntitlements(orgId: string, plan: PlanSlug, updatedAt = new Date()) {
@@ -84,16 +94,40 @@ export class EntitlementsService {
       throwEntitlementsError(error, "Could not sync plan entitlements");
     }
 
-    return mapEntitlements(data as EntitlementsRow);
+    const billingStatus = await this.getBillingStatus(orgId);
+
+    return mapEntitlements(data as EntitlementsRow, billingStatus);
+  }
+
+  private async getBillingStatus(orgId: string) {
+    const { data, error } = await this.supabase
+      .from("organizations")
+      .select(ORGANIZATION_BILLING_SELECT)
+      .eq("id", orgId)
+      .maybeSingle();
+
+    if (error) {
+      throwEntitlementsError(error, "Could not read billing status");
+    }
+
+    return ((data as OrganizationBillingRow | null)?.billing_status ??
+      "active") as BillingStatus;
   }
 }
 
-function mapEntitlements(row: EntitlementsRow) {
+function mapEntitlements(row: EntitlementsRow, billingStatus: BillingStatus = "active") {
+  const autoConfirmBlockedReason =
+    billingStatus === "past_due" || billingStatus === "suspended"
+      ? `billing_${billingStatus}`
+      : null;
+
   return {
     orgId: row.org_id,
     maxPages: row.max_pages,
     aiMonthlyTokenLimit: Number(row.ai_monthly_token_limit),
-    autoConfirmAllowed: row.auto_confirm_allowed,
+    autoConfirmAllowed:
+      autoConfirmBlockedReason === null && row.auto_confirm_allowed,
+    autoConfirmBlockedReason,
     updatedAt: row.updated_at,
   };
 }

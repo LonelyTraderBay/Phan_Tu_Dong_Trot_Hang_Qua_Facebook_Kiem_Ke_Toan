@@ -12,7 +12,7 @@
 | **2D Returns** | **GREEN (code)** | `return_order` RPC; `order_returns`; `return_restock` ledger movement; COD open write-off/discrepancy note; API + VI order action |
 | **2E P&L** | **GREEN (code)** | Variant `cogs_vnd`; order item `cogs_unit_vnd` snapshot; API `/v1/pnl/summary` + `/v1/pnl/by-sku`; VI `/pnl`; CSV download |
 | **2F Channel #2** | **GREEN (connect) / AMBER (webhook processing)** | Zalo OA encrypted-token connect; optional-secret webhook receipt + atomic outbox stub `zalo/inbound.received`; full Zalo OAuth and persistence worker deferred |
-| 2G Billing packaging | Pending | |
+| **2G Billing packaging** | **GREEN (invoice+flags)** | Manual billing portal endpoints, invoice table, ops issue invoice, VI `/settings/billing`, and `past_due` auto-confirm soft gate |
 | 2H Hardening | Pending | |
 
 ## 2A evidence
@@ -90,4 +90,18 @@
 | Runbook | GREEN/AMBER | `docs/runbooks/zalo-oa-connect.md` documents setup and AMBER production limitation |
 | API unit tests | GREEN | Zalo connect encryption test and Zalo webhook happy path mock included in `pnpm --filter api test` |
 
-**Next:** Wave 2G Billing packaging.
+## 2G evidence
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Billing schema | GREEN | `supabase/migrations/20260727150000_billing_packaging.sql` adds org billing flags and `billing_invoices` with RLS/grants |
+| Current plan API | GREEN | `GET /v1/billing/plan` returns plan, billing status, renewal/email fields, entitlements, and dunning metadata |
+| Usage meters | GREEN | `GET /v1/billing/usage` returns connected pages, monthly AI tokens, and monthly orders |
+| Invoice list | GREEN | `GET /v1/billing/invoices` returns manual invoices for the current org |
+| Ops issue invoice | GREEN | `POST /ops/v1/orgs/:orgId/invoices` inserts an `issued` invoice and writes audit metadata |
+| Dunning soft gate | GREEN | `EntitlementsService.getEntitlements` maps `past_due`/`suspended` to `autoConfirmAllowed=false`; ADR 0004 documents manual handling |
+| Web VI | GREEN | `apps/web/src/app/(app)/settings/billing/page.tsx`; nav link `Thanh toán` |
+| OpenAPI | GREEN | `packages/contracts/openapi.yaml` includes billing paths and invoice schemas |
+| API unit tests | GREEN | Billing plan/usage specs, entitlements `past_due` spec, and ops invoice issuance spec included in `pnpm --filter api test` |
+
+**Next:** Wave 2H Hardening.

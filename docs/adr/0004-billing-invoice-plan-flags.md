@@ -26,6 +26,12 @@
 
 Admin/`ops` cập nhật plan → sync entitlements. Thu tiền: hóa đơn ngoài hệ thống; suspend qua admin-ops nếu quá hạn.
 
+Plan F 2G bổ sung packaging tối thiểu:
+
+- Member portal đọc `GET /v1/billing/plan`, `/usage`, `/invoices`
+- Ops phát hành hóa đơn thủ công qua `POST /ops/v1/orgs/:orgId/invoices`
+- `organizations.billing_status = past_due` là dunning soft gate: API plan hiển thị quá hạn và `auto_confirm_allowed` bị hạ về `false`; thao tác thủ công vẫn mở.
+
 ## Consequences
 
 - Cần API ops đổi plan + enforce `max_pages` / `auto_confirm_allowed`  

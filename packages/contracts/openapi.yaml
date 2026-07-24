@@ -315,6 +315,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PnlBySkuResponse'
+  /v1/billing/plan:
+    get:
+      summary: Current billing plan, status, and entitlements for current org
+      responses:
+        '200':
+          description: Billing plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingPlanResponse'
+  /v1/billing/usage:
+    get:
+      summary: Simple billing usage meters for current org
+      responses:
+        '200':
+          description: Billing usage meters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingUsageResponse'
+  /v1/billing/invoices:
+    get:
+      summary: List manual billing invoices for current org
+      responses:
+        '200':
+          description: Billing invoices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingInvoicesResponse'
   /v1/inventory/movements:
     get:
       summary: List stock movements for current org
@@ -746,6 +776,35 @@ paths:
           description: Platform admin required
         '404':
           description: Organization not found
+  /ops/v1/orgs/{orgId}/invoices:
+    post:
+      summary: Issue a manual billing invoice for an organization (platform admin)
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueBillingInvoiceRequest'
+      responses:
+        '201':
+          description: Billing invoice issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueBillingInvoiceResponse'
+        '400':
+          description: Invalid invoice or org id
+        '403':
+          description: Platform admin required
+        '404':
+          description: Organization not found
   /internal/v1/ai/health:
     get:
       summary: Proxy AI health (service key)
@@ -991,9 +1050,164 @@ components:
           minimum: 0
         autoConfirmAllowed:
           type: boolean
+        autoConfirmBlockedReason:
+          type:
+            - string
+            - 'null'
         updatedAt:
           type: string
           format: date-time
+    BillingStatus:
+      type: string
+      enum:
+        - active
+        - past_due
+        - suspended
+    BillingPlanResponse:
+      type: object
+      required:
+        - plan
+        - billingStatus
+        - billingCustomerEmail
+        - planRenewsAt
+        - entitlements
+        - dunning
+      properties:
+        plan:
+          $ref: '#/components/schemas/PlanSlug'
+        billingStatus:
+          $ref: '#/components/schemas/BillingStatus'
+        billingCustomerEmail:
+          type:
+            - string
+            - 'null'
+          format: email
+        planRenewsAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        entitlements:
+          $ref: '#/components/schemas/Entitlements'
+        dunning:
+          type: object
+          required:
+            - autoConfirmBlocked
+            - reason
+          properties:
+            autoConfirmBlocked:
+              type: boolean
+            reason:
+              type:
+                - string
+                - 'null'
+          description: past_due/suspended blocks auto-confirm but does not disable reads.
+    BillingUsageResponse:
+      type: object
+      required:
+        - periodStart
+        - pagesConnectedCount
+        - aiTokensMonth
+        - ordersCountMonth
+      properties:
+        periodStart:
+          type: string
+          format: date-time
+        pagesConnectedCount:
+          type: integer
+          minimum: 0
+        aiTokensMonth:
+          type: integer
+          minimum: 0
+        ordersCountMonth:
+          type: integer
+          minimum: 0
+    BillingInvoice:
+      type: object
+      required:
+        - id
+        - orgId
+        - periodStart
+        - periodEnd
+        - amountVnd
+        - status
+        - issuedAt
+        - note
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+        amountVnd:
+          type: string
+          pattern: ^[0-9]+$
+        status:
+          type: string
+          enum:
+            - draft
+            - issued
+            - paid
+            - void
+        issuedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        note:
+          type:
+            - string
+            - 'null'
+        createdAt:
+          type: string
+          format: date-time
+    BillingInvoicesResponse:
+      type: object
+      required:
+        - invoices
+      properties:
+        invoices:
+          type: array
+          items:
+            $ref: '#/components/schemas/BillingInvoice'
+    IssueBillingInvoiceRequest:
+      type: object
+      required:
+        - periodStart
+        - periodEnd
+        - amountVnd
+      properties:
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+        amountVnd:
+          oneOf:
+            - type: string
+              pattern: ^[0-9]+$
+            - type: integer
+              minimum: 0
+        note:
+          type: string
+          maxLength: 1000
+      additionalProperties: false
+    IssueBillingInvoiceResponse:
+      type: object
+      required:
+        - invoice
+      properties:
+        invoice:
+          $ref: '#/components/schemas/BillingInvoice'
     UpdateOrgPlanRequest:
       type: object
       required:

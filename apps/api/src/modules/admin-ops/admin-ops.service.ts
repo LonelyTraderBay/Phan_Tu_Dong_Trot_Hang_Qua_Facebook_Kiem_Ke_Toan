@@ -12,13 +12,15 @@ import { loadEnv } from "../../config/env";
 import { AuditService, type WriteAuditInput } from "../audit/audit.service";
 import { EntitlementsService } from "../billing/entitlements.service";
 import { isPlanSlug, type PlanSlug } from "../billing/plan-catalog";
-import type { SetGlobalFlagBody, UpdateOrgPlanBody } from "./dto";
+import type { IssueInvoiceBody, SetGlobalFlagBody, UpdateOrgPlanBody } from "./dto";
 
 export const ADMIN_OPS_SUPABASE = Symbol("ADMIN_OPS_SUPABASE");
 
 const ORGANIZATION_SELECT =
-  "id, name, slug, plan, settings_json, timezone, locale, suspended_at, created_at, updated_at";
+  "id, name, slug, plan, settings_json, timezone, locale, suspended_at, billing_customer_email, billing_status, plan_renews_at, created_at, updated_at";
 const FEATURE_FLAG_SELECT = "id, key, org_id, enabled, payload_json";
+const INVOICE_SELECT =
+  "id, org_id, period_start, period_end, amount_vnd, status, issued_at, note, created_at";
 const GLOBAL_KILL_SWITCH_KEYS = [
   "kill_ai_outbound",
   "kill_ai_all",
@@ -44,6 +46,9 @@ type OrganizationRow = {
   timezone: string;
   locale: string;
   suspended_at: string | null;
+  billing_customer_email?: string | null;
+  billing_status?: string | null;
+  plan_renews_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -54,6 +59,18 @@ type FeatureFlagRow = {
   org_id: string | null;
   enabled: boolean;
   payload_json: Record<string, unknown>;
+};
+
+type InvoiceRow = {
+  id: string;
+  org_id: string;
+  period_start: string;
+  period_end: string;
+  amount_vnd: number | string;
+  status: "draft" | "issued" | "paid" | "void" | string;
+  issued_at: string | null;
+  note: string | null;
+  created_at: string;
 };
 
 @Injectable()
@@ -166,6 +183,54 @@ export class AdminOpsService {
     };
   }
 
+  async issueInvoice(
+    orgId: string,
+    body: IssueInvoiceBody,
+    issuedAt = new Date(),
+  ) {
+    const amountVnd = normalizeVnd(body.amountVnd);
+    const issuedAtIso = issuedAt.toISOString();
+    const { data, error } = await this.supabase
+      .from("billing_invoices")
+      .insert({
+        org_id: orgId,
+        period_start: body.periodStart,
+        period_end: body.periodEnd,
+        amount_vnd: amountVnd,
+        status: "issued",
+        issued_at: issuedAtIso,
+        note: body.note ?? null,
+      })
+      .select(INVOICE_SELECT)
+      .single();
+
+    if (error) {
+      if (error.code === "23503") {
+        throw new NotFoundException({
+          code: "organization_not_found",
+          message: "Organization was not found",
+        });
+      }
+      throwAdminOpsError(error, "Could not issue billing invoice");
+    }
+
+    const invoice = mapInvoice(data as InvoiceRow);
+    await this.audit?.writeAudit({
+      orgId,
+      actorType: "platform",
+      action: "billing.invoice_issued",
+      entityType: "billing_invoice",
+      entityId: invoice.id,
+      meta: {
+        periodStart: invoice.periodStart,
+        periodEnd: invoice.periodEnd,
+        amountVnd: invoice.amountVnd,
+      },
+    });
+
+    return { invoice };
+  }
+
   async setGlobalFlag(key: string, body: SetGlobalFlagBody) {
     if (!isGlobalKillSwitchKey(key)) {
       throw new BadRequestException({
@@ -238,6 +303,9 @@ function mapOrganization(row: OrganizationRow) {
     timezone: row.timezone,
     locale: row.locale,
     suspendedAt: row.suspended_at,
+    billingCustomerEmail: row.billing_customer_email ?? null,
+    billingStatus: row.billing_status ?? "active",
+    planRenewsAt: row.plan_renews_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -251,6 +319,27 @@ function mapFeatureFlag(row: FeatureFlagRow) {
     enabled: row.enabled,
     payloadJson: row.payload_json,
   };
+}
+
+function mapInvoice(row: InvoiceRow) {
+  return {
+    id: row.id,
+    orgId: row.org_id,
+    periodStart: row.period_start,
+    periodEnd: row.period_end,
+    amountVnd: String(row.amount_vnd),
+    status: row.status,
+    issuedAt: row.issued_at,
+    note: row.note,
+    createdAt: row.created_at,
+  };
+}
+
+function normalizeVnd(value: string | number) {
+  if (typeof value === "number") {
+    return String(value);
+  }
+  return value;
 }
 
 function throwAdminOpsError(error: SupabaseError, message: string): never {

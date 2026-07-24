@@ -247,6 +247,46 @@ export type PnlSku = {
   orderCount: number;
 };
 
+export type BillingEntitlements = {
+  orgId: string;
+  maxPages: number;
+  aiMonthlyTokenLimit: number;
+  autoConfirmAllowed: boolean;
+  autoConfirmBlockedReason?: string | null;
+  updatedAt: string;
+};
+
+export type BillingPlan = {
+  plan: string;
+  billingStatus: 'active' | 'past_due' | 'suspended' | string;
+  billingCustomerEmail: string | null;
+  planRenewsAt: string | null;
+  entitlements: BillingEntitlements;
+  dunning?: {
+    autoConfirmBlocked: boolean;
+    reason: string | null;
+  };
+};
+
+export type BillingUsage = {
+  periodStart: string;
+  pagesConnectedCount: number;
+  aiTokensMonth: number;
+  ordersCountMonth: number;
+};
+
+export type BillingInvoice = {
+  id: string;
+  orgId: string;
+  periodStart: string;
+  periodEnd: string;
+  amountVnd: string;
+  status: 'draft' | 'issued' | 'paid' | 'void' | string;
+  issuedAt: string | null;
+  note: string | null;
+  createdAt: string;
+};
+
 export type OrdersExportFormat = 'csv' | 'xlsx' | 'pdf';
 
 export type ApiAuthContext = {
@@ -707,6 +747,21 @@ export async function getPnlBySku(input: {
     `/v1/pnl/by-sku${dateRangeQuery(input)}`,
   );
   return items;
+}
+
+export async function getBillingPlan(): Promise<BillingPlan> {
+  return apiFetch<BillingPlan>('/v1/billing/plan');
+}
+
+export async function getBillingUsage(): Promise<BillingUsage> {
+  return apiFetch<BillingUsage>('/v1/billing/usage');
+}
+
+export async function listBillingInvoices(): Promise<BillingInvoice[]> {
+  const { invoices } = await apiFetch<{ invoices: BillingInvoice[] }>(
+    '/v1/billing/invoices',
+  );
+  return invoices;
 }
 
 export async function downloadOrdersExport(input: {

@@ -1,15 +1,20 @@
 # Spec audit — 2026-07-24 (pre–implementation plan)
 
+**Status:** **SUPERSEDED / FIXED** — findings below were addressed in the full sync of 2026-07-24.  
+**Current SoT:** [CANONICAL-LOCKED-DECISIONS](./2026-07-24-CANONICAL-LOCKED-DECISIONS.md) · [README](./README.md)  
 **Auditor:** Agent review of all files under `docs/superpowers/specs/`  
-**Purpose:** Line-level consistency check before writing the implementation plan.
+**Purpose:** Historical record of consistency check before implementation plan.
 
-## Files reviewed
+> **Implementers:** Ignore open “P0/P1” wording below as current truth. All C1–C5 and critical G* items were fixed. Residual opens only in CANONICAL §8.
 
-1. `2026-07-24-omni-commerce-ai-saas-design.md` (canonical product design)
-2. `2026-07-24-enterprise-engineering-foundation-charter.md` (engineering law)
-3. `2026-07-24-enterprise-grade-commercialization-analysis.md` (strategy)
-4. `2026-07-24-backend-python-vs-typescript-analysis.md` (stack decision record)
-5. `2026-07-24-external-services-catalog.md` (vendors / free-first)
+## Files reviewed (original set + later)
+
+1. `2026-07-24-omni-commerce-ai-saas-design.md`
+2. `2026-07-24-enterprise-engineering-foundation-charter.md`
+3. `2026-07-24-enterprise-grade-commercialization-analysis.md`
+4. `2026-07-24-backend-python-vs-typescript-analysis.md`
+5. `2026-07-24-external-services-catalog.md`
+6. (+ later) structure, maturity, coding-gaps, upgrade-opportunities, CANONICAL
 
 ## Severity legend
 
@@ -21,68 +26,38 @@
 
 ---
 
-## Findings (before fixes)
+## Resolution (post-sync)
 
-### P0 — contradictions
+| ID | Original issue | Resolution |
+|----|----------------|------------|
+| C1 | Jobs listed as Inngest/Trigger/Redis | **Inngest only** — design §9/§15, external §7, CANONICAL |
+| C2 | Backend A “đang khóa” / A→C | **Option C locked** — backend analysis header + design |
+| C3 | External led with Vercel/Railway / CF Pages | **Render Free Node** for web — external §0/§3 |
+| C4 | Commercialization “một stack” / tách AI năm 2–3 | Clarified: Topology C from day 1 (see commercialization §13) |
+| C5 | `*.vercel.app` / `*.pages.dev` | **`*.onrender.com`** temporary subdomain |
+| G1 | No doc index | **README** + CANONICAL |
+| G7 | CF Pages × Next undocumented | Closed: **not** Phase 1 path; Render Free |
+
+---
+
+## Findings (historical — before fixes)
+
+### P0 — contradictions (FIXED)
 
 | ID | Issue | Where |
 |----|--------|------|
 | C1 | Jobs still listed as `Inngest / Trigger.dev / Redis` while Free-first locked **Inngest** | design §9 |
 | C2 | Backend analysis still labels Phương án A as **“đang khóa”** and recommends **A→C** | backend analysis §4, §7 |
-| C3 | External catalog §3 / §17 / checklist still lead with **Vercel + Railway** while Free-first locked **Cloudflare Pages + Render/Fly** | external-services |
-| C4 | Commercialization says “TypeScript / Next.js **một stack xuyên suốt**” and “Năm 2–3 **tách AI service**” — AI already separate (Option C) | commercialization §3.1, §6 |
-| C5 | Free subdomain example still `*.vercel.app` under Free-first Cloudflare Pages policy | external-services §0.1 |
+| C3 | External catalog still led with wrong hosts | external-services |
+| C4 | Commercialization outdated stack narrative | commercialization |
+| C5 | Free subdomain example outdated | external-services §0.1 |
 
-### P1 — gaps to add
+### P1 — gaps (mostly FIXED via structure/maturity/CANONICAL)
 
-| ID | Gap | Why it matters |
-|----|-----|----------------|
-| G1 | No **doc index** linking the five specs + reading order | Plan/agents open wrong file |
-| G2 | Design §7 data model missing: `entitlements`, `feature_flags`, `usage_events`, `job_dead_letters` / idempotency keys | Charter requires them |
-| G3 | Module ownership **api vs ai** for Knowledge/RAG not explicit in design §5 | Prevents wrong PR boundaries |
-| G4 | Free-first not in design **Decisions locked** table (only §13) | Easy to miss |
-| G5 | Charter missing Free-first + default Gemini + deploy targets | Scaffold env wrong |
-| G6 | **PDPA minimum**: export/delete org data path not in Phase 1 success criteria | Commercialization lists compliance |
-| G7 | **Next.js on Cloudflare Pages** constraint (adapter/OpenNext) not documented | Hosting choice has build implications |
-| G8 | RAG **read path** ambiguous: AI direct pgvector vs Core retrieval API | Security boundary |
-| G9 | Rate limiting / abuse on public Auth + webhook not specified | Enterprise baseline |
-| G10 | Commercialization §13 still asks to “duyệt Foundations-first / cập nhật design” — already done | Stale gate |
-
-### P2 — optimize / narrative
-
-| ID | Issue |
-|----|--------|
-| O1 | Backend analysis §7 decision matrix still written as if choosing A/B/C |
-| O2 | Design Status still “Draft for user review” while many items locked |
-| O3 | Product working name only English — optional VI name |
-| O4 | Duplicate “Later phases…” sentences in design §1 |
+See [structure](./2026-07-24-enterprise-structure-and-data-architecture.md), [maturity](./2026-07-24-enterprise-maturity-scorecard-to-100.md), [coding-gaps CLOSED](./2026-07-24-coding-gaps-pre-implementation.md).
 
 ---
 
-## Fixes applied in this pass
+## Verdict for coding
 
-See git-less edits in the five specs + new `README.md` index. Summary:
-
-- Locked Jobs = **Inngest** in design §9 and decisions table  
-- Free-first + vendor row added to design decisions; status clarified  
-- Data model + module ownership + RAG read rule + rate limit + PDPA minimum + CF Pages note  
-- Charter: Free-first, Gemini default, Inngest, deploy targets, RAG read via Core-or-RPC rule  
-- Backend analysis: mark A/B historical; C locked; remove “A đang khóa”  
-- Commercialization: polyglot wording; remove “tách AI later”; close §13 gates; link Free-first  
-- External catalog: align §3/§17/checklist with §0 Free-first; fix subdomain example  
-- Added `docs/superpowers/specs/README.md` reading order  
-
-## Remaining open (OK to defer to implementation plan)
-
-| Item | Notes |
-|------|--------|
-| Exact NestJS module folder names inside `apps/api` | Plan task |
-| Exact Gemini model IDs for chat vs embed | Plan + env |
-| Render vs Fly as default always-free host | Both allowed; plan picks one for scripts |
-| Formal VI product brand name | Marketing, not blocking |
-| ICP shop lẻ vs agency | Affects Year-1 sales, not scaffold |
-| Cloudflare Pages + Next.js adapter choice (OpenNext / `@opennextjs/cloudflare`) | First hosting task must spike |
-
-## Verdict
-
-**Specs are ready for implementation planning after this fix pass**, provided the user accepts the remaining deferrals above. No further product-scope brainstorm required for Phase 1 Sellable Core + Option C + Free-first.
+**Safe to write Plan A (platform scaffold)** after user OK. DoD = structure §11 + maturity M2. Do not re-open Free-first host or Inngest placement.

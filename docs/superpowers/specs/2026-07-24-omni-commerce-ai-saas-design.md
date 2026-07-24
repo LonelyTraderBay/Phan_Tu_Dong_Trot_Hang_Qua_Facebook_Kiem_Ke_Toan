@@ -4,7 +4,7 @@
 **Status:** Decisions locked — **awaiting final user OK** before implementation plan  
 **Product working name:** Omni-Commerce + AI Admin (SaaS)  
 **Build posture:** Foundations-first / additive only — no throwaway demo (see §2.2)  
-**Related docs:** [specs README](./README.md) · [charter](./2026-07-24-enterprise-engineering-foundation-charter.md) · [external services / Free-first](./2026-07-24-external-services-catalog.md) · [commercialization](./2026-07-24-enterprise-grade-commercialization-analysis.md) · [stack ADR](./2026-07-24-backend-python-vs-typescript-analysis.md) · [pre-plan audit](./2026-07-24-spec-audit-pre-plan.md)
+**Related docs:** [**CANONICAL**](./2026-07-24-CANONICAL-LOCKED-DECISIONS.md) · [specs README](./README.md) · [charter](./2026-07-24-enterprise-engineering-foundation-charter.md) · [**structure & data architecture**](./2026-07-24-enterprise-structure-and-data-architecture.md) · [maturity → 100](./2026-07-24-enterprise-maturity-scorecard-to-100.md) · [external services / Free-first](./2026-07-24-external-services-catalog.md) · [commercialization](./2026-07-24-enterprise-grade-commercialization-analysis.md) · [stack ADR](./2026-07-24-backend-python-vs-typescript-analysis.md) · [coding gaps CLOSED](./2026-07-24-coding-gaps-pre-implementation.md) · [pre-plan audit FIXED](./2026-07-24-spec-audit-pre-plan.md)
 
 ## 1. Goal
 
@@ -53,7 +53,7 @@ Build a multi-tenant SaaS so each shop owner can:
 | Export Excel/CSV/PDF (header cột) | **Tiếng Việt** |
 
 **Phase 1 không làm i18n** (không multi-language UI, không locale switcher).  
-Nếu sau này cần thêm ngôn ngữ (EN…), đó là phase riêng — có thể giữ `locale` mặc định `"vi"` trong `organizations.settings_json`.
+Nếu sau này cần thêm ngôn ngữ (EN…), đó là phase riêng — `organizations.locale` mặc định `"vi"` (cột riêng; không nhét locale vào `settings_json`).
 
 #### B) Ngôn ngữ code / kỹ thuật (locked)
 
@@ -165,7 +165,7 @@ See stack rationale: [backend Python vs TS analysis](./2026-07-24-backend-python
 
 - Every business row has `org_id` (shop).
 - **Supabase RLS** enforces `org_id` membership on all tenant tables.
-- Meta page tokens stored encrypted (Supabase Vault or app-encrypted column); never exposed to client.
+- Meta page tokens stored encrypted at rest with **AES-256-GCM** (`TOKEN_ENCRYPTION_KEY` on Core only); never exposed to client. (Supabase Vault optional later — not Phase 1 path.)
 - RAG queries **must** filter by `org_id`; automated isolation tests required.
 - Roles: `owner`, `cskh` (support), `kho` (warehouse).
 - CSKH may approve orders only if shop setting allows.
@@ -186,7 +186,7 @@ See stack rationale: [backend Python vs TS analysis](./2026-07-24-backend-python
 | Settings AI | api (+ web UI) | Persona, hours, required fields, auto-confirm; locale `vi` |
 | Billing flags | api | `plan` + entitlements + usage meters (no payment gateway) |
 | Feature flags | api | e.g. `auto_confirm` |
-| Audit | api (+ ai_runs in ai/api) | Security/money events; AI run records |
+| Audit | api only (`ai_runs` + `audit_logs` written by **Core**) | Security/money events; AI returns run payload → Core persists |
 | Admin-ops | api (+ web operator UI) | List/suspend orgs, channel health |
 
 ## 6. Order lifecycle
@@ -208,25 +208,21 @@ Also: `cancelled`, `returned`
 
 ## 7. Data model (core)
 
+**Canonical schema (columns, keys, RLS):** [enterprise-structure-and-data-architecture.md §7–9](./2026-07-24-enterprise-structure-and-data-architecture.md) — **LOCKED**. Do not invent alternate table/column names in code.
+
 | Entity | Purpose |
 |--------|---------|
-| `organizations` | Shop tenant + `plan` + `settings_json` |
-| `users` / `memberships` | Auth users and roles per org |
-| `entitlements` | Limits: max pages, AI monthly tokens, auto_confirm_allowed… |
-| `feature_flags` | Per-org or global flags |
-| `usage_events` | Meter AI tokens / messages for quota |
-| `channel_connections` | Meta Page/IG ids, encrypted tokens, status |
-| `products` / `product_variants` | General catalog (`attrs_json`) |
-| `knowledge_chunks` | Text + embedding (`vector`), source refs, `org_id` |
-| `contacts` | PSID/IGSID, phone, name, tags |
-| `conversations` / `messages` | Unified inbox; `bot_paused`, assignee |
-| `orders` / `order_items` | Commerce + payment_method + address snapshot |
-| `webhook_receipts` | Idempotency keys for Meta (and other) webhooks |
-| `job_dead_letters` | Failed job payloads for DLQ/runbook |
-| `ai_runs` | Prompt version, tools, citations, cost, `org_id` |
-| `audit_logs` | Append-only security/money trail |
+| `organizations`, `memberships`, `membership_invites`, `platform_admins` | Tenant + RBAC + SaaS ops |
+| `entitlements`, `feature_flags`, `usage_events` | Plans / flags / meters |
+| `channel_connections` | Meta Page/IG tokens (encrypted) |
+| `products`, `product_variants` | Catalog (VND int, stock) |
+| `knowledge_chunks` | RAG embeddings (pgvector) |
+| `contacts`, `conversations`, `messages` | CRM + inbox (`bot_epoch`) |
+| `orders`, `order_items` | Commerce + idempotency |
+| `webhook_receipts`, `job_dead_letters` | Reliability |
+| `ai_runs`, `audit_logs` | AI + security trail (**Core** writes) |
 
-Enable **pgvector** for `knowledge_chunks.embedding`.
+Money = **BIGINT VND**; phones = **E.164**; TZ default `Asia/Ho_Chi_Minh`.
 
 ## 8. AI / RAG guardrails
 
@@ -342,9 +338,12 @@ User approved design sections:
 5. Build posture — Enterprise foundations / additive only locked  
 6. Runtime topology — **C** locked  
 7. External cost policy — **Free-first** locked  
-8. Spec audit fixes — applied 2026-07-24 ([audit](./2026-07-24-spec-audit-pre-plan.md))
+8. Spec audit fixes — applied 2026-07-24  
+9. **Enterprise structure & data architecture** — locked 2026-07-24 ([structure doc](./2026-07-24-enterprise-structure-and-data-architecture.md))  
+10. Pre-code defaults §15 — locked  
+11. **Enterprise maturity path M0→M4 (100/100 = M4 only)** — locked ([scorecard](./2026-07-24-enterprise-maturity-scorecard-to-100.md))
 
-**Next step after user OK:** write implementation plan under `docs/superpowers/plans/` (prefer split plans: Platform → Meta → AI/Catalog → Orders).
+**Next step after user OK:** write implementation plan under `docs/superpowers/plans/`. Plan A Platform **must** include maturity **M2** DoD. Do not claim 100/100 until M4.
 
 ## 15. Pre-code defaults (đóng lỗ hổng khi bắt tay code)
 
@@ -357,7 +356,7 @@ Các mặc định dưới đây **có hiệu lực cho Phase 1** trừ khi user
 | B2 | Inngest × Python | **All Inngest functions live in `apps/api` (TS).** Steps call `apps/ai` via m2m HTTP. Python does **not** register Inngest handlers in Phase 1. |
 | B3 | AI persistence | **`ai_runs` written by Core** (AI returns run payload to Core / internal ingest). **`knowledge_chunks`**: AI may write only via **org-forced RPC** (or Core ingest API). No broad service-role CRUD from AI. |
 | B4 | Active org | Required header **`X-Org-Id`** on Core business APIs; Core verifies membership. |
-| B5 | SaaS operator | Table **`platform_admins`**; `/ops/*` only. Seed via `PLATFORM_ADMIN_EMAILS`. |
+| B5 | SaaS operator | Table **`platform_admins`**; **`/ops/v1/*` only**. Seed via `PLATFORM_ADMIN_EMAILS`. |
 | B6 | Webhook path | Verify → `webhook_receipts` → enqueue → **HTTP 200**. Keep-warm cron optional pre-customer; **always-on host before real customers**. Local: Cloudflare Tunnel or ngrok. |
 | B7 | Tooling | **pnpm** + **Turborepo**; Python **uv**; Node **20 LTS**; Python **3.12**. |
 | B8 | Token crypto | **AES-256-GCM**; env `TOKEN_ENCRYPTION_KEY` (32-byte base64). |
@@ -367,7 +366,7 @@ Các mặc định dưới đây **có hiệu lực cho Phase 1** trừ khi user
 | H4 | Meta 24h window | Check before send; on failure mark outbound + escalate — no infinite retry storm. |
 | H5 | Non-text inbound | Persist type/URL; AI replies asking for text (VI). |
 | H7 | Money | **VND as integer** (`BIGINT`), no decimals. |
-| H8 | Timezone | Default **`Asia/Ho_Chi_Minh`**. |
+| H8 | Timezone | Default column **`organizations.timezone = Asia/Ho_Chi_Minh`**. |
 | H9 | Phone | Store **E.164**. |
 | M8 | Inbox live updates | Phase 1: **polling 3–5s** (Realtime optional later). |
 

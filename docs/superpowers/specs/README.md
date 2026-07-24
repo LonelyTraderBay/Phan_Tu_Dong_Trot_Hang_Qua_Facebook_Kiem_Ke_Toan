@@ -1,30 +1,45 @@
 # Specs index — Omni-Commerce AI SaaS
 
-**Last audited:** 2026-07-24 ([audit report](./2026-07-24-spec-audit-pre-plan.md))
+**Last full sync:** 2026-07-24 (re-audit CLEAN)  
+**Conflict authority:** [CANONICAL-LOCKED-DECISIONS](./2026-07-24-CANONICAL-LOCKED-DECISIONS.md) wins over any older paragraph.
 
-## Reading order (canonical)
+## Reading order
 
-| Order | File | Role | Status |
-|-------|------|------|--------|
-| 1 | [2026-07-24-omni-commerce-ai-saas-design.md](./2026-07-24-omni-commerce-ai-saas-design.md) | **Product + architecture source of truth** | Locked decisions; awaiting final user OK for plan |
-| 2 | [2026-07-24-enterprise-engineering-foundation-charter.md](./2026-07-24-enterprise-engineering-foundation-charter.md) | Engineering law from commit #1 | Locked |
-| 3 | [2026-07-24-external-services-catalog.md](./2026-07-24-external-services-catalog.md) | Vendors + **Free-first** policy | Locked §0 |
-| 3b | [2026-07-24-coding-gaps-pre-implementation.md](./2026-07-24-coding-gaps-pre-implementation.md) | Lỗ hổng khi code + blockers | 2026-07-24 |
-| 4 | [2026-07-24-enterprise-grade-commercialization-analysis.md](./2026-07-24-enterprise-grade-commercialization-analysis.md) | Multi-year commercial strategy | Locked posture; roadmap advisory |
-| 5 | [2026-07-24-backend-python-vs-typescript-analysis.md](./2026-07-24-backend-python-vs-typescript-analysis.md) | ADR: why Option C | Historical A/B; **C locked** |
-| — | [2026-07-24-spec-audit-pre-plan.md](./2026-07-24-spec-audit-pre-plan.md) | Pre-plan consistency audit | 2026-07-24 |
+| Order | File | Role |
+|-------|------|------|
+| **0** | [2026-07-24-CANONICAL-LOCKED-DECISIONS.md](./2026-07-24-CANONICAL-LOCKED-DECISIONS.md) | **Anti-conflict SoT when coding** |
+| 1 | [2026-07-24-omni-commerce-ai-saas-design.md](./2026-07-24-omni-commerce-ai-saas-design.md) | Product + architecture |
+| 2 | [2026-07-24-enterprise-engineering-foundation-charter.md](./2026-07-24-enterprise-engineering-foundation-charter.md) | Engineering law |
+| 2b | [2026-07-24-enterprise-structure-and-data-architecture.md](./2026-07-24-enterprise-structure-and-data-architecture.md) | Folders + schema LOCKED |
+| 2c | [2026-07-24-enterprise-maturity-scorecard-to-100.md](./2026-07-24-enterprise-maturity-scorecard-to-100.md) | Path to 100/100 (M0–M4) |
+| 3 | [2026-07-24-external-services-catalog.md](./2026-07-24-external-services-catalog.md) | Vendors + Free-first |
+| 3b | [2026-07-24-coding-gaps-pre-implementation.md](./2026-07-24-coding-gaps-pre-implementation.md) | Gaps → closed in design §15 |
+| 3c | [2026-07-24-enterprise-upgrade-opportunities.md](./2026-07-24-enterprise-upgrade-opportunities.md) | What else to upgrade |
+| 4 | [2026-07-24-enterprise-grade-commercialization-analysis.md](./2026-07-24-enterprise-grade-commercialization-analysis.md) | Multi-year GTM |
+| 5 | [2026-07-24-backend-python-vs-typescript-analysis.md](./2026-07-24-backend-python-vs-typescript-analysis.md) | ADR Option C (historical A/B) |
+| — | [2026-07-24-spec-audit-pre-plan.md](./2026-07-24-spec-audit-pre-plan.md) | Audit record (findings fixed) |
 
-## Locked topology (do not re-litigate in plan)
+## Locked snapshot (do not re-litigate)
 
 ```
-apps/web     Next.js + TS          → Render Free (Node) — Phase 1
-apps/api     NestJS + TS           → Render/Fly Free → paid when customers
-apps/ai      FastAPI + Python      → same vendor as api
-Supabase     Auth + Postgres+RLS + Storage + pgvector  × staging + prod
-Jobs         Inngest Free (functions in apps/api only; AI via HTTP)
-LLM          Gemini Free (AI Studio) → paid when customers
+Topology     C: web (Next/TS) + api (Nest/TS) + ai (FastAPI/Py) + Supabase
+Web host     Render Free (Node) — Phase 1; CF Pages later optional
+API/AI host  Render Free or Fly free (one vendor preferred)
+Jobs         Inngest in apps/api only → HTTP to ai
+LLM          Gemini Free → paid at M3
+Tenancy      org_id + RLS + X-Org-Id + platform_admins
+Reliability  outbox_events preferred + webhook_receipts + bot_epoch
+Maturity     M0 done · M1 done · M2 in Plan A · M4 = only official 100/100
+UI language  Tiếng Việt · Code English
+Tooling      pnpm + Turborepo · uv · Node 20 · Python 3.12
 ```
 
 ## Conflict rule
 
-If two docs disagree: **design (§ decisions) > charter > external-services §0 > analysis ADRs**.
+**CANONICAL → design §§2/9/15 → structure → maturity → charter → external §0 → ADR/analysis.**
+
+Older lines that still mention Cloudflare Pages as Phase-1 web host, Trigger/BullMQ as primary jobs, or “A→C later” are **obsolete**.
+
+## Scaffold rule
+
+First code PR must satisfy [structure §11](./2026-07-24-enterprise-structure-and-data-architecture.md) + [maturity M2 hooks](./2026-07-24-enterprise-maturity-scorecard-to-100.md) before feature UI.

@@ -43,3 +43,13 @@ Completed.
 - The backend skill references `backend_doc/START_HERE.md`, but that file/path was not present in this worktree.
 - OAuth URL does not include a CSRF `state` parameter because the locked Task 4 interface only completes with `{ code }`.
 - Meta App Review scope requirements may change; the Phase 1 scope list is commented in code as requested.
+
+## Review fix — revoke UUID validation (2026-07-24)
+
+- **Issue:** `POST /v1/channels/:id/revoke` used a hand-rolled regex with UUID shape `8-4-4-12`, missing the 4th segment; standard `8-4-4-4-12` IDs (e.g. `33333333-3333-3333-3333-333333333333`) were rejected.
+- **Fix:** Replaced manual regex check with Nest `ParseUUIDPipe` on `@Param("id")` in `channels.controller.ts`.
+- **Test:** Added `channels.controller.spec.ts` — (1) `revokeChannel` delegates a standard UUID to `revokeConnection`, (2) `ParseUUIDPipe` accepts the same UUID.
+- **Verification:**
+  - `pnpm exec vitest run src/modules/channels/channels.controller.spec.ts src/modules/channels/channels.service.spec.ts` — passed, 6 tests.
+  - `pnpm --dir apps/api test` — passed, 16 files / 43 tests.
+- **Deferred:** OAuth `state` not added (locked Task 4 `{ code }` interface).

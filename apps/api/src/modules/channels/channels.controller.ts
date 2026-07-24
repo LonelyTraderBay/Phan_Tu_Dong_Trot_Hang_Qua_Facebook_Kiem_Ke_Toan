@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Post,
   UnauthorizedException,
   UseGuards,
@@ -19,9 +20,6 @@ import { RequirePermission } from "../../common/decorators/require-permission.de
 import { PermissionsGuard } from "../authz/permissions.guard";
 import { ChannelsService } from "./channels.service";
 import { CompleteMetaOAuthBodySchema } from "./dto";
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Controller("v1/channels")
 export class ChannelsController {
@@ -59,15 +57,8 @@ export class ChannelsController {
   @RequirePermission("channels.connect")
   revokeChannel(
     @OrgId() orgId: string | undefined,
-    @Param("id") connectionId: string,
+    @Param("id", ParseUUIDPipe) connectionId: string,
   ) {
-    if (!UUID_PATTERN.test(connectionId)) {
-      throw new BadRequestException({
-        code: "invalid_channel_connection_id",
-        message: "id route parameter must be a UUID",
-      });
-    }
-
     return this.channels.revokeConnection(requireOrgId(orgId), connectionId);
   }
 }

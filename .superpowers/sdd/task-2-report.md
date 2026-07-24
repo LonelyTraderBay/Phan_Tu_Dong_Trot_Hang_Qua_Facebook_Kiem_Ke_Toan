@@ -17,6 +17,12 @@ Verification:
 - `pnpm --dir apps/api typecheck`
 - `pnpm --dir apps/api test`
 
+Review fixes (atomic create + outbox):
+- Added migration `20260725150000_catalog_create_product_atomic.sql` with `create_product_with_variants_and_reindex` RPC (security definer, service_role only). Inserts product, variants, and `knowledge.reindex` outbox row in one transaction.
+- `CatalogService.createProduct` now calls the RPC; no separate variant insert or post-commit enqueue.
+- Update/delete/variant writes still enqueue outbox after commit via `enqueueOutbox` (throws on failure — API returns 500; write may already be committed).
+- Tests: RPC path for create; outbox failure propagation on update.
+
 Notes:
 - `backend_doc/START_HERE.md` was not present in this worktree; used available task brief, module patterns, migrations, authz types, and `packages/contracts/openapi.yaml`.
 - Ran `pnpm install --frozen-lockfile` because dependencies were absent from the worktree.

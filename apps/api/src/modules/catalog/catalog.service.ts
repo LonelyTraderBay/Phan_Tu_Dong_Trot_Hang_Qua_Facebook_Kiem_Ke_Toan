@@ -23,7 +23,7 @@ import type {
 export const CATALOG_SUPABASE = Symbol('CATALOG_SUPABASE');
 export const CATALOG_OUTBOX = Symbol('CATALOG_OUTBOX');
 
-export type SupabaseLike = Pick<SupabaseClient, 'from'>;
+export type SupabaseLike = Pick<SupabaseClient, 'from' | 'rpc'>;
 export type OutboxEnqueuer = (
   tx: SupabaseLike,
   input: EnqueueOutboxInput,
@@ -89,6 +89,12 @@ type SupabaseError = {
   message?: string;
 };
 
+type CreateProductRpcRow = {
+  product: ProductRow;
+  variants: VariantRow[] | null;
+  outbox_event_id: string;
+};
+
 const PRODUCT_SELECT =
   'id, org_id, title, description, status, attrs_json, created_at, updated_at, deleted_at';
 const VARIANT_SELECT =
@@ -142,33 +148,33 @@ export class CatalogService {
 
   async createProduct(orgId: string, body: CreateProductBody) {
     const { data, error } = await this.supabase
-      .from('products')
-      .insert({
-        org_id: orgId,
-        title: body.title,
-        description: body.description ?? null,
-        status: body.status,
-        attrs_json: body.attrs,
-      } satisfies ProductInsert)
-      .select(PRODUCT_SELECT)
+      .rpc('create_product_with_variants_and_reindex', {
+        p_org_id: orgId,
+        p_title: body.title,
+        p_description: body.description ?? null,
+        p_status: body.status,
+        p_attrs_json: body.attrs,
+        p_variants: body.variants.map((variant) => ({
+          sku: variant.sku,
+          title: variant.title,
+          price_vnd: variant.priceVnd,
+          stock_qty: variant.stockQty,
+          attrs_json: variant.attrs,
+        })),
+      })
       .single();
 
     if (error) {
       throwCatalogError(error, 'Could not create product');
     }
 
-    const product = data as ProductRow;
-    const variants = body.variants.length
-      ? await this.insertVariants(orgId, product.id, body.variants)
-      : [];
-
-    await this.enqueueProductReindex(orgId, product.id);
+    const row = data as CreateProductRpcRow;
 
     return {
       product: mapProduct(
         {
-          ...product,
-          variants,
+          ...(row.product as ProductRow),
+          variants: (row.variants ?? []) as VariantRow[],
         },
         { includeVariants: true },
       ),

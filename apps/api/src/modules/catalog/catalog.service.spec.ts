@@ -1,3 +1,4 @@
+import { InternalServerErrorException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -10,6 +11,7 @@ import { CreateProductBodySchema } from './dto';
 const ORG_ID = '11111111-1111-1111-1111-111111111111';
 const PRODUCT_ID = '22222222-2222-2222-2222-222222222222';
 const VARIANT_ID = '33333333-3333-3333-3333-333333333333';
+const OUTBOX_ID = '44444444-4444-4444-4444-444444444444';
 const CREATED_AT = '2026-07-24T10:00:00.000Z';
 
 function productRow() {
@@ -43,36 +45,46 @@ function variantRow(overrides: Record<string, unknown> = {}) {
 }
 
 function catalogSupabaseMock() {
-  const inserts: Array<{ table: string; values: unknown }> = [];
+  const rpcCalls: Array<{ fn: string; args: unknown }> = [];
   const client = {
+    rpc(fn: string, args: unknown) {
+      rpcCalls.push({ fn, args });
+      return {
+        single: async () => ({
+          data: {
+            product: productRow(),
+            variants: [variantRow()],
+            outbox_event_id: OUTBOX_ID,
+          },
+          error: null,
+        }),
+      };
+    },
     from(table: string) {
       if (table === 'products') {
         return {
-          insert(values: unknown) {
-            inserts.push({ table, values });
+          update() {
             return {
-              select() {
+              eq() {
                 return {
-                  single: async () => ({
-                    data: productRow(),
-                    error: null,
-                  }),
+                  eq() {
+                    return {
+                      is() {
+                        return {
+                          select() {
+                            return {
+                              maybeSingle: async () => ({
+                                data: productRow(),
+                                error: null,
+                              }),
+                            };
+                          },
+                        };
+                      },
+                    };
+                  },
                 };
               },
-            };
-          },
-        };
-      }
-
-      if (table === 'product_variants') {
-        return {
-          insert(values: unknown) {
-            inserts.push({ table, values });
-            return {
-              select: async () => ({
-                data: [variantRow()],
-                error: null,
-              }),
             };
           },
         };
@@ -82,13 +94,13 @@ function catalogSupabaseMock() {
     },
   } as unknown as SupabaseLike;
 
-  return { client, inserts };
+  return { client, rpcCalls };
 }
 
 describe('CatalogService', () => {
-  it('creates a product with a bigint VND variant and enqueues reindex', async () => {
-    const { client, inserts } = catalogSupabaseMock();
-    const enqueue = vi.fn(async () => ({ id: 'outbox-1' })) as OutboxEnqueuer;
+  it('creates a product atomically via RPC with variants and outbox', async () => {
+    const { client, rpcCalls } = catalogSupabaseMock();
+    const enqueue = vi.fn(async () => ({ id: OUTBOX_ID })) as OutboxEnqueuer;
     const service = new CatalogService(client, enqueue);
 
     const result = await service.createProduct(
@@ -109,30 +121,25 @@ describe('CatalogService', () => {
       }),
     );
 
-    expect(inserts).toEqual([
+    expect(rpcCalls).toEqual([
       {
-        table: 'products',
-        values: {
-          org_id: ORG_ID,
-          title: 'T-shirt',
-          description: 'Cotton',
-          status: 'active',
-          attrs_json: { color: 'black' },
+        fn: 'create_product_with_variants_and_reindex',
+        args: {
+          p_org_id: ORG_ID,
+          p_title: 'T-shirt',
+          p_description: 'Cotton',
+          p_status: 'active',
+          p_attrs_json: { color: 'black' },
+          p_variants: [
+            {
+              sku: 'AT-DEN-L',
+              title: 'Black / L',
+              price_vnd: '1234567890123',
+              stock_qty: 7,
+              attrs_json: { size: 'L' },
+            },
+          ],
         },
-      },
-      {
-        table: 'product_variants',
-        values: [
-          {
-            org_id: ORG_ID,
-            product_id: PRODUCT_ID,
-            sku: 'AT-DEN-L',
-            title: 'Black / L',
-            price_vnd: '1234567890123',
-            stock_qty: 7,
-            attrs_json: { size: 'L' },
-          },
-        ],
       },
     ]);
     expect(result.product.variants).toEqual([
@@ -141,6 +148,24 @@ describe('CatalogService', () => {
         priceVnd: '1234567890123',
       }),
     ]);
+    expect(enqueue).not.toHaveBeenCalled();
+  });
+
+  it('propagates outbox enqueue failures on product update', async () => {
+    const { client } = catalogSupabaseMock();
+    const enqueue = vi.fn(async () => {
+      throw new InternalServerErrorException({
+        code: 'outbox_failed',
+        message: 'Could not enqueue outbox event',
+      });
+    }) as OutboxEnqueuer;
+    const service = new CatalogService(client, enqueue);
+
+    await expect(
+      service.updateProduct(ORG_ID, PRODUCT_ID, { title: 'Updated' }),
+    ).rejects.toMatchObject({
+      response: { code: 'outbox_failed' },
+    });
     expect(enqueue).toHaveBeenCalledWith(client, {
       orgId: ORG_ID,
       eventName: 'knowledge.reindex',

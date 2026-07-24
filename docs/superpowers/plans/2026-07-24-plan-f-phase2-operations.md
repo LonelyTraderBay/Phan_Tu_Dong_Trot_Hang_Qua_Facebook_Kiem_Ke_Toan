@@ -1,0 +1,152 @@
+# Plan F — Phase 2 Operations (Waves 2A–2H)
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Deepen operations after Pilot Phase 1 — inventory ledger, carrier, COD, returns, simple P&L, second channel, billing packaging, hardening.
+
+**Architecture:** Core Nest owns stock/orders/shipping money paths; AI never mutates stock directly; all stock changes via RPC/service that writes `stock_movements`; money BIGINT VND; secrets AES-256-GCM; `X-Org-Id` + RLS.
+
+**Tech Stack:** NestJS · Next.js · Supabase/Postgres · Vitest · Inngest (api)
+
+**Depends on:** Plan E code/docs DoD (`plan-e-dod-evidence.md`)  
+**Next:** Plan G Phase 3 after `plan-f-dod-evidence.md`  
+**Playbook:** [plan-f-priority-execution](./2026-07-24-plan-f-priority-execution.md)
+
+## Global Constraints
+
+- Stock mutations only through ledger-aware paths (confirm/cancel/adjust/return)
+- Direct `PATCH` `stockQty` must either call adjust RPC or be rejected
+- No float for money; carrier fees BIGINT
+- Export Excel remains fallback if carrier down
+- VI UI for new surfaces
+- One wave critical path at a time inside F
+
+## Plan F Definition of Done
+
+- [ ] 2A–2H waves complete with tests  
+- [ ] `plan-f-dod-evidence.md` GREEN/AMBER honest  
+- [ ] No claim CPC  
+
+---
+
+## Wave 2A — Inventory depth (F0) — START HERE
+
+### Task F0.1: Migration `stock_movements` + adjust RPC
+
+- [ ] Table `stock_movements` (`org_id`, `variant_id`, `movement_type`, `qty_delta`, `stock_after`, `order_id` nullable, `reason`, `actor_user_id`, `created_at`)
+- [ ] Types: `confirm` | `cancel_restore` | `adjust` | `inbound` | `outbound` (inbound/outbound alias adjust sign)
+- [ ] RLS: members select; service_role all
+- [ ] `adjust_variant_stock(org, variant, qty_delta, reason, actor, type)` atomic update + ledger
+- [ ] Optional org setting `low_stock_threshold` default 5 on `organizations` or query param
+- [ ] Commit: `feat(db): stock movements ledger and adjust rpc`
+
+### Task F0.2: Wire confirm/cancel RPCs to ledger
+
+- [ ] `confirm_order` / `create_and_confirm_order`: after stock decrement insert `confirm` rows (`qty_delta` negative)
+- [ ] `cancel_order`: on restore insert `cancel_restore` rows (positive)
+- [ ] Keep existing race / insufficient_stock behavior
+- [ ] Commit: `feat(db): order stock changes write ledger`
+
+### Task F0.3: Inventory API module
+
+- [ ] `GET /v1/inventory/movements?variantId=&limit=`
+- [ ] `POST /v1/inventory/adjust` `{ variantId, qtyDelta, reason, movementType? }`
+- [ ] `GET /v1/inventory/low-stock?threshold=`
+- [ ] Permissions: read=`catalog.read`, write=`catalog.write`
+- [ ] Route catalog `stockQty` patch through adjust RPC (delta = target − current)
+- [ ] Unit tests: adjust + list + low-stock + reject negative resulting stock
+- [ ] Commit: `feat(api): inventory adjust movements low-stock`
+
+### Task F0.4: Web VI — low stock + adjust
+
+- [ ] Catalog/variant UI: adjust stock with reason; show recent movements
+- [ ] Dashboard widget or inventory page: low-stock list
+- [ ] Commit: `feat(web): inventory adjust and low stock`
+
+### Task F0.5: Wave 2A evidence note
+
+- [ ] Update working notes / partial DoD section for 2A in `plan-f-dod-evidence.md` (create stub)
+- [ ] Commit: `docs: plan F wave 2A evidence stub`
+
+**DoD 2A:** Mọi đổi kho truy vết; race confirm vẫn đúng; UI adjust + low-stock.
+
+---
+
+## Wave 2B — Carrier API (F1)
+
+### Task F1.1–F1.5 (outline — expand before coding)
+
+- [ ] `ShippingProvider` interface + 1 adapter (GHN/GHTK/VTP — pick one)
+- [ ] Encrypted carrier secrets per org
+- [ ] Create shipment from confirmed order; store tracking
+- [ ] Fee BIGINT on order/shipment
+- [ ] Staging E2E + export fallback when carrier fails
+- [ ] Commit(s): `feat(api): shipping provider …`
+
+**DoD 2B:** 1 carrier E2E staging; export vẫn dùng được.
+
+---
+
+## Wave 2C — COD reconciliation (F2)
+
+- [ ] Expected COD vs collected events; discrepancy queue
+- [ ] Report API + VI list
+- [ ] No float
+- [ ] Commit: `feat: cod reconciliation`
+
+**DoD 2C:** Báo cáo đối soát dùng được.
+
+---
+
+## Wave 2D — Returns (F3)
+
+- [ ] Order status / return flow; restock via ledger (`inbound`/`adjust`)
+- [ ] COD impact rules
+- [ ] UI return 1 đơn
+- [ ] Commit: `feat: returns restock`
+
+**DoD 2D:** Hoàn 1 đơn → stock/COD đúng.
+
+---
+
+## Wave 2E — Simple P&L (F4)
+
+- [ ] COGS inputs; revenue − cost; day/SKU dashboard; export
+- [ ] Commit: `feat: simple pnl`
+
+**DoD 2E:** Lãi gộp ngày/SKU.
+
+---
+
+## Wave 2F — Channel #2 (F5)
+
+- [ ] Zalo OA **or** one marketplace connector (pattern like Meta)
+- [ ] Inbox multi-channel
+- [ ] Commit: `feat: channel two connector`
+
+**DoD 2F:** Inbox đa kênh.
+
+---
+
+## Wave 2G — Billing packaging (F6)
+
+- [ ] Build on ADR 0004 invoice+flags: plans UI, meters, portal, dunning stubs
+- [ ] Commit: `feat: billing packaging`
+
+**DoD 2G:** Subscription/invoice path chặt hơn E4.
+
+---
+
+## Wave 2H — Hardening (F7)
+
+- [ ] Load test notes; runbooks; eval; CHANGELOG
+- [ ] `plan-f-dod-evidence.md` complete
+- [ ] Commit: `docs: plan F DoD evidence`
+
+**DoD Plan F:** Evidence file + all waves.
+
+## Out of scope
+
+- Multi-warehouse (Plan H)  
+- Ads/attribution (Plan G)  
+- Claiming CPC/E100  

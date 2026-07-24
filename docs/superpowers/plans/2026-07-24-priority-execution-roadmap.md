@@ -1,7 +1,8 @@
 # Priority Execution Roadmap — tới CPC / E100
 
 **Date:** 2026-07-25  
-**Status:** Active backlog — Plans A–D DONE on `main` (`af8413a`); **Pilot Phase 1 ready**; Plan E NEXT when customer imminent  
+**Status:** Active backlog — Plans A–D DONE; **Pilot Phase 1 ready**; Plan E **code+docs DONE** (`plan-e-dod-evidence.md`, paid AMBER); **Plan F NEXT**  
+
 **Authority:** [CANONICAL](../specs/2026-07-24-CANONICAL-LOCKED-DECISIONS.md) · [master roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) · [WBS](../specs/2026-07-24-implementation-work-breakdown.md)  
 **Kế hoạch chi tiết từng bước (SoT ưu tiên còn lại):** [path-to-completion-priority](./2026-07-24-path-to-completion-priority.md)
 
@@ -16,7 +17,7 @@
 | 3 | **E100** (Enterprise 100/100) | + Plan **I (M4)** |
 | — | Epoch 5 Platform | Optional sau CPC |
 
-**Không** nhảy Phase 2 trước Plan E DoD (trừ docs chuẩn bị).
+Paid/live Plan E drills có thể AMBER song song với code Plan F; **không** claim CPC trước khi clear AMBER + xong H.
 
 ---
 
@@ -27,9 +28,9 @@
 | **A** | Waves A+B+C — Platform | **DONE** (merged `main`) |
 | **B** | Wave D — Meta channels | **DONE** → [DoD](./plan-b-dod-evidence.md) |
 | **C** | Waves E+F — Catalog + AI | **DONE** → [DoD](./plan-c-dod-evidence.md) |
-| **D** | Waves G+H+I — Orders + Web + Hardening | **DONE** (merged `main` @ `af8413a`) → [DoD](./plan-d-dod-evidence.md) · [playbook](./2026-07-24-plan-d-priority-execution.md) |
-| **E** | Gate M3 — Commercial ops | **NEXT** when customer imminent → [playbook ưu tiên](./2026-07-24-plan-e-priority-execution.md) · [plan](./2026-07-24-plan-e-m3-commercial-ops.md) |
-| **F** | Phase 2 Operations (2A–2H) | After E → [F–I index](./2026-07-24-plans-f-i-post-phase1-index.md) |
+| **D** | Waves G+H+I — Orders + Web + Hardening | **DONE** → [DoD](./plan-d-dod-evidence.md) |
+| **E** | Gate M3 — Commercial ops | **CODE+DOCS DONE** (paid AMBER) → [DoD](./plan-e-dod-evidence.md) · [playbook](./2026-07-24-plan-e-priority-execution.md) |
+| **F** | Phase 2 Operations (2A–2H) | **NEXT** → [playbook](./2026-07-24-plan-f-priority-execution.md) · [F–I index](./2026-07-24-plans-f-i-post-phase1-index.md) |
 | **G** | Phase 3 Intelligence (3A–3F) | After F |
 | **H** | Phase 4 ERP-lite (4A–4F) → **CPC** | After G |
 | **I** | M4 Procurement → **E100** | Overlap from late F |
@@ -42,8 +43,8 @@
 DONE  Plan B  Meta
 DONE  Plan C  Catalog + AI
 DONE  Plan D  Orders + Web + Hardening     → Pilot Phase 1 READY
-P3    Plan E  M3 (Pro, always-on, billing, DR)  ← NEXT khi có / sắp có khách
-P4a   Plan F  Phase 2 Operations
+AMBER Plan E  M3 code+docs GREEN · paid drills AMBER
+P4a   Plan F  Phase 2 Operations                  ← NEXT eng
 P4b   Plan G  Phase 3 Intelligence
 P4c   Plan H  Phase 4 ERP-lite                   → CPC
 P5    Plan I  M4                                  → E100
@@ -70,10 +71,11 @@ P6    Epoch 5 (optional)
 - [x] Terms/Privacy + PDPA path + App Review package  
 
 ### Sau Plan E = bán pilot an toàn
-- [ ] Supabase Pro + PITR + restore drill  
-- [ ] Always-on hosts  
-- [ ] LLM paid + cap  
-- [ ] Billing/entitlements enforce  
+- [x] LLM spend cap + secondary provider (code)  
+- [x] Billing/entitlements (invoice+flags)  
+- [x] DPA template + subprocessors + scheduled QA workflow  
+- [ ] Supabase Pro + PITR + restore drill (**owner / paid**)  
+- [ ] Always-on hosts + live uptime (**owner / paid**)  
 
 ### Sau Plan H = **CPC**
 - [ ] Carrier + COD + returns + P&L  
@@ -99,11 +101,10 @@ P6    Epoch 5 (optional)
 
 ## 5. Hành động ngay
 
-1. ~~Plans A–D~~ — **DONE** · Pilot Phase 1 ready ([DoD D](./plan-d-dod-evidence.md))  
-2. Làm theo [path-to-completion-priority](./2026-07-24-path-to-completion-priority.md):  
-   - **P0** sớm (chưa Pro): §12.1 · Meta Review · DPA · chọn billing · migrate staging  
-   - **P3 Plan E** E0→E7 khi có / sắp có khách → [playbook E](./2026-07-24-plan-e-priority-execution.md)  
-   - **P4a–c** F→H (JIT full plan) → **CPC**  
-   - **P5** I (M4) → **E100**  
+1. ~~Plans A–D~~ — **DONE** · Pilot Phase 1 ready  
+2. ~~P0 docs + Plan E code/docs~~ — [DoD E](./plan-e-dod-evidence.md) (paid AMBER)  
+3. **NEXT:** Plan F 2A→2H → [playbook F](./2026-07-24-plan-f-priority-execution.md)  
+4. Owner parallel: live §12.1 · Meta Review · Pro+PITR · always-on  
+5. Sau F: G → H → **CPC**; rồi I → **E100**
 
-**Không** claim CPC/E100; **không** code Phase 2 trước E DoD.
+**Không** claim CPC/E100.

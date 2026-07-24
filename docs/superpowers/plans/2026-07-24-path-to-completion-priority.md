@@ -18,8 +18,9 @@
 
 ```
 DONE  A→D  Pilot
-▶ P3  E    M3     → bán pilot an toàn
-  P4a F    Phase 2 Operations
+DONE  P0   docs/legal/ADR (live staging/Review = owner AMBER)
+AMBER P3  E    M3 code+docs GREEN · paid drills AMBER  → [plan-e-dod-evidence]
+▶ P4a F    Phase 2 Operations
   P4b G    Phase 3 Intelligence
   P4c H    Phase 4 ERP-lite     → CPC
   P5  I    M4                   → E100
@@ -30,23 +31,19 @@ DONE  A→D  Pilot
 
 ---
 
-## P0 — Việc sớm (làm ngay, chưa đốt Pro)
+## P0 — Việc sớm — DOCS GREEN / LIVE AMBER
 
-Không thay thế Plan E. Làm song song / trước khi có khách.
-
-| Bước | Việc | Xong khi |
-|------|------|----------|
-| P0.1 | Staging walkthrough Design §12.1 (Web VI surfaces) | Checklist tay xanh trên staging |
-| P0.2 | Meta App Review submit (Terms/Privacy URL + webhook) | App ở trạng thái submitted / approved path |
-| P0.3 | DPA draft + subprocessors list nội bộ | File sẵn ký |
-| P0.4 | Chọn billing: Stripe **hoặc** PayOS **hoặc** invoice+flags | Quyết định ghi ADR ngắn |
-| P0.5 | Apply mọi Supabase migration Plan D trên staging | `db push`/`migrate` xanh |
-
-Playbook liên quan: [plan-d-dod-evidence](./plan-d-dod-evidence.md) (amber items).
+| Bước | Việc | Status |
+|------|------|--------|
+| P0.1 | Staging walkthrough Design §12.1 | Checklist: `docs/ops/p0-staging-walkthrough-12-1.md` — **live = owner** |
+| P0.2 | Meta App Review submit pack | `docs/ops/p0-meta-app-review-submit.md` — **submit = owner** |
+| P0.3 | DPA + subprocessors | **DONE** `docs/legal/*` |
+| P0.4 | Billing ADR | **DONE** `docs/adr/0004-billing-invoice-plan-flags.md` → invoice+flags |
+| P0.5 | Staging migrate notes | `docs/ops/p0-staging-migrate.md` — **apply = owner** |
 
 ---
 
-## P3 — Plan E · Gate M3 (E0→E7) — NEXT khi có / sắp có khách
+## P3 — Plan E · Gate M3 (E0→E7) — CODE+DOCS DONE (paid AMBER)
 
 **Playbook đầy đủ:** [plan-e-priority-execution](./2026-07-24-plan-e-priority-execution.md) · [plan file](./2026-07-24-plan-e-m3-commercial-ops.md)
 
@@ -64,14 +61,18 @@ Playbook liên quan: [plan-d-dod-evidence](./plan-d-dod-evidence.md) (amber item
 | **E7** | (1) `plan-e-dod-evidence.md` (2) Roadmap Plan E DONE | **M3 đóng** |
 
 **Song song OK:** E0∥E1 · E2∥E0–E1 · E5∥E3–E4 · E6∥E4–E5.  
-**Cấm:** E4 charge trước E0 PITR; E7 trước restore drill; Phase 2 code trước E7.
+**Cấm:** E4 charge khách trước E0 PITR trên prod.  
+**Eng tiếp:** Sau E7 evidence (kể cả paid AMBER) được mở Plan F; CPC vẫn cần clear AMBER E0/E1.
 
 ### DoD Plan E
 Restore drill · always-on webhook · spend cap · billing/entitlements · uptime/on-call · DPA · scheduled isolation/eval · evidence.
 
 ---
 
-## P4a — Plan F · Phase 2 Operations → sau E
+## P4a — Plan F · Phase 2 Operations → **NEXT**
+
+Evidence E: [plan-e-dod-evidence](./plan-e-dod-evidence.md). Paid drills AMBER không chặn bắt đầu code F; CPC vẫn cần clear AMBER.  
+**Playbook:** [plan-f-priority-execution](./2026-07-24-plan-f-priority-execution.md) · [plan](./2026-07-24-plan-f-phase2-operations.md)
 
 **Viết full plan JIT** trước khi code. Wave order (không đảo trong F):
 
@@ -155,16 +156,11 @@ Với mỗi plan E→I:
 ## Tóm tắt một trang — làm gì **tiếp theo**
 
 ```
-NGAY (P0):  §12.1 staging · Meta Review · DPA draft · chọn billing · migrate staging
-            ↓ khi có / sắp có khách
-P3 Plan E:  E0 Pro+PITR+drill → E1 always-on → E2 LLM cap → E3 uptime
-            → E4 billing → E5 DPA → E6 cron eval → E7 evidence
-            ↓
-P4a Plan F: 2A→2H (kho → carrier → COD → returns → P&L → kênh#2 → billing pkg → harden)
-P4b Plan G: 3A→3F (ads → attribution → advisor → calendar → public API → harden)
-P4c Plan H: 4A→4F (warehouse → PO → e-invoice → mobile → accounting export → CPC)
-            ↓ CPC
-P5 Plan I:  M4.1→M4.8 → E100
+DONE P0 docs + P3 Plan E code/docs (paid/live AMBER = owner parallel)
+▶ NEXT eng: Plan F  2A→2H
+THEN Plan G → H → CPC
+THEN Plan I → E100
+OWNER parallel: §12.1 · Meta Review submit · Pro+PITR drill · always-on
 ```
 
 ---
@@ -175,7 +171,8 @@ P5 Plan I:  M4.1→M4.8 → E100
 |----------|------|
 | Roadmap tổng | [priority-execution-roadmap](./2026-07-24-priority-execution-roadmap.md) |
 | Plan E playbook | [plan-e-priority-execution](./2026-07-24-plan-e-priority-execution.md) |
-| Plan E tasks | [plan-e-m3-commercial-ops](./2026-07-24-plan-e-m3-commercial-ops.md) |
+| Plan E DoD | [plan-e-dod-evidence](./plan-e-dod-evidence.md) |
+| Plan F playbook | [plan-f-priority-execution](./2026-07-24-plan-f-priority-execution.md) |
 | F–I index | [plans-f-i-post-phase1-index](./2026-07-24-plans-f-i-post-phase1-index.md) |
 | Wave chi tiết gốc | [master-roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) |
 | Pilot DoD | [plan-d-dod-evidence](./plan-d-dod-evidence.md) |

@@ -1,15 +1,10 @@
-## Fix section - Important review findings
-
-- Added OpenAPI contract entries for:
-  - `GET /v1/inbox/conversations`
-  - `GET /v1/inbox/conversations/{id}/messages`
-  - `POST /v1/inbox/conversations/{id}/takeover`
-- Added `public.takeover_inbox_conversation(...)` RPC so takeover performs `bot_epoch = bot_epoch + 1` atomically in SQL and is executable only by `service_role`.
-- Updated `InboxService` takeover to call the RPC and require `AuditService`; audit write failures now propagate instead of being silent.
-- Persisted inbound text messages with `raw_type = 'text'`.
-
-Verification:
-
-- `pnpm --dir apps/api exec vitest run src/modules/inbox/inbox.service.spec.ts src/jobs/functions/meta-persist-inbound.spec.ts`
-- `pnpm --dir apps/api test`
-- `pnpm --dir apps/api typecheck`
+Task 6 complete.
+- Added service-key POST /internal/v1/tools/get-product.
+- Added service-key POST /internal/v1/tools/create-draft-order.
+- Draft orders resolve variant price snapshots in Core and enforce org/env max VND.
+- Added service-key POST /internal/v1/ai/runs and AiRunsService persistence.
+- Added DEFAULT_AI_DRAFT_MAX_AMOUNT_VND env schema/example.
+- Added minimal orders/order_items migration plus atomic create_draft_order RPC.
+- Updated OpenAPI stubs for tools and ai_runs.
+- Tests: draft max rejection and ai_runs write/model allowlist.
+- Verified: focused Vitest, API typecheck, full API tests, OpenAPI Prettier check.

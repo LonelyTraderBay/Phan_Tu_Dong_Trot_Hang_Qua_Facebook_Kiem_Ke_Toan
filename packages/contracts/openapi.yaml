@@ -276,6 +276,86 @@ paths:
       responses:
         '200':
           description: OK
+  /internal/v1/ai/runs:
+    post:
+      summary: Persist an AI run after Core receives an AI response (service key)
+      parameters:
+        - name: x-service-key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WriteAiRunRequest'
+      responses:
+        '201':
+          description: AI run written
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WriteAiRunResponse'
+        '400':
+          description: Invalid request or model not allowed
+        '401':
+          description: Invalid service key
+  /internal/v1/tools/get-product:
+    post:
+      summary: Get one product with variants for AI tooling (service key)
+      parameters:
+        - name: x-service-key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiGetProductRequest'
+      responses:
+        '201':
+          description: Product returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiGetProductResponse'
+        '401':
+          description: Invalid service key
+        '404':
+          description: Product not found for organization
+  /internal/v1/tools/create-draft-order:
+    post:
+      summary: Create a draft order from catalog variants for AI tooling (service key)
+      parameters:
+        - name: x-service-key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiCreateDraftOrderRequest'
+      responses:
+        '201':
+          description: Draft order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiCreateDraftOrderResponse'
+        '400':
+          description: Invalid request or draft total over AI maximum
+        '401':
+          description: Invalid service key
+        '404':
+          description: Organization, product, contact, or conversation not found
   /internal/v1/knowledge/chunks:
     post:
       summary: Atomically replace RAG chunks for one knowledge source (service key)
@@ -408,5 +488,245 @@ components:
           type: integer
           minimum: 0
         attrs:
+          type: object
+          additionalProperties: true
+    AiProduct:
+      type: object
+      required:
+        - id
+        - title
+        - status
+        - attrs
+        - createdAt
+        - updatedAt
+        - variants
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type:
+            - string
+            - 'null'
+        status:
+          type: string
+        attrs:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiProductVariant'
+    AiProductVariant:
+      type: object
+      required:
+        - id
+        - productId
+        - sku
+        - title
+        - priceVnd
+        - stockQty
+        - attrs
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        title:
+          type: string
+        priceVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Whole VND amount as a bigint string.
+        stockQty:
+          type: integer
+          minimum: 0
+        attrs:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AiGetProductRequest:
+      type: object
+      required:
+        - orgId
+        - productId
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+    AiGetProductResponse:
+      type: object
+      required:
+        - product
+      properties:
+        product:
+          $ref: '#/components/schemas/AiProduct'
+    AiDraftOrderItemWrite:
+      type: object
+      required:
+        - variantId
+        - qty
+      properties:
+        variantId:
+          type: string
+          format: uuid
+        qty:
+          type: integer
+          minimum: 1
+          maximum: 999
+    AiCreateDraftOrderRequest:
+      type: object
+      required:
+        - orgId
+        - items
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        conversationId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        contactId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        paymentMethod:
+          type: string
+          enum:
+            - cod
+            - bank_transfer
+            - other
+          default: cod
+        customerName:
+          type:
+            - string
+            - 'null'
+        phoneE164:
+          type:
+            - string
+            - 'null'
+        addressText:
+          type:
+            - string
+            - 'null'
+        addressJson:
+          type: object
+          additionalProperties: true
+        idempotencyKey:
+          type:
+            - string
+            - 'null'
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/AiDraftOrderItemWrite'
+    AiCreateDraftOrderResponse:
+      type: object
+      required:
+        - order
+        - items
+      properties:
+        order:
+          type: object
+          additionalProperties: true
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    WriteAiRunRequest:
+      type: object
+      required:
+        - orgId
+        - promptVersion
+        - model
+        - status
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        conversationId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        messageId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        promptVersion:
+          type: string
+        model:
+          type: string
+        tokens:
+          type: object
+          properties:
+            prompt:
+              type: integer
+              minimum: 0
+            completion:
+              type: integer
+              minimum: 0
+            input:
+              type: integer
+              minimum: 0
+            output:
+              type: integer
+              minimum: 0
+            total:
+              type: integer
+              minimum: 0
+        inputTokens:
+          type: integer
+          minimum: 0
+        outputTokens:
+          type: integer
+          minimum: 0
+        tools:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        citations:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        status:
+          type: string
+    WriteAiRunResponse:
+      type: object
+      required:
+        - aiRun
+      properties:
+        aiRun:
           type: object
           additionalProperties: true

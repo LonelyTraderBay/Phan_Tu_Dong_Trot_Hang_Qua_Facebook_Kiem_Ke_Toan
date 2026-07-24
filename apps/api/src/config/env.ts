@@ -16,6 +16,12 @@ export const EnvSchema = z.object({
   SENTRY_DSN: z.string().optional(),
   PLATFORM_ADMIN_EMAILS: z.string().default(""),
   AI_MODEL_ALLOWLIST: z.string().default("gemini-2.0-flash"),
+  DEFAULT_AI_DRAFT_MAX_AMOUNT_VND: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .safe()
+    .default(DEFAULT_AI_DRAFT_MAX_AMOUNT_VND),
   META_APP_ID: z.string().min(1),
   META_APP_SECRET: z.string().min(1),
   META_VERIFY_TOKEN: z.string().min(8),

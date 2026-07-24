@@ -1,0 +1,5 @@
+project_id = "omni-commerce"
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed/dev.sql"]

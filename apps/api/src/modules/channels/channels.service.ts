@@ -7,6 +7,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { randomBytes } from "node:crypto";
 
 import { encryptToken } from "../../common/crypto/token-crypto";
 import { loadEnv, type Env } from "../../config/env";
@@ -25,6 +26,7 @@ export const CHANNELS_ENV = Symbol("CHANNELS_ENV");
 const CHANNEL_SELECT =
   "id, org_id, provider, external_page_id, external_ig_id, status, created_at";
 const META_OAUTH_BASE_URL = "https://www.facebook.com";
+const META_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
 // Phase 1 scopes. Revisit when Meta App Review requirements change.
 const META_OAUTH_SCOPES = [
@@ -60,6 +62,7 @@ export type ChannelsEnv = Pick<
 type CompleteOAuthInput = {
   code: string;
   orgId: string;
+  state: string;
   userId: string;
 };
 
@@ -121,7 +124,8 @@ export class ChannelsService {
     this.audit = audit;
   }
 
-  getMetaOAuthUrl() {
+  async getMetaOAuthUrl(input: { orgId: string; userId: string }) {
+    const state = await this.createOAuthState(input);
     const url = new URL(
       `${META_OAUTH_BASE_URL}/${this.env.META_GRAPH_VERSION}/dialog/oauth`,
     );
@@ -129,11 +133,13 @@ export class ChannelsService {
     url.searchParams.set("redirect_uri", this.env.META_REDIRECT_URI);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("scope", META_OAUTH_SCOPES.join(","));
+    url.searchParams.set("state", state);
 
     return { url: url.toString() };
   }
 
   async completeOAuth(input: CompleteOAuthInput) {
+    await this.consumeOAuthState(input);
     const now = new Date().toISOString();
     const { userToken, tokenExpiresAt, debug } =
       await this.exchangeAndValidateUserToken(input.code);
@@ -190,6 +196,47 @@ export class ChannelsService {
     );
 
     return { connections: connections.map(mapConnection) };
+  }
+
+  private async createOAuthState(input: { orgId: string; userId: string }) {
+    const state = randomBytes(32).toString("base64url");
+    const expiresAt = new Date(Date.now() + META_OAUTH_STATE_TTL_MS).toISOString();
+    const { error } = await this.supabase.from("oauth_states").insert({
+      org_id: input.orgId,
+      user_id: input.userId,
+      state,
+      expires_at: expiresAt,
+    });
+
+    if (error) {
+      throwChannelsError(error, "Could not start Meta OAuth");
+    }
+
+    return state;
+  }
+
+  private async consumeOAuthState(input: CompleteOAuthInput) {
+    const state = input.state.trim();
+    if (!state) {
+      throwInvalidOAuthState();
+    }
+
+    const { data, error } = await this.supabase
+      .from("oauth_states")
+      .delete()
+      .eq("state", state)
+      .eq("org_id", input.orgId)
+      .eq("user_id", input.userId)
+      .gt("expires_at", new Date().toISOString())
+      .select("state")
+      .maybeSingle();
+
+    if (error) {
+      throwChannelsError(error, "Could not validate Meta OAuth state");
+    }
+    if (!data) {
+      throwInvalidOAuthState();
+    }
   }
 
   async listConnections(orgId: string) {
@@ -374,6 +421,13 @@ function throwChannelsError(error: SupabaseError, message: string): never {
   throw new InternalServerErrorException({
     code: "channels_failed",
     message,
+  });
+}
+
+function throwInvalidOAuthState(): never {
+  throw new BadRequestException({
+    code: "meta_oauth_state_invalid",
+    message: "Meta OAuth state is invalid or expired",
   });
 }
 

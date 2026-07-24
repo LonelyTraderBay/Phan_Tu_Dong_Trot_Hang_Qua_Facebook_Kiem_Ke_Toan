@@ -32,8 +32,11 @@ type SupabaseCall = {
 };
 
 type ChannelMapping = {
-  external_page_id: string;
+  external_ig_id?: string | null;
+  external_page_id?: string;
   org_id: string;
+  provider?: "meta_page" | "meta_ig";
+  status?: "active" | "needs_reauth" | "revoked";
 };
 
 type RpcResult = {
@@ -77,6 +80,30 @@ function metaPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function instagramPayload(overrides: Record<string, unknown> = {}) {
+  return metaPayload({
+    object: "instagram",
+    entry: [
+      {
+        id: "ig-1",
+        time: 1_721_824_400,
+        messaging: [
+          {
+            sender: { id: "ig-customer-1" },
+            recipient: { id: "ig-1" },
+            timestamp: 1_721_824_400_000,
+            message: {
+              mid: "m_ig_1",
+              text: "hello from ig",
+            },
+          },
+        ],
+      },
+    ],
+    ...overrides,
+  });
+}
+
 function mockSupabase(input: {
   mappings?: ChannelMapping[];
   rpcError?: { code?: string; message?: string };
@@ -88,6 +115,7 @@ function mockSupabase(input: {
   const client = {
     from(table: string) {
       if (table === "channel_connections") {
+        const filters: Array<{ field: string; value: unknown }> = [];
         const query = {
           select(columns: string) {
             calls.push({ op: "select", table, columns });
@@ -95,15 +123,26 @@ function mockSupabase(input: {
           },
           eq(field: string, value: unknown) {
             calls.push({ op: "eq", field, value });
+            filters.push({ field, value });
             return query;
           },
           in(field: string, value: unknown) {
             calls.push({ op: "in", field, value });
-            const pageIds = new Set(value as string[]);
+            const lookupIds = new Set(value as string[]);
             return {
-              data: (input.mappings ?? []).filter((row) =>
-                pageIds.has(row.external_page_id),
-              ),
+              data: (input.mappings ?? []).filter((row) => {
+                const normalized = normalizeMapping(row);
+                return (
+                  filters.every(
+                    (filter) =>
+                      normalized[filter.field as keyof typeof normalized] ===
+                      filter.value,
+                  ) &&
+                  lookupIds.has(
+                    normalized[field as keyof typeof normalized] as string,
+                  )
+                );
+              }),
               error: null,
             };
           },
@@ -134,6 +173,16 @@ function mockSupabase(input: {
   } as unknown as SupabaseLike;
 
   return { calls, client };
+}
+
+function normalizeMapping(row: ChannelMapping) {
+  return {
+    external_ig_id: row.external_ig_id ?? null,
+    external_page_id: row.external_page_id ?? "",
+    org_id: row.org_id,
+    provider: row.provider ?? "meta_page",
+    status: row.status ?? "active",
+  };
 }
 
 describe("MetaWebhookService", () => {
@@ -174,7 +223,7 @@ describe("MetaWebhookService", () => {
 
     await expect(service.ingest(request)).resolves.toEqual({ ok: true });
     expect(calls).toContainEqual({
-      columns: "external_page_id, org_id",
+      columns: "external_page_id, external_ig_id, org_id",
       op: "select",
       table: "channel_connections",
     });
@@ -346,6 +395,69 @@ describe("MetaWebhookService", () => {
     expect(calls).not.toContainEqual(expect.objectContaining({ op: "limit" }));
   });
 
+  it("routes instagram entries by external_ig_id to their organization", async () => {
+    const { calls, client } = mockSupabase({
+      mappings: [
+        {
+          external_ig_id: "ig-1",
+          external_page_id: "page-1",
+          org_id: ORG_ID,
+          provider: "meta_ig",
+        },
+      ],
+    });
+    const service = new MetaWebhookService(client, env);
+    const request = signedPayload(instagramPayload());
+
+    await expect(service.ingest(request)).resolves.toEqual({ ok: true });
+
+    expect(calls).toContainEqual({
+      field: "provider",
+      op: "eq",
+      value: "meta_ig",
+    });
+    expect(calls).toContainEqual({
+      field: "external_ig_id",
+      op: "in",
+      value: ["ig-1"],
+    });
+    expect(calls).toContainEqual({
+      args: expect.objectContaining({
+        p_org_id: ORG_ID,
+        p_payload_json: request.payload,
+        p_receipt_key: "m_ig_1",
+      }),
+      functionName: "record_meta_webhook_receipt_and_enqueue",
+      op: "rpc",
+    });
+  });
+
+  it("routes instagram entries through page linkage when no meta_ig row exists", async () => {
+    const { calls, client } = mockSupabase({
+      mappings: [
+        {
+          external_ig_id: "ig-1",
+          external_page_id: "page-1",
+          org_id: ORG_ID,
+          provider: "meta_page",
+        },
+      ],
+    });
+    const service = new MetaWebhookService(client, env);
+
+    await expect(
+      service.ingest(signedPayload(instagramPayload())),
+    ).resolves.toEqual({ ok: true });
+    expect(calls).toContainEqual({
+      args: expect.objectContaining({
+        p_org_id: ORG_ID,
+        p_receipt_key: "m_ig_1",
+      }),
+      functionName: "record_meta_webhook_receipt_and_enqueue",
+      op: "rpc",
+    });
+  });
+
   it("records unmapped entries without an outbox destination", async () => {
     const { calls, client } = mockSupabase({ mappings: [] });
     const service = new MetaWebhookService(client, env);
@@ -357,6 +469,23 @@ describe("MetaWebhookService", () => {
       args: expect.objectContaining({
         p_org_id: null,
         p_receipt_key: "m_page_1",
+      }),
+      functionName: "record_meta_webhook_receipt_and_enqueue",
+      op: "rpc",
+    });
+  });
+
+  it("records unmapped instagram entries without an outbox destination", async () => {
+    const { calls, client } = mockSupabase({ mappings: [] });
+    const service = new MetaWebhookService(client, env);
+
+    await expect(
+      service.ingest(signedPayload(instagramPayload())),
+    ).resolves.toEqual({ ok: true });
+    expect(calls).toContainEqual({
+      args: expect.objectContaining({
+        p_org_id: null,
+        p_receipt_key: "m_ig_1",
       }),
       functionName: "record_meta_webhook_receipt_and_enqueue",
       op: "rpc",

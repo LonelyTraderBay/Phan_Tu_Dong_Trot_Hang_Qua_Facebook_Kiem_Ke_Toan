@@ -30,6 +30,7 @@ function MetaOAuthCallbackContent() {
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
     const code = searchParams.get('code');
+    const state = searchParams.get('state');
 
     if (error) {
       const message = formatMetaOAuthError(error, errorDescription);
@@ -46,9 +47,16 @@ function MetaOAuthCallbackContent() {
       return;
     }
 
+    if (!state) {
+      router.replace(
+        `/settings/channels?oauth_error=${encodeURIComponent('Thiếu trạng thái xác thực từ Meta.')}`,
+      );
+      return;
+    }
+
     void (async () => {
       try {
-        await completeMetaOAuth(code);
+        await completeMetaOAuth(code, state);
         router.replace('/settings/channels?oauth_success=1');
       } catch (err) {
         const message =

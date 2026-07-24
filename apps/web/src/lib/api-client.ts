@@ -112,13 +112,14 @@ export async function getMetaOAuthUrl(): Promise<{ url: string }> {
 
 export async function completeMetaOAuth(
   code: string,
+  state: string,
 ): Promise<{ connections: ChannelConnection[] }> {
   return apiFetch<{ connections: ChannelConnection[] }>(
     '/v1/channels/meta/complete',
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, state }),
     },
   );
 }

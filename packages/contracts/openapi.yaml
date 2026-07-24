@@ -41,6 +41,16 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - url
+                properties:
+                  url:
+                    type: string
+                    format: uri
   /v1/channels/meta/complete:
     post:
       summary: Complete Meta OAuth and connect pages
@@ -52,8 +62,11 @@ paths:
               type: object
               required:
                 - code
+                - state
               properties:
                 code:
+                  type: string
+                state:
                   type: string
       responses:
         '201':

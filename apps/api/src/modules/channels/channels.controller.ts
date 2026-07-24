@@ -28,8 +28,14 @@ export class ChannelsController {
   @Get("meta/oauth-url")
   @UseGuards(PermissionsGuard)
   @RequirePermission("channels.connect")
-  getMetaOAuthUrl() {
-    return this.channels.getMetaOAuthUrl();
+  getMetaOAuthUrl(
+    @OrgId() orgId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser | undefined,
+  ) {
+    return this.channels.getMetaOAuthUrl({
+      orgId: requireOrgId(orgId),
+      userId: requireUserId(user),
+    });
   }
 
   @Post("meta/complete")
@@ -40,10 +46,12 @@ export class ChannelsController {
     @CurrentUser() user: AuthenticatedUser | undefined,
     @Body() body: unknown,
   ) {
+    const parsedBody = parseBody(CompleteMetaOAuthBodySchema, body);
     return this.channels.completeOAuth({
       orgId: requireOrgId(orgId),
       userId: requireUserId(user),
-      code: parseBody(CompleteMetaOAuthBodySchema, body).code,
+      code: parsedBody.code,
+      state: parsedBody.state,
     });
   }
 

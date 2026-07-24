@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { decryptToken } from "../../common/crypto/token-crypto";
 import {
@@ -9,6 +9,7 @@ import {
 } from "./channels.service";
 
 const ORG_ID = "11111111-1111-1111-1111-111111111111";
+const ORG_2_ID = "11111111-1111-1111-1111-111111111112";
 const USER_ID = "22222222-2222-2222-2222-222222222222";
 const CONNECTION_ID = "33333333-3333-3333-3333-333333333333";
 const TOKEN_KEY = "dev-token-encryption-key-32chars!!";
@@ -67,16 +68,113 @@ function connectionRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
+type OAuthStateRow = {
+  expires_at: string;
+  org_id: string;
+  state: string;
+  user_id: string;
+};
+
+function oauthState(overrides: Partial<OAuthStateRow> = {}): OAuthStateRow {
+  return {
+    expires_at: new Date(Date.now() + 60_000).toISOString(),
+    org_id: ORG_ID,
+    state: "oauth-state-1",
+    user_id: USER_ID,
+    ...overrides,
+  };
+}
+
+function channelsSupabaseMock(input: {
+  connectionRows?: unknown[];
+  oauthStates?: OAuthStateRow[];
+} = {}) {
+  const inserts: unknown[] = [];
+  const upserts: unknown[] = [];
+  const oauthStates = [...(input.oauthStates ?? [])];
+  const client = {
+    from(table: string) {
+      if (table === "oauth_states") {
+        return {
+          insert(values: unknown) {
+            inserts.push({ table, values });
+            oauthStates.push(values as OAuthStateRow);
+            return { error: null };
+          },
+          delete() {
+            const filters: Array<{ field: keyof OAuthStateRow; value: string }> =
+              [];
+            let expiresAfter = "";
+            const query = {
+              eq(field: keyof OAuthStateRow, value: string) {
+                filters.push({ field, value });
+                return query;
+              },
+              gt(field: keyof OAuthStateRow, value: string) {
+                expect(field).toBe("expires_at");
+                expiresAfter = value;
+                return query;
+              },
+              select(columns: string) {
+                expect(columns).toBe("state");
+                return {
+                  maybeSingle: async () => {
+                    const index = oauthStates.findIndex(
+                      (row) =>
+                        filters.every(
+                          (filter) => row[filter.field] === filter.value,
+                        ) && row.expires_at > expiresAfter,
+                    );
+                    if (index === -1) {
+                      return { data: null, error: null };
+                    }
+
+                    const [row] = oauthStates.splice(index, 1);
+                    return { data: { state: row.state }, error: null };
+                  },
+                };
+              },
+            };
+            return query;
+          },
+        };
+      }
+
+      if (table === "channel_connections") {
+        return {
+          upsert(values: unknown, options: unknown) {
+            upserts.push({ table, values, options });
+            return {
+              select: async () => ({
+                data: input.connectionRows ?? [connectionRow()],
+                error: null,
+              }),
+            };
+          },
+        };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    },
+  } as unknown as SupabaseLike;
+
+  return { client, inserts, oauthStates, upserts };
+}
+
 describe("ChannelsService", () => {
-  it("builds a Meta OAuth URL with Phase 1 scopes", () => {
+  it("builds a Meta OAuth URL with Phase 1 scopes and state", async () => {
+    const { client, inserts } = channelsSupabaseMock();
     const service = new ChannelsService(
-      {} as SupabaseLike,
+      client,
       graphMock(),
       undefined,
       env,
     );
 
-    const result = service.getMetaOAuthUrl();
+    const result = await service.getMetaOAuthUrl({
+      orgId: ORG_ID,
+      userId: USER_ID,
+    });
     const url = new URL(result.url);
 
     expect(url.origin).toBe("https://www.facebook.com");
@@ -87,26 +185,24 @@ describe("ChannelsService", () => {
     expect(url.searchParams.get("scope")).toContain(
       "instagram_manage_messages",
     );
+    expect(url.searchParams.get("state")).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(inserts).toEqual([
+      {
+        table: "oauth_states",
+        values: expect.objectContaining({
+          org_id: ORG_ID,
+          state: url.searchParams.get("state"),
+          user_id: USER_ID,
+        }),
+      },
+    ]);
   });
 
   it("stores encrypted token and omits secrets from DTO", async () => {
-    const upserts: unknown[] = [];
+    const { client, upserts } = channelsSupabaseMock({
+      oauthStates: [oauthState()],
+    });
     const auditCalls: unknown[] = [];
-    const client = {
-      from(table: string) {
-        return {
-          upsert(values: unknown, options: unknown) {
-            upserts.push({ table, values, options });
-            return {
-              select: async () => ({
-                data: [connectionRow()],
-                error: null,
-              }),
-            };
-          },
-        };
-      },
-    } as unknown as SupabaseLike;
     const service = new ChannelsService(
       client,
       graphMock(),
@@ -123,6 +219,7 @@ describe("ChannelsService", () => {
       orgId: ORG_ID,
       userId: USER_ID,
       code: "x",
+      state: "oauth-state-1",
     });
 
     expect(JSON.stringify(upserts)).not.toContain("EAAB_PLAIN");
@@ -156,6 +253,94 @@ describe("ChannelsService", () => {
         },
       },
     ]);
+  });
+
+  it("rejects missing OAuth state before exchanging code", async () => {
+    const exchangeCodeForToken = vi.fn();
+    const service = new ChannelsService(
+      channelsSupabaseMock().client,
+      graphMock({ exchangeCodeForToken }),
+      undefined,
+      env,
+    );
+
+    await expect(
+      service.completeOAuth({
+        orgId: ORG_ID,
+        userId: USER_ID,
+        code: "x",
+        state: " ",
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(exchangeCodeForToken).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid OAuth state before exchanging code", async () => {
+    const exchangeCodeForToken = vi.fn();
+    const service = new ChannelsService(
+      channelsSupabaseMock().client,
+      graphMock({ exchangeCodeForToken }),
+      undefined,
+      env,
+    );
+
+    await expect(
+      service.completeOAuth({
+        orgId: ORG_ID,
+        userId: USER_ID,
+        code: "x",
+        state: "missing-state",
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(exchangeCodeForToken).not.toHaveBeenCalled();
+  });
+
+  it("rejects expired OAuth state before exchanging code", async () => {
+    const exchangeCodeForToken = vi.fn();
+    const service = new ChannelsService(
+      channelsSupabaseMock({
+        oauthStates: [
+          oauthState({
+            expires_at: new Date(Date.now() - 60_000).toISOString(),
+          }),
+        ],
+      }).client,
+      graphMock({ exchangeCodeForToken }),
+      undefined,
+      env,
+    );
+
+    await expect(
+      service.completeOAuth({
+        orgId: ORG_ID,
+        userId: USER_ID,
+        code: "x",
+        state: "oauth-state-1",
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(exchangeCodeForToken).not.toHaveBeenCalled();
+  });
+
+  it("rejects OAuth state created for a different org", async () => {
+    const exchangeCodeForToken = vi.fn();
+    const service = new ChannelsService(
+      channelsSupabaseMock({
+        oauthStates: [oauthState({ org_id: ORG_2_ID })],
+      }).client,
+      graphMock({ exchangeCodeForToken }),
+      undefined,
+      env,
+    );
+
+    await expect(
+      service.completeOAuth({
+        orgId: ORG_ID,
+        userId: USER_ID,
+        code: "x",
+        state: "oauth-state-1",
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(exchangeCodeForToken).not.toHaveBeenCalled();
   });
 
   it("lists channel connections without selecting or returning tokens", async () => {

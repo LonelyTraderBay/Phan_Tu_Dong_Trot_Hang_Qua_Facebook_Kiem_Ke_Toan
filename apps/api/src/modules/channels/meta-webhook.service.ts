@@ -43,6 +43,7 @@ type SupabaseError = {
 
 type ChannelConnectionRow = {
   external_page_id: string;
+  external_ig_id: string | null;
   org_id: string;
 };
 
@@ -99,7 +100,9 @@ export class MetaWebhookService {
     const payload = toJsonObject(input.payload);
     const entries = getEntries(payload);
     const routedEntries = entries.length > 0 ? entries : [undefined];
-    const orgIdsByPageId = await this.findOrgIdsByPageId(
+    const routeKind = getWebhookRouteKind(payload);
+    const orgIdsByEntryId = await this.findOrgIdsByEntryId(
+      routeKind,
       entries
         .map((entry) => toNonEmptyString(entry.id))
         .filter((id): id is string => id !== undefined),
@@ -114,7 +117,7 @@ export class MetaWebhookService {
       const pageId = entry ? toNonEmptyString(entry.id) : undefined;
 
       await this.recordReceiptAndMaybeOutbox({
-        orgId: pageId ? (orgIdsByPageId.get(pageId) ?? null) : null,
+        orgId: pageId ? (orgIdsByEntryId.get(pageId) ?? null) : null,
         payload: scopedPayload,
         payloadHash,
         receiptKey: entry
@@ -126,35 +129,74 @@ export class MetaWebhookService {
     return { ok: true };
   }
 
-  private async findOrgIdsByPageId(pageIds: string[]) {
-    if (pageIds.length === 0) {
+  private async findOrgIdsByEntryId(
+    routeKind: "page" | "instagram",
+    entryIds: string[],
+  ) {
+    if (entryIds.length === 0) {
       return new Map<string, string>();
     }
 
+    if (routeKind === "page") {
+      return this.findOrgIdsByChannelColumn({
+        entryIds,
+        provider: "meta_page",
+        lookupColumn: "external_page_id",
+      });
+    }
+
+    const orgIdsByEntryId = new Map<string, string>();
+    for (const provider of ["meta_ig", "meta_page"] as const) {
+      const rows = await this.selectChannelMappings({
+        entryIds,
+        provider,
+        lookupColumn: "external_ig_id",
+      });
+      for (const row of rows) {
+        const entryId = toNonEmptyString(row.external_ig_id);
+        if (entryId) {
+          setUniqueOrgId(orgIdsByEntryId, entryId, row.org_id);
+        }
+      }
+    }
+
+    return orgIdsByEntryId;
+  }
+
+  private async findOrgIdsByChannelColumn(input: {
+    entryIds: string[];
+    provider: "meta_page" | "meta_ig";
+    lookupColumn: "external_page_id" | "external_ig_id";
+  }) {
+    const rows = await this.selectChannelMappings(input);
+    const orgIdsByEntryId = new Map<string, string>();
+    for (const row of rows) {
+      const entryId = toNonEmptyString(row[input.lookupColumn]);
+      if (entryId) {
+        setUniqueOrgId(orgIdsByEntryId, entryId, row.org_id);
+      }
+    }
+
+    return orgIdsByEntryId;
+  }
+
+  private async selectChannelMappings(input: {
+    entryIds: string[];
+    provider: "meta_page" | "meta_ig";
+    lookupColumn: "external_page_id" | "external_ig_id";
+  }) {
     const { data, error } = await this.supabase
       .from("channel_connections")
-      .select("external_page_id, org_id")
-      .eq("provider", "meta_page")
+      .select("external_page_id, external_ig_id, org_id")
+      .eq("provider", input.provider)
       .eq("status", "active")
-      .in("external_page_id", pageIds);
+      .in(input.lookupColumn, input.entryIds);
 
     if (error) {
-      throwWebhookError(error, "Could not map Meta page to organization");
+      throwWebhookError(error, "Could not map Meta entry to organization");
     }
 
-    const orgIdsByPageId = new Map<string, string>();
-    for (const row of (data ?? []) as ChannelConnectionRow[]) {
-      const existingOrgId = orgIdsByPageId.get(row.external_page_id);
-      if (existingOrgId && existingOrgId !== row.org_id) {
-        throwWebhookError(
-          { message: "Meta page maps to multiple organizations" },
-          "Could not map Meta page to organization",
-        );
-      }
-      orgIdsByPageId.set(row.external_page_id, row.org_id);
-    }
-
-    return orgIdsByPageId;
+    return (data ?? []) as ChannelConnectionRow[];
   }
 
   private async recordReceiptAndMaybeOutbox(input: {
@@ -235,6 +277,10 @@ function getEntries(payload: JsonObject) {
   return toRecordArray(payload.entry);
 }
 
+function getWebhookRouteKind(payload: JsonObject): "page" | "instagram" {
+  return payload.object === "instagram" ? "instagram" : "page";
+}
+
 function getMessagingEvents(entry: Record<string, unknown>) {
   return toRecordArray(entry.messaging);
 }
@@ -278,6 +324,21 @@ function toNonEmptyString(value: unknown) {
   }
 
   return undefined;
+}
+
+function setUniqueOrgId(
+  orgIdsByEntryId: Map<string, string>,
+  entryId: string,
+  orgId: string,
+) {
+  const existingOrgId = orgIdsByEntryId.get(entryId);
+  if (existingOrgId && existingOrgId !== orgId) {
+    throwWebhookError(
+      { message: "Meta entry maps to multiple organizations" },
+      "Could not map Meta entry to organization",
+    );
+  }
+  orgIdsByEntryId.set(entryId, orgId);
 }
 
 function throwWebhookError(error: SupabaseError, message: string): never {

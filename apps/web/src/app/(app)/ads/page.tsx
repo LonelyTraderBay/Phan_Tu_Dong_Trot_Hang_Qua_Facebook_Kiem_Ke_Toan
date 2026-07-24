@@ -4,10 +4,11 @@ import { type CSSProperties, useCallback, useEffect, useState } from 'react';
 
 import {
   ApiClientError,
-  getPnlBySku,
-  getPnlSummary,
-  type PnlSku,
-  type PnlSummary,
+  getAdSpendSummary,
+  importAdSpendCsv,
+  listAdSpend,
+  type AdSpendRecord,
+  type AdSpendSummary,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 
@@ -16,28 +17,33 @@ type DateRange = {
   to: string;
 };
 
-export default function PnlPage() {
+const SAMPLE_CSV = 'date,campaign,amount_vnd\n2026-07-25,Meta prospecting,150000';
+
+export default function AdsPage() {
   const [range, setRange] = useState<DateRange>(() => defaultRange());
-  const [summary, setSummary] = useState<PnlSummary | null>(null);
-  const [skuRows, setSkuRows] = useState<PnlSku[]>([]);
+  const [csv, setCsv] = useState(SAMPLE_CSV);
+  const [rows, setRows] = useState<AdSpendRecord[]>([]);
+  const [summary, setSummary] = useState<AdSpendSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadReport = useCallback(async () => {
+  const loadAds = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const [nextSummary, nextSkuRows] = await Promise.all([
-        getPnlSummary(range),
-        getPnlBySku(range),
+      const [nextRows, nextSummary] = await Promise.all([
+        listAdSpend({ ...range, limit: 200 }),
+        getAdSpendSummary(range),
       ]);
+      setRows(nextRows);
       setSummary(nextSummary);
-      setSkuRows(nextSkuRows);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Không thể tải báo cáo lãi gộp.'));
+      setRows([]);
       setSummary(null);
-      setSkuRows([]);
+      setError(getApiErrorMessage(err, 'Không thể tải chi phí ads.'));
     } finally {
       setLoading(false);
     }
@@ -45,10 +51,10 @@ export default function PnlPage() {
 
   useEffect(() => {
     function handleSessionChanged() {
-      void loadReport();
+      void loadAds();
     }
 
-    void loadReport();
+    void loadAds();
     window.addEventListener(SESSION_CHANGED_EVENT, handleSessionChanged);
     window.addEventListener('storage', handleSessionChanged);
 
@@ -56,55 +62,40 @@ export default function PnlPage() {
       window.removeEventListener(SESSION_CHANGED_EVENT, handleSessionChanged);
       window.removeEventListener('storage', handleSessionChanged);
     };
-  }, [loadReport]);
+  }, [loadAds]);
 
-  function handleDownloadCsv() {
-    const rows = [
-      [
-        'type',
-        'key',
-        'revenueVnd',
-        'cogsVnd',
-        'grossProfitVnd',
-        'adSpendVnd',
-        'netProfitVnd',
-        'orderCount',
-        'qty',
-      ],
-      ...(summary?.days ?? []).map((day) => [
-        'day',
-        day.day,
-        day.revenueVnd,
-        day.cogsVnd,
-        day.grossProfitVnd,
-        day.adSpendVnd,
-        day.netProfitVnd,
-        String(day.orderCount),
-        '',
-      ]),
-      ...skuRows.map((sku) => [
-        'sku',
-        sku.sku,
-        sku.revenueVnd,
-        sku.cogsVnd,
-        sku.grossProfitVnd,
-        '',
-        '',
-        String(sku.orderCount),
-        String(sku.qty),
-      ]),
-    ];
-    downloadCsv(`pnl-${range.from}-${range.to}.csv`, rows);
+  async function handleImport() {
+    setImporting(true);
+    setMessage(null);
+    setError(null);
+
+    try {
+      const result = await importAdSpendCsv(csv);
+      setMessage(`Đã import ${result.importedCount} dòng chi phí ads.`);
+      await loadAds();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Không thể import CSV ads.'));
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function handleFileUpload(file: File | null) {
+    if (!file) {
+      return;
+    }
+    setCsv(await file.text());
   }
 
   return (
     <main>
       <header style={headerStyle}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 32 }}>Lãi gộp</h1>
+          <h1 style={{ margin: 0, fontSize: 32 }}>Chi phí ads</h1>
           <p style={descriptionStyle}>
-            Báo cáo doanh thu, COGS và lãi gộp cho đơn đã bán
-            (shipped/done). Tiền dùng BIGINT VND, không dùng số lẻ.
+            Import CSV theo mẫu <code>date,campaign,amount_vnd</code>. Số tiền là
+            BIGINT VND, không dùng số lẻ. Meta Ads API sẽ nối sau; hiện tại dùng
+            CSV/JSON batch qua Core API.
           </p>
         </div>
         <div style={filterRowStyle}>
@@ -132,23 +123,20 @@ export default function PnlPage() {
           </label>
           <button
             type="button"
-            onClick={() => void loadReport()}
+            onClick={() => void loadAds()}
             disabled={loading}
             style={secondaryButtonStyle}
           >
             {loading ? 'Đang tải...' : 'Tải lại'}
           </button>
-          <button
-            type="button"
-            onClick={handleDownloadCsv}
-            disabled={loading || (!summary && skuRows.length === 0)}
-            style={secondaryButtonStyle}
-          >
-            Tải CSV
-          </button>
         </div>
       </header>
 
+      {message ? (
+        <p role="status" style={statusStyle}>
+          {message}
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" style={alertStyle}>
           {error}
@@ -157,63 +145,73 @@ export default function PnlPage() {
 
       <section style={summaryGridStyle}>
         <SummaryCard
-          label="Doanh thu"
-          value={formatVnd(summary?.revenueVnd ?? '0')}
-        />
-        <SummaryCard label="COGS" value={formatVnd(summary?.cogsVnd ?? '0')} />
-        <SummaryCard
-          label="Lãi gộp"
-          value={formatVnd(summary?.grossProfitVnd ?? '0')}
+          label="Tổng chi ads"
+          value={formatVnd(summary?.totalVnd ?? '0')}
         />
         <SummaryCard
-          label="Chi phí ads"
-          value={formatVnd(summary?.adSpendVnd ?? '0')}
+          label="Số ngày có ads"
+          value={String(summary?.days.length ?? 0)}
         />
-        <SummaryCard
-          label="Lãi sau ads"
-          value={formatVnd(summary?.netProfitVnd ?? '0')}
-        />
-        <SummaryCard label="Đơn đã bán" value={String(summary?.orderCount ?? 0)} />
+        <SummaryCard label="Dòng gần đây" value={String(rows.length)} />
       </section>
 
       <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Theo ngày</h2>
+        <div style={sectionHeaderStyle}>
+          <div>
+            <h2 style={sectionTitleStyle}>Import CSV</h2>
+            <p style={mutedStyle}>
+              Header bắt buộc: <code>date,campaign,amount_vnd</code>. Có thể thêm
+              <code> external_id</code> nếu dữ liệu đến từ nguồn ngoài.
+            </p>
+          </div>
+          <label style={uploadButtonStyle}>
+            Chọn file CSV
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => void handleFileUpload(event.target.files?.[0] ?? null)}
+              style={{ display: 'none' }}
+            />
+          </label>
+        </div>
+        <textarea
+          value={csv}
+          onChange={(event) => setCsv(event.target.value)}
+          rows={8}
+          style={textareaStyle}
+        />
+        <div style={{ marginTop: 12 }}>
+          <button
+            type="button"
+            onClick={() => void handleImport()}
+            disabled={importing || !csv.trim()}
+            style={primaryButtonStyle}
+          >
+            {importing ? 'Đang import...' : 'Import chi phí ads'}
+          </button>
+        </div>
+      </section>
+
+      <section style={panelStyle}>
+        <h2 style={sectionTitleStyle}>Tổng theo ngày</h2>
         {loading ? (
-          <p style={mutedStyle}>Đang tải lãi gộp theo ngày...</p>
+          <p style={mutedStyle}>Đang tải tổng ads theo ngày...</p>
         ) : !summary || summary.days.length === 0 ? (
-          <p style={emptyStyle}>Chưa có đơn shipped/done trong khoảng ngày này.</p>
+          <p style={emptyStyle}>Chưa có chi phí ads trong khoảng ngày này.</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={tableStyle}>
               <thead>
                 <tr>
                   <th style={tableHeaderStyle}>Ngày</th>
-                  <th style={tableHeaderStyle}>Đơn</th>
-                  <th style={tableHeaderStyle}>Doanh thu</th>
-                  <th style={tableHeaderStyle}>COGS</th>
-                  <th style={tableHeaderStyle}>Lãi gộp</th>
-                  <th style={tableHeaderStyle}>Ads</th>
-                  <th style={tableHeaderStyle}>Lãi sau ads</th>
+                  <th style={tableHeaderStyle}>Chi phí ads</th>
                 </tr>
               </thead>
               <tbody>
                 {summary.days.map((day) => (
                   <tr key={day.day}>
                     <td style={tableCellStyle}>{formatDay(day.day)}</td>
-                    <td style={tableCellStyle}>{day.orderCount}</td>
-                    <td style={tableCellStyle}>{formatVnd(day.revenueVnd)}</td>
-                    <td style={tableCellStyle}>{formatVnd(day.cogsVnd)}</td>
-                    <td style={tableCellStyle}>
-                      <span style={profitStyle(day.grossProfitVnd)}>
-                        {formatVnd(day.grossProfitVnd)}
-                      </span>
-                    </td>
-                    <td style={tableCellStyle}>{formatVnd(day.adSpendVnd)}</td>
-                    <td style={tableCellStyle}>
-                      <span style={profitStyle(day.netProfitVnd)}>
-                        {formatVnd(day.netProfitVnd)}
-                      </span>
-                    </td>
+                    <td style={tableCellStyle}>{formatVnd(day.amountVnd)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -223,37 +221,31 @@ export default function PnlPage() {
       </section>
 
       <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Theo SKU</h2>
+        <h2 style={sectionTitleStyle}>Dòng đã import</h2>
         {loading ? (
-          <p style={mutedStyle}>Đang tải lãi gộp theo SKU...</p>
-        ) : skuRows.length === 0 ? (
-          <p style={emptyStyle}>Chưa có SKU bán trong khoảng ngày này.</p>
+          <p style={mutedStyle}>Đang tải danh sách ads...</p>
+        ) : rows.length === 0 ? (
+          <p style={emptyStyle}>Chưa có dòng ads nào trong khoảng ngày này.</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={tableStyle}>
               <thead>
                 <tr>
-                  <th style={tableHeaderStyle}>SKU</th>
-                  <th style={tableHeaderStyle}>SL</th>
-                  <th style={tableHeaderStyle}>Đơn</th>
-                  <th style={tableHeaderStyle}>Doanh thu dòng</th>
-                  <th style={tableHeaderStyle}>COGS</th>
-                  <th style={tableHeaderStyle}>Lãi gộp</th>
+                  <th style={tableHeaderStyle}>Ngày</th>
+                  <th style={tableHeaderStyle}>Campaign</th>
+                  <th style={tableHeaderStyle}>Nguồn</th>
+                  <th style={tableHeaderStyle}>Số tiền</th>
+                  <th style={tableHeaderStyle}>External ID</th>
                 </tr>
               </thead>
               <tbody>
-                {skuRows.map((sku) => (
-                  <tr key={sku.sku}>
-                    <td style={tableCellStyle}>{sku.sku}</td>
-                    <td style={tableCellStyle}>{sku.qty}</td>
-                    <td style={tableCellStyle}>{sku.orderCount}</td>
-                    <td style={tableCellStyle}>{formatVnd(sku.revenueVnd)}</td>
-                    <td style={tableCellStyle}>{formatVnd(sku.cogsVnd)}</td>
-                    <td style={tableCellStyle}>
-                      <span style={profitStyle(sku.grossProfitVnd)}>
-                        {formatVnd(sku.grossProfitVnd)}
-                      </span>
-                    </td>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <td style={tableCellStyle}>{formatDay(row.date)}</td>
+                    <td style={tableCellStyle}>{row.campaignName}</td>
+                    <td style={tableCellStyle}>{formatSource(row.source)}</td>
+                    <td style={tableCellStyle}>{formatVnd(row.amountVnd)}</td>
+                    <td style={tableCellStyle}>{row.externalId ?? '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -292,6 +284,10 @@ function getApiErrorMessage(err: unknown, fallback: string) {
   return err instanceof ApiClientError ? err.message : fallback;
 }
 
+function formatSource(source: string) {
+  return source === 'meta_ads' ? 'Meta Ads' : 'CSV';
+}
+
 function formatDay(value: string) {
   return new Intl.DateTimeFormat('vi-VN', {
     dateStyle: 'medium',
@@ -305,30 +301,6 @@ function formatVnd(value: string) {
   return `${sign}${grouped} đ`;
 }
 
-function profitStyle(value: string): CSSProperties {
-  return {
-    color: value.startsWith('-') ? '#b91c1c' : '#15803d',
-    fontWeight: 800,
-  };
-}
-
-function downloadCsv(filename: string, rows: string[][]) {
-  const csv = rows
-    .map((row) =>
-      row
-        .map((cell) => `"${cell.replace(/"/g, '""')}"`)
-        .join(','),
-    )
-    .join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
 const headerStyle: CSSProperties = {
   alignItems: 'flex-start',
   display: 'flex',
@@ -340,7 +312,7 @@ const headerStyle: CSSProperties = {
 const descriptionStyle: CSSProperties = {
   color: '#475569',
   fontSize: 18,
-  maxWidth: 780,
+  maxWidth: 820,
 };
 
 const filterRowStyle: CSSProperties = {
@@ -392,15 +364,33 @@ const panelStyle: CSSProperties = {
   padding: 20,
 };
 
+const sectionHeaderStyle: CSSProperties = {
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
+  justifyContent: 'space-between',
+};
+
 const sectionTitleStyle: CSSProperties = {
   color: '#0f172a',
   fontSize: 22,
   margin: '0 0 16px',
 };
 
+const textareaStyle: CSSProperties = {
+  border: '1px solid #cbd5e1',
+  borderRadius: 10,
+  color: '#0f172a',
+  font: '14px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+  marginTop: 12,
+  padding: 12,
+  width: '100%',
+};
+
 const tableStyle: CSSProperties = {
   borderCollapse: 'collapse',
-  minWidth: 860,
+  minWidth: 760,
   width: '100%',
 };
 
@@ -420,6 +410,17 @@ const tableCellStyle: CSSProperties = {
   padding: '12px 16px',
 };
 
+const primaryButtonStyle: CSSProperties = {
+  background: '#2563eb',
+  border: '1px solid #2563eb',
+  borderRadius: 8,
+  color: '#ffffff',
+  cursor: 'pointer',
+  fontSize: 14,
+  fontWeight: 700,
+  padding: '9px 12px',
+};
+
 const secondaryButtonStyle: CSSProperties = {
   background: '#ffffff',
   border: '1px solid #cbd5e1',
@@ -429,6 +430,11 @@ const secondaryButtonStyle: CSSProperties = {
   fontSize: 14,
   fontWeight: 700,
   padding: '9px 12px',
+};
+
+const uploadButtonStyle: CSSProperties = {
+  ...secondaryButtonStyle,
+  display: 'inline-flex',
 };
 
 const mutedStyle: CSSProperties = {
@@ -448,4 +454,13 @@ const alertStyle: CSSProperties = {
   color: '#b91c1c',
   fontSize: 16,
   marginTop: 20,
+};
+
+const statusStyle: CSSProperties = {
+  background: '#ecfdf5',
+  border: '1px solid #bbf7d0',
+  borderRadius: 12,
+  color: '#047857',
+  marginTop: 20,
+  padding: 12,
 };

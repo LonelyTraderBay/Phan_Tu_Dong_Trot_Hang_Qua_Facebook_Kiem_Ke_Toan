@@ -33,19 +33,28 @@ type OrderRow = {
   items?: OrderItemRow[] | null;
 };
 
+type AdSpendRow = {
+  date: string;
+  amount_vnd: string | number;
+};
+
 type SupabaseError = {
   code?: string;
   message?: string;
 };
 
-type MoneyAggregate = {
+type GrossAggregate = {
   revenue: bigint;
   cogs: bigint;
   grossProfit: bigint;
   orderCount: number;
 };
 
-type SkuAggregate = MoneyAggregate & {
+type MoneyAggregate = GrossAggregate & {
+  adSpend: bigint;
+};
+
+type SkuAggregate = GrossAggregate & {
   sku: string;
   qty: number;
   orderIds: Set<string>;
@@ -54,6 +63,7 @@ type SkuAggregate = MoneyAggregate & {
 const SOLD_STATUSES: OrderStatus[] = ['shipped', 'done'];
 const ORDER_WITH_ITEMS_SELECT =
   'id, status, total_vnd, shipped_at, done_at, created_at, items:order_items(sku_snapshot, qty, line_total_vnd, cogs_unit_vnd)';
+const AD_SPEND_SELECT = 'date, amount_vnd';
 
 @Injectable()
 export class PnlService {
@@ -68,7 +78,10 @@ export class PnlService {
   }
 
   async getSummary(orgId: string, query: PnlDateRangeQuery) {
-    const orders = await this.loadSoldOrders(orgId, query);
+    const [orders, adSpendRows] = await Promise.all([
+      this.loadSoldOrders(orgId, query),
+      this.loadAdSpendRows(orgId, query),
+    ]);
     const totals = emptyAggregate();
     const byDay = new Map<string, MoneyAggregate>();
 
@@ -81,6 +94,16 @@ export class PnlService {
 
       addOrder(totals, revenue, cogs);
       addOrder(dayAggregate, revenue, cogs);
+      byDay.set(day, dayAggregate);
+    }
+
+    for (const row of adSpendRows) {
+      const day = row.date;
+      const dayAggregate = byDay.get(day) ?? emptyAggregate();
+      const amount = toBigintVnd(row.amount_vnd);
+
+      totals.adSpend += amount;
+      dayAggregate.adSpend += amount;
       byDay.set(day, dayAggregate);
     }
 
@@ -122,7 +145,7 @@ export class PnlService {
         .map((aggregate) => ({
           sku: aggregate.sku,
           qty: aggregate.qty,
-          ...serializeAggregate(aggregate),
+          ...serializeGrossAggregate(aggregate),
         })),
     };
   }
@@ -149,6 +172,32 @@ export class PnlService {
       );
     });
   }
+
+  private async loadAdSpendRows(orgId: string, query: PnlDateRangeQuery) {
+    let builder = this.supabase
+      .from('ad_spend')
+      .select(AD_SPEND_SELECT)
+      .eq('org_id', orgId)
+      .order('date', { ascending: true })
+      .limit(10_000);
+
+    if (query.from) {
+      builder = builder.gte('date', dateOnly(query.from, 'from'));
+    }
+    if (query.to) {
+      builder = builder.lte('date', dateOnly(query.to, 'to'));
+    }
+
+    const { data, error } = await builder;
+    if (error) {
+      if (error.code === '42P01') {
+        return [];
+      }
+      throwPnlError(error, 'Could not load P&L ad spend');
+    }
+
+    return (data ?? []) as AdSpendRow[];
+  }
 }
 
 function emptyAggregate(): MoneyAggregate {
@@ -156,20 +205,24 @@ function emptyAggregate(): MoneyAggregate {
     revenue: 0n,
     cogs: 0n,
     grossProfit: 0n,
+    adSpend: 0n,
     orderCount: 0,
   };
 }
 
 function emptySkuAggregate(sku: string): SkuAggregate {
   return {
-    ...emptyAggregate(),
+    revenue: 0n,
+    cogs: 0n,
+    grossProfit: 0n,
+    orderCount: 0,
     sku,
     qty: 0,
     orderIds: new Set<string>(),
   };
 }
 
-function addOrder(aggregate: MoneyAggregate, revenue: bigint, cogs: bigint) {
+function addOrder(aggregate: GrossAggregate, revenue: bigint, cogs: bigint) {
   aggregate.revenue += revenue;
   aggregate.cogs += cogs;
   aggregate.grossProfit += revenue - cogs;
@@ -177,6 +230,17 @@ function addOrder(aggregate: MoneyAggregate, revenue: bigint, cogs: bigint) {
 }
 
 function serializeAggregate(aggregate: MoneyAggregate) {
+  return {
+    revenueVnd: aggregate.revenue.toString(),
+    cogsVnd: aggregate.cogs.toString(),
+    grossProfitVnd: aggregate.grossProfit.toString(),
+    adSpendVnd: aggregate.adSpend.toString(),
+    netProfitVnd: (aggregate.grossProfit - aggregate.adSpend).toString(),
+    orderCount: aggregate.orderCount,
+  };
+}
+
+function serializeGrossAggregate(aggregate: GrossAggregate) {
   return {
     revenueVnd: aggregate.revenue.toString(),
     cogsVnd: aggregate.cogs.toString(),
@@ -211,6 +275,13 @@ function dateBound(value: string, bound: 'from' | 'to') {
       : new Date(`${value}T23:59:59.999Z`).getTime();
   }
   return new Date(value).getTime();
+}
+
+function dateOnly(value: string, bound: 'from' | 'to') {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  return new Date(dateBound(value, bound)).toISOString().slice(0, 10);
 }
 
 function toBigintVnd(value: string | number | unknown) {

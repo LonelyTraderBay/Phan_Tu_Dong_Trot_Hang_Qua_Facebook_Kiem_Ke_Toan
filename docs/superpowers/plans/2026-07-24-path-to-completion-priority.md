@@ -21,7 +21,7 @@ DONE  A→D  Pilot
 DONE  P0   docs/legal/ADR (live staging/Review = owner AMBER)
 AMBER P3  E    M3 code+docs GREEN · paid drills AMBER  → [plan-e-dod-evidence]
 DONE  P4a F    Phase 2 Operations
-▶ P4b G    Phase 3 Intelligence
+▶ P4b G    Phase 3 Intelligence — IN PROGRESS
   P4c H    Phase 4 ERP-lite     → CPC
   P5  I    M4                   → E100
   P6  Epoch 5 (optional)
@@ -92,7 +92,9 @@ Evidence E: [plan-e-dod-evidence](./plan-e-dod-evidence.md). Paid drills AMBER k
 
 ---
 
-## P4b — Plan G · Phase 3 Intelligence → **NEXT**
+## P4b — Plan G · Phase 3 Intelligence → **IN PROGRESS**
+
+**Playbook:** [plan-g-priority-execution](./2026-07-24-plan-g-priority-execution.md) · [plan](./2026-07-24-plan-g-phase3-intelligence.md) · [evidence](./plan-g-dod-evidence.md)
 
 | Ưu tiên | Wave | Bước | DoD wave |
 |--------:|------|------|----------|
@@ -159,7 +161,7 @@ Với mỗi plan E→I:
 ```
 DONE P0 docs + P3 Plan E code/docs (paid/live AMBER = owner parallel)
 DONE Plan F 2A→2H
-▶ NEXT eng: Write Plan G JIT plan, then execute 3A→3F
+▶ NOW eng: Execute Plan G 3A→3F
 THEN Plan H → CPC
 THEN Plan I → E100
 OWNER parallel: §12.1 · Meta Review submit · Pro+PITR drill · always-on

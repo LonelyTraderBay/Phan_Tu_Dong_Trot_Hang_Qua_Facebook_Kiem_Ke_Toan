@@ -227,6 +227,8 @@ export type PnlDay = {
   revenueVnd: string;
   cogsVnd: string;
   grossProfitVnd: string;
+  adSpendVnd: string;
+  netProfitVnd: string;
   orderCount: number;
 };
 
@@ -234,6 +236,8 @@ export type PnlSummary = {
   revenueVnd: string;
   cogsVnd: string;
   grossProfitVnd: string;
+  adSpendVnd: string;
+  netProfitVnd: string;
   orderCount: number;
   days: PnlDay[];
 };
@@ -285,6 +289,29 @@ export type BillingInvoice = {
   issuedAt: string | null;
   note: string | null;
   createdAt: string;
+};
+
+export type AdSpendSource = 'meta_ads' | 'csv';
+
+export type AdSpendRecord = {
+  id: string;
+  orgId: string;
+  source: AdSpendSource | string;
+  date: string;
+  campaignName: string;
+  amountVnd: string;
+  externalId: string | null;
+  createdAt: string;
+};
+
+export type AdSpendDay = {
+  day: string;
+  amountVnd: string;
+};
+
+export type AdSpendSummary = {
+  totalVnd: string;
+  days: AdSpendDay[];
 };
 
 export type OrdersExportFormat = 'csv' | 'xlsx' | 'pdf';
@@ -747,6 +774,48 @@ export async function getPnlBySku(input: {
     `/v1/pnl/by-sku${dateRangeQuery(input)}`,
   );
   return items;
+}
+
+export async function importAdSpendCsv(csv: string): Promise<{
+  importedCount: number;
+  adSpend: AdSpendRecord[];
+}> {
+  return apiFetch<{ importedCount: number; adSpend: AdSpendRecord[] }>(
+    '/v1/ad-spend/import',
+    {
+      method: 'POST',
+      body: JSON.stringify({ csv, source: 'csv' }),
+    },
+  );
+}
+
+export async function listAdSpend(input: {
+  from?: string;
+  to?: string;
+  limit?: number;
+} = {}): Promise<AdSpendRecord[]> {
+  const params = new URLSearchParams();
+  if (input.from) {
+    params.set('from', input.from);
+  }
+  if (input.to) {
+    params.set('to', input.to);
+  }
+  if (input.limit) {
+    params.set('limit', String(input.limit));
+  }
+  const query = params.size > 0 ? `?${params.toString()}` : '';
+  const { adSpend } = await apiFetch<{ adSpend: AdSpendRecord[] }>(
+    `/v1/ad-spend${query}`,
+  );
+  return adSpend;
+}
+
+export async function getAdSpendSummary(input: {
+  from?: string;
+  to?: string;
+} = {}): Promise<AdSpendSummary> {
+  return apiFetch<AdSpendSummary>(`/v1/ad-spend/summary${dateRangeQuery(input)}`);
 }
 
 export async function getBillingPlan(): Promise<BillingPlan> {

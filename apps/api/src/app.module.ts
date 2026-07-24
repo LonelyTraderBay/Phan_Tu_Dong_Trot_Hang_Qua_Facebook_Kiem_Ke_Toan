@@ -7,6 +7,7 @@ import {
   OrgGuard,
   SupabaseMembershipsRepository,
 } from './common/guards/org.guard';
+import { AdSpendModule } from './modules/ad-spend/ad-spend.module';
 import { AdminOpsModule } from './modules/admin-ops/admin-ops.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
@@ -36,6 +37,7 @@ import { ShippingModule } from './modules/shipping/shipping.module';
     ShippingModule,
     CodModule,
     PnlModule,
+    AdSpendModule,
     FeatureFlagsModule,
     InternalModule,
   ],

@@ -315,6 +315,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PnlBySkuResponse'
+  /v1/ad-spend/import:
+    post:
+      summary: Import ad spend rows from CSV text or JSON batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdSpendImportRequest'
+      responses:
+        '201':
+          description: Ad spend imported
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdSpendImportResponse'
+        '400':
+          description: Invalid CSV, JSON rows, date, source, or money value
+  /v1/ad-spend:
+    get:
+      summary: List ad spend rows for current org
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+      responses:
+        '200':
+          description: Ad spend rows
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdSpendListResponse'
+  /v1/ad-spend/summary:
+    get:
+      summary: Summarize ad spend by day for current org
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Ad spend daily summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdSpendSummaryResponse'
   /v1/billing/plan:
     get:
       summary: Current billing plan, status, and entitlements for current org
@@ -1665,9 +1732,25 @@ components:
         orderCount:
           type: integer
           minimum: 0
-    PnlDailyAggregate:
+    PnlProfitAggregate:
       allOf:
         - $ref: '#/components/schemas/PnlMoneyAggregate'
+        - type: object
+          required:
+            - adSpendVnd
+            - netProfitVnd
+          properties:
+            adSpendVnd:
+              type: string
+              pattern: '^[0-9]+$'
+              description: Imported ad spend expense as a bigint string.
+            netProfitVnd:
+              type: string
+              pattern: '^-?[0-9]+$'
+              description: grossProfitVnd minus adSpendVnd as a bigint string.
+    PnlDailyAggregate:
+      allOf:
+        - $ref: '#/components/schemas/PnlProfitAggregate'
         - type: object
           required:
             - day
@@ -1677,7 +1760,7 @@ components:
               format: date
     PnlSummaryResponse:
       allOf:
-        - $ref: '#/components/schemas/PnlMoneyAggregate'
+        - $ref: '#/components/schemas/PnlProfitAggregate'
         - type: object
           required:
             - days
@@ -1708,6 +1791,146 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PnlSkuAggregate'
+    AdSpendSource:
+      type: string
+      enum:
+        - meta_ads
+        - csv
+    AdSpend:
+      type: object
+      required:
+        - id
+        - orgId
+        - source
+        - date
+        - campaignName
+        - amountVnd
+        - externalId
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        source:
+          $ref: '#/components/schemas/AdSpendSource'
+        date:
+          type: string
+          format: date
+        campaignName:
+          type: string
+        amountVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Whole VND amount as a bigint string.
+        externalId:
+          type:
+            - string
+            - 'null'
+        createdAt:
+          type: string
+          format: date-time
+    AdSpendImportRow:
+      type: object
+      required:
+        - date
+      properties:
+        date:
+          type: string
+          format: date
+        campaignName:
+          type: string
+          description: Accepted JSON alias. `campaign` and `campaign_name` are also accepted by the API.
+        campaign:
+          type: string
+        campaign_name:
+          type: string
+        amountVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Accepted JSON alias. `amount_vnd` is also accepted by the API.
+        amount_vnd:
+          type: string
+          pattern: '^[0-9]+$'
+        source:
+          $ref: '#/components/schemas/AdSpendSource'
+          default: csv
+        externalId:
+          type:
+            - string
+            - 'null'
+        external_id:
+          type:
+            - string
+            - 'null'
+    AdSpendImportRequest:
+      type: object
+      properties:
+        csv:
+          type: string
+          description: CSV text with date,campaign,amount_vnd headers.
+        source:
+          $ref: '#/components/schemas/AdSpendSource'
+          default: csv
+        rows:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/AdSpendImportRow'
+      anyOf:
+        - required:
+            - csv
+        - required:
+            - rows
+    AdSpendImportResponse:
+      type: object
+      required:
+        - importedCount
+        - adSpend
+      properties:
+        importedCount:
+          type: integer
+          minimum: 0
+        adSpend:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdSpend'
+    AdSpendListResponse:
+      type: object
+      required:
+        - adSpend
+      properties:
+        adSpend:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdSpend'
+    AdSpendDay:
+      type: object
+      required:
+        - day
+        - amountVnd
+      properties:
+        day:
+          type: string
+          format: date
+        amountVnd:
+          type: string
+          pattern: '^[0-9]+$'
+    AdSpendSummaryResponse:
+      type: object
+      required:
+        - totalVnd
+        - days
+      properties:
+        totalVnd:
+          type: string
+          pattern: '^[0-9]+$'
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdSpendDay'
     ShippingProvider:
       type: string
       enum:

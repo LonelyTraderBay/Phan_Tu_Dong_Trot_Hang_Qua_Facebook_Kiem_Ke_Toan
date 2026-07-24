@@ -27,6 +27,7 @@ const navItems = [
   { href: '/orders', label: 'Đơn hàng' },
   { href: '/cod', label: 'COD' },
   { href: '/pnl', label: 'Lãi gộp' },
+  { href: '/ads', label: 'Ads' },
   { href: '/settings/channels', label: 'Kênh' },
   { href: '/settings/billing', label: 'Thanh toán' },
   { href: '/settings', label: 'Cài đặt' },

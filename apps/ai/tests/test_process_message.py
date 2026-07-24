@@ -30,14 +30,21 @@ class FakeRetriever:
         return self.chunks
 
 
+DEFAULT_LLM_JSON = (
+    '{"replyText":"Ao thun nay co mau den [1].",'
+    '"citedIndices":[1],"escalate":false}'
+)
+
+
 class FakeLlm:
-    def __init__(self):
+    def __init__(self, text: str = DEFAULT_LLM_JSON):
         self.calls: list[dict] = []
+        self.text = text
 
     def complete(self, **kwargs) -> LlmCompletion:
         self.calls.append(kwargs)
         return LlmCompletion(
-            text="Ao thun nay co mau den [1].",
+            text=self.text,
             model=kwargs["model"],
             prompt_tokens=10,
             completion_tokens=7,
@@ -45,10 +52,10 @@ class FakeLlm:
         )
 
 
-def make_orchestrator(chunks: list[dict]):
+def make_orchestrator(chunks: list[dict], *, llm_text: str = DEFAULT_LLM_JSON):
     embeddings = FakeEmbeddings()
     retriever = FakeRetriever(chunks)
-    llm = FakeLlm()
+    llm = FakeLlm(llm_text)
     orchestrator = ProcessMessageOrchestrator(
         embedding_provider=embeddings,
         retriever=retriever,
@@ -56,50 +63,6 @@ def make_orchestrator(chunks: list[dict]):
         prompt=PromptTemplate(version="test_prompt_v1", text="Only use context."),
     )
     return orchestrator, embeddings, retriever, llm
-
-
-def test_process_message_answers_from_retrieved_chunks():
-    orchestrator, embeddings, retriever, llm = make_orchestrator(
-        [
-            {
-                "sourceType": "product",
-                "sourceId": "22222222-2222-2222-2222-222222222222",
-                "chunkIndex": 0,
-                "content": "Ao thun co mau den.",
-                "score": 0.92,
-            }
-        ]
-    )
-
-    result = orchestrator.process_message(
-        org_id=ORG_ID,
-        message="Ao nay co mau den khong?",
-        top_k=2,
-        model="gemini-2.0-flash",
-    )
-
-    assert embeddings.texts == ["Ao nay co mau den khong?"]
-    assert retriever.calls[0]["org_id"] == ORG_ID
-    assert retriever.calls[0]["top_k"] == 2
-    assert llm.calls[0]["model"] == "gemini-2.0-flash"
-    assert "[1] Ao thun co mau den." in llm.calls[0]["messages"][0]["content"]
-    assert result == {
-        "replyText": "Ao thun nay co mau den [1].",
-        "citations": [
-            {
-                "index": 1,
-                "sourceType": "product",
-                "sourceId": "22222222-2222-2222-2222-222222222222",
-                "chunkIndex": 0,
-                "score": 0.92,
-            }
-        ],
-        "toolsUsed": [],
-        "promptVersion": "test_prompt_v1",
-        "model": "gemini-2.0-flash",
-        "tokens": {"prompt": 10, "completion": 7, "total": 17},
-        "escalate": False,
-    }
 
 
 def test_process_message_escalates_without_context_and_skips_llm():
@@ -117,6 +80,146 @@ def test_process_message_escalates_without_context_and_skips_llm():
     assert result["citations"] == []
     assert result["toolsUsed"] == []
     assert result["tokens"] == {"prompt": 0, "completion": 0, "total": 0}
+    assert result["escalate"] is True
+
+
+def test_process_message_escalates_low_relevance_chunks_and_skips_llm():
+    orchestrator, _, _, llm = make_orchestrator(
+        [
+            {
+                "sourceType": "product",
+                "sourceId": "22222222-2222-2222-2222-222222222222",
+                "chunkIndex": 0,
+                "content": "Quan jeans co mau xanh.",
+                "distance": 0.80,
+            }
+        ]
+    )
+
+    result = orchestrator.process_message(
+        org_id=ORG_ID,
+        message="Ao nay co mau den khong?",
+        model="gemini-2.0-flash",
+    )
+
+    assert llm.calls == []
+    assert result["citations"] == []
+    assert result["tokens"] == {"prompt": 0, "completion": 0, "total": 0}
+    assert result["escalate"] is True
+
+
+def test_process_message_answers_with_subset_citations_from_good_chunks():
+    orchestrator, embeddings, retriever, llm = make_orchestrator(
+        [
+            {
+                "sourceType": "product",
+                "sourceId": "22222222-2222-2222-2222-222222222222",
+                "chunkIndex": 0,
+                "content": "Ao thun co co tron.",
+                "score": 0.92,
+            },
+            {
+                "sourceType": "product",
+                "sourceId": "33333333-3333-3333-3333-333333333333",
+                "chunkIndex": 1,
+                "content": "Ao thun co mau den.",
+                "score": 0.91,
+            }
+        ],
+        llm_text=(
+            '{"replyText":"Ao thun nay co mau den [2].",'
+            '"citedIndices":[2,99],"escalate":false}'
+        ),
+    )
+
+    result = orchestrator.process_message(
+        org_id=ORG_ID,
+        message="Ao nay co mau den khong?",
+        top_k=2,
+        model="gemini-2.0-flash",
+    )
+
+    assert embeddings.texts == ["Ao nay co mau den khong?"]
+    assert retriever.calls[0]["org_id"] == ORG_ID
+    assert retriever.calls[0]["top_k"] == 2
+    assert llm.calls[0]["model"] == "gemini-2.0-flash"
+    assert "[1] Ao thun co co tron." in llm.calls[0]["messages"][0]["content"]
+    assert "[2] Ao thun co mau den." in llm.calls[0]["messages"][0]["content"]
+    assert result == {
+        "replyText": "Ao thun nay co mau den [2].",
+        "citations": [
+            {
+                "index": 2,
+                "sourceType": "product",
+                "sourceId": "33333333-3333-3333-3333-333333333333",
+                "chunkIndex": 1,
+                "score": 0.91,
+            }
+        ],
+        "toolsUsed": [],
+        "promptVersion": "test_prompt_v1",
+        "model": "gemini-2.0-flash",
+        "tokens": {"prompt": 10, "completion": 7, "total": 17},
+        "escalate": False,
+    }
+
+
+def test_process_message_honors_model_escalate_flag():
+    orchestrator, _, _, llm = make_orchestrator(
+        [
+            {
+                "sourceType": "product",
+                "sourceId": "22222222-2222-2222-2222-222222222222",
+                "chunkIndex": 0,
+                "content": "Ao thun co mau den.",
+                "score": 0.92,
+            }
+        ],
+        llm_text=(
+            '{"replyText":"Minh se chuyen doi ngu ho tro kiem tra them.",'
+            '"citedIndices":[1],"escalate":true}'
+        ),
+    )
+
+    result = orchestrator.process_message(
+        org_id=ORG_ID,
+        message="Ao nay co mau den khong?",
+        model="gemini-2.0-flash",
+    )
+
+    assert llm.calls[0]["model"] == "gemini-2.0-flash"
+    assert result["replyText"] == "Minh se chuyen doi ngu ho tro kiem tra them."
+    assert result["citations"] == []
+    assert result["tokens"] == {"prompt": 10, "completion": 7, "total": 17}
+    assert result["escalate"] is True
+
+
+def test_process_message_escalates_factual_answer_without_citations():
+    orchestrator, _, _, llm = make_orchestrator(
+        [
+            {
+                "sourceType": "product",
+                "sourceId": "22222222-2222-2222-2222-222222222222",
+                "chunkIndex": 0,
+                "content": "Ao thun co mau den.",
+                "score": 0.92,
+            }
+        ],
+        llm_text=(
+            '{"replyText":"Ao thun nay co mau den.",'
+            '"citedIndices":[],"escalate":false}'
+        ),
+    )
+
+    result = orchestrator.process_message(
+        org_id=ORG_ID,
+        message="Ao nay co mau den khong?",
+        model="gemini-2.0-flash",
+    )
+
+    assert llm.calls[0]["model"] == "gemini-2.0-flash"
+    assert result["replyText"].startswith("Minh chua co du thong tin")
+    assert result["citations"] == []
     assert result["escalate"] is True
 
 

@@ -1,0 +1,14 @@
+{
+  "extends": "../../apps/api/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "module": "ES2022",
+    "paths": {
+      "vitest": ["../../apps/api/node_modules/vitest/dist/index.d.ts"]
+    },
+    "rootDir": "../..",
+    "typeRoots": ["../../apps/api/node_modules/@types"],
+    "types": ["node"]
+  },
+  "include": ["./**/*.ts", "../../apps/api/src/**/*.ts"]
+}

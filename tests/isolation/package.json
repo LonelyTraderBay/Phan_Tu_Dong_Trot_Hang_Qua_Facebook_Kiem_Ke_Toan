@@ -1,0 +1,7 @@
+{
+  "name": "@omni/isolation-tests",
+  "private": true,
+  "scripts": {
+    "test": "pnpm --dir ../../apps/api exec vitest run --root ../../tests/isolation cross-tenant.org.spec.ts"
+  }
+}

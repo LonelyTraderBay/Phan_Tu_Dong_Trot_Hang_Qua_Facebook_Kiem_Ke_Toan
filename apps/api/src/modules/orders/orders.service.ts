@@ -152,18 +152,35 @@ export class OrdersService {
     createdFrom?: string;
     createdTo?: string;
   }): Promise<ExportFile> {
-    const rows = await this.fetchOrderRows({ ...input, limit: 5_000 });
-    const exportRows: ExportOrderRow[] = rows.map((row) => ({
-      id: row.id,
-      status: row.status,
-      customerName: row.customer_name,
-      phoneE164: row.phone_e164,
-      paymentMethod: row.payment_method,
-      totalVnd: row.total_vnd.toString(),
-      createdAt: row.created_at,
-      confirmedAt: row.confirmed_at,
-      shippedAt: row.shipped_at,
-    }));
+    const rows = await this.fetchOrderRows({
+      ...input,
+      limit: 5_000,
+      includeItems: true,
+    });
+    const exportRows: ExportOrderRow[] = rows.flatMap((row) => {
+      const base = {
+        id: row.id,
+        status: row.status,
+        customerName: row.customer_name,
+        phoneE164: row.phone_e164,
+        addressText: row.address_text,
+        paymentMethod: row.payment_method,
+        totalVnd: row.total_vnd.toString(),
+        createdAt: row.created_at,
+        confirmedAt: row.confirmed_at,
+        shippedAt: row.shipped_at,
+      };
+      const items = row.items ?? [];
+      if (items.length === 0) {
+        return [{ ...base, sku: '', qty: '', title: '' }];
+      }
+      return items.map((item) => ({
+        ...base,
+        sku: item.sku_snapshot,
+        qty: String(item.qty),
+        title: item.title_snapshot,
+      }));
+    });
 
     return buildOrdersExport(input.format, exportRows);
   }
@@ -174,10 +191,11 @@ export class OrdersService {
     createdFrom?: string;
     createdTo?: string;
     limit: number;
+    includeItems?: boolean;
   }) {
     let query = this.supabase
       .from('orders')
-      .select(ORDER_SELECT)
+      .select(input.includeItems ? ORDER_WITH_ITEMS_SELECT : ORDER_SELECT)
       .eq('org_id', input.orgId);
 
     if (input.status) {

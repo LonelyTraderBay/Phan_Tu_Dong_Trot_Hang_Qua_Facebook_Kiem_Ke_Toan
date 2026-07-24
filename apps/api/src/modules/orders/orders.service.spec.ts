@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { EXPORT_HEADERS } from './orders-export';
 import {
   OrdersService,
   type AuditWriter,
@@ -297,7 +298,19 @@ describe('OrdersService export', () => {
       payment_method: 'cod',
       customer_name: 'Nguyen Van A',
       phone_e164: '+84901234567',
-      address_text: null,
+      address_text: '123 Nguyen Hue, Q1, TP.HCM',
+      items: [
+        {
+          id: '55555555-5555-5555-5555-555555555555',
+          product_id: '66666666-6666-6666-6666-666666666666',
+          variant_id: '77777777-7777-7777-7777-777777777777',
+          title_snapshot: 'Black / L',
+          sku_snapshot: 'AT-DEN-L',
+          qty: 2,
+          unit_price_vnd: '500',
+          line_total_vnd: '1000',
+        },
+      ],
       address_json: {},
       currency: 'VND',
       subtotal_vnd: '1000',
@@ -349,9 +362,20 @@ describe('OrdersService export', () => {
       status: 'confirmed',
     });
 
+    const csv = file.buffer.toString('utf8');
+    const headerLine = csv.split('\n')[0] ?? '';
+
     expect(file.buffer.length).toBeGreaterThan(0);
     expect(file.contentType).toContain('text/csv');
-    expect(file.buffer.toString('utf8')).toContain(ORDER_ID);
-    expect(file.buffer.toString('utf8')).toContain('Nguyen Van A');
+    expect(headerLine).toBe(EXPORT_HEADERS.join(','));
+    for (const header of ['Mã đơn', 'Địa chỉ', 'Mã SKU', 'Số lượng', 'Tên sản phẩm']) {
+      expect(headerLine).toContain(header);
+    }
+    expect(csv).toContain(ORDER_ID);
+    expect(csv).toContain('Nguyen Van A');
+    expect(csv).toContain('123 Nguyen Hue, Q1, TP.HCM');
+    expect(csv).toContain('AT-DEN-L');
+    expect(csv).toContain('Black / L');
+    expect(csv).toContain(',2,');
   });
 });

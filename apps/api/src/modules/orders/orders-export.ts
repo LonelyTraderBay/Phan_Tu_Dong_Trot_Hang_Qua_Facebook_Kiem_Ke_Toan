@@ -5,11 +5,15 @@ export type ExportOrderRow = {
   status: string;
   customerName: string | null;
   phoneE164: string | null;
+  addressText: string | null;
   paymentMethod: string;
   totalVnd: string;
   createdAt: string;
   confirmedAt: string | null;
   shippedAt: string | null;
+  sku: string;
+  qty: string;
+  title: string;
 };
 
 export type ExportFormat = 'csv' | 'xlsx' | 'pdf';
@@ -20,16 +24,20 @@ export type ExportFile = {
   filename: string;
 };
 
-const HEADERS = [
-  'Order ID',
-  'Status',
-  'Customer Name',
-  'Phone',
-  'Payment Method',
-  'Total (VND)',
-  'Created At',
-  'Confirmed At',
-  'Shipped At',
+export const EXPORT_HEADERS = [
+  'Mã đơn',
+  'Trạng thái',
+  'Tên khách',
+  'Số điện thoại',
+  'Địa chỉ',
+  'Hình thức thanh toán',
+  'Tổng tiền (VND)',
+  'Ngày tạo',
+  'Ngày xác nhận',
+  'Ngày giao',
+  'Mã SKU',
+  'Số lượng',
+  'Tên sản phẩm',
 ] as const;
 
 function toCells(row: ExportOrderRow) {
@@ -38,11 +46,15 @@ function toCells(row: ExportOrderRow) {
     row.status,
     row.customerName ?? '',
     row.phoneE164 ?? '',
+    row.addressText ?? '',
     row.paymentMethod,
     row.totalVnd,
     row.createdAt,
     row.confirmedAt ?? '',
     row.shippedAt ?? '',
+    row.sku,
+    row.qty,
+    row.title,
   ];
 }
 
@@ -55,7 +67,7 @@ function escapeCsvCell(value: string) {
 
 export function buildOrdersCsv(rows: ExportOrderRow[]): Buffer {
   const lines = [
-    HEADERS.join(','),
+    EXPORT_HEADERS.join(','),
     ...rows.map((row) => toCells(row).map(String).map(escapeCsvCell).join(',')),
   ];
   return Buffer.from(`${lines.join('\n')}\n`, 'utf8');
@@ -64,7 +76,7 @@ export function buildOrdersCsv(rows: ExportOrderRow[]): Buffer {
 export async function buildOrdersXlsx(rows: ExportOrderRow[]): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Orders');
-  sheet.addRow([...HEADERS]);
+  sheet.addRow([...EXPORT_HEADERS]);
   for (const row of rows) {
     sheet.addRow(toCells(row));
   }
@@ -77,40 +89,62 @@ function pdfEscape(text: string) {
   return text.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }
 
-export function buildOrdersPdf(rows: ExportOrderRow[]): Buffer {
-  const textLines = [
-    'Orders Export',
-    '',
-    ...rows.map(
-      (row) =>
-        `${row.id} | ${row.status} | ${row.customerName ?? '-'} | ${row.totalVnd} VND`,
-    ),
-  ];
-  if (rows.length === 0) {
-    textLines.push('(no orders)');
-  }
+const PDF_LINES_PER_PAGE = 50;
+const PDF_LINE_HEIGHT = 14;
+const PDF_START_Y = 750;
 
-  let y = 750;
-  const content: string[] = ['BT', '/F1 10 Tf'];
-  for (const line of textLines) {
-    content.push(`50 ${y} Td (${pdfEscape(line)}) Tj`);
-    content.push('0 -14 Td');
-    y -= 14;
-    if (y < 50) {
-      break;
+function buildPdfPageStream(lines: string[]) {
+  const content: string[] = ['BT', '/F1 9 Tf'];
+  for (let index = 0; index < lines.length; index += 1) {
+    if (index === 0) {
+      content.push(`50 ${PDF_START_Y} Td (${pdfEscape(lines[index] ?? '')}) Tj`);
+    } else {
+      content.push(`0 -${PDF_LINE_HEIGHT} Td (${pdfEscape(lines[index] ?? '')}) Tj`);
     }
   }
   content.push('ET');
-  const stream = content.join('\n');
-  const streamLength = Buffer.byteLength(stream, 'utf8');
+  return content.join('\n');
+}
 
-  const objects = [
-    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
-    '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
-    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n',
-    `4 0 obj\n<< /Length ${streamLength} >>\nstream\n${stream}\nendstream\nendobj\n`,
-    '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
+export function buildOrdersPdf(rows: ExportOrderRow[]): Buffer {
+  const textLines = [
+    'Xuất đơn hàng',
+    '',
+    ...rows.map(
+      (row) =>
+        `${row.id} | ${row.status} | ${row.customerName ?? '-'} | ${row.phoneE164 ?? '-'} | ${row.addressText ?? '-'} | ${row.sku} x${row.qty} ${row.title} | ${row.totalVnd} VND`,
+    ),
   ];
+  if (rows.length === 0) {
+    textLines.push('(không có đơn)');
+  }
+
+  const pageLines: string[][] = [];
+  for (let index = 0; index < textLines.length; index += PDF_LINES_PER_PAGE) {
+    pageLines.push(textLines.slice(index, index + PDF_LINES_PER_PAGE));
+  }
+
+  const pageCount = pageLines.length;
+  const fontObjectId = pageCount * 2 + 2;
+  const objects: string[] = [
+    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+    `2 0 obj\n<< /Type /Pages /Kids [${Array.from({ length: pageCount }, (_, index) => `${index * 2 + 3} 0 R`).join(' ')}] /Count ${pageCount} >>\nendobj\n`,
+  ];
+
+  for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+    const pageObjectId = pageIndex * 2 + 3;
+    const contentObjectId = pageIndex * 2 + 4;
+    const stream = buildPdfPageStream(pageLines[pageIndex] ?? []);
+    const streamLength = Buffer.byteLength(stream, 'utf8');
+    objects.push(
+      `${pageObjectId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${contentObjectId} 0 R /Resources << /Font << /F1 ${fontObjectId} 0 R >> >> >>\nendobj\n`,
+      `${contentObjectId} 0 obj\n<< /Length ${streamLength} >>\nstream\n${stream}\nendstream\nendobj\n`,
+    );
+  }
+
+  objects.push(
+    `${fontObjectId} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`,
+  );
 
   let pdf = '%PDF-1.4\n';
   const offsets: number[] = [0];

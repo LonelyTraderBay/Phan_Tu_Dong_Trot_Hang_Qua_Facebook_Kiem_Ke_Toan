@@ -78,3 +78,7 @@ where provider in ('meta_page', 'meta_ig');
 - Leo thang cho owner tích hợp Meta khi: webhook verify liên tục fail sau khi đã đối chiếu secret/token; DLQ tăng nhanh; hoặc nhiều tenant mất DM > 15 phút.
 - Leo thang cho owner hạ tầng nếu tunnel/host API không stable trước khi có khách thật.
 - Mở incident vận hành nếu cần tạm ngắt webhook subscription hoặc thông báo khách hàng bị ảnh hưởng.
+
+## Trước pilot / App Review
+
+Cấu hình Meta App, legal URLs, test Page/IG và screencast: [Meta App Review checklist](../meta-app-review-checklist.md).

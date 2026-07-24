@@ -136,3 +136,14 @@ npx inngest-cli@latest dev -u http://localhost:3001/api/inngest
 ```
 
 Xem thêm runbook: [docs/runbooks/meta-down.md](./docs/runbooks/meta-down.md).
+
+## Pilot / Meta App Review (staging)
+
+Trước khi onboard shop pilot hoặc nộp Meta App Review:
+
+1. Deploy staging web + API (always-on; webhook không cold-start).
+2. Legal public: `https://<app-host>/legal/privacy` và `/legal/terms`.
+3. Webhook prod/staging: `https://<api-host>/v1/webhooks/meta` + `META_VERIFY_TOKEN`.
+4. OAuth redirect: `https://<app-host>/settings/channels/callback` (= `META_REDIRECT_URI`).
+
+Checklist đầy đủ (permissions, test Page/IG, screencast): [docs/meta-app-review-checklist.md](./docs/meta-app-review-checklist.md).

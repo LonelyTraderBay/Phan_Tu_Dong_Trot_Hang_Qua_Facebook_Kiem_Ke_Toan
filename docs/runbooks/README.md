@@ -7,6 +7,11 @@ Runbook vận hành cho nền tảng Omni Commerce.
 - [AI down](./ai-down.md)
 - [DB failover](./db-failover.md)
 - [Meta down](./meta-down.md)
+- [PDPA delete/anonymize](./pdpa-delete.md)
+
+## Go-live / pilot
+
+- [Meta App Review + staging pilot checklist](../meta-app-review-checklist.md) — permissions, legal URLs, webhook, test users, screencast
 
 ## Quy tắc chung
 

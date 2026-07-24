@@ -71,6 +71,38 @@ paths:
       responses:
         '201':
           description: Revoked
+  /v1/inbox/conversations:
+    get:
+      summary: List inbox conversations for current org
+      responses:
+        '200':
+          description: OK
+  /v1/inbox/conversations/{id}/messages:
+    get:
+      summary: List inbox messages for a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+  /v1/inbox/conversations/{id}/takeover:
+    post:
+      summary: Pause bot and take over an inbox conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Taken over
   /v1/webhooks/meta:
     get:
       summary: Verify Meta webhook subscription

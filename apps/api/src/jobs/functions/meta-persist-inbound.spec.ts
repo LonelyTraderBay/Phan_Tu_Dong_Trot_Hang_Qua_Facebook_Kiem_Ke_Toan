@@ -206,6 +206,7 @@ describe('MetaInboundPersistenceService', () => {
         conversation_id: CONVERSATION_ID,
         direction: 'inbound',
         sender_type: 'customer',
+        raw_type: 'text',
         provider_message_id: 'm_page_1',
         body_text: 'hello from messenger',
       }),

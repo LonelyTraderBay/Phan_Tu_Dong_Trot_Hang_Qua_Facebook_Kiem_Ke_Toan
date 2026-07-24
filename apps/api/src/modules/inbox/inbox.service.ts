@@ -12,7 +12,7 @@ import { AuditService, type WriteAuditInput } from '../audit/audit.service';
 
 export const INBOX_SUPABASE = Symbol('INBOX_SUPABASE');
 
-export type SupabaseLike = Pick<SupabaseClient, 'from'>;
+export type SupabaseLike = Pick<SupabaseClient, 'from' | 'rpc'>;
 export type AuditWriter = {
   writeAudit(input: WriteAuditInput): Promise<unknown>;
 };
@@ -77,15 +77,14 @@ const MESSAGE_SELECT =
 @Injectable()
 export class InboxService {
   private readonly supabase: SupabaseLike;
-  private readonly audit?: AuditWriter;
+  private readonly audit: AuditWriter;
 
   constructor(
     @Optional()
     @Inject(INBOX_SUPABASE)
-    supabase?: SupabaseLike,
-    @Optional()
+    supabase: SupabaseLike | undefined,
     @Inject(AuditService)
-    audit?: AuditWriter,
+    audit: AuditWriter,
   ) {
     this.supabase = supabase ?? createSupabaseServiceClient();
     this.audit = audit;
@@ -132,22 +131,12 @@ export class InboxService {
     actorUserId: string;
     now?: Date;
   }) {
-    const conversation = await this.requireConversation(
-      input.orgId,
-      input.conversationId,
-    );
-    const previousEpoch = conversation.bot_epoch;
-    const nextEpoch = previousEpoch + 1;
     const { data, error } = await this.supabase
-      .from('conversations')
-      .update({
-        bot_paused: true,
-        bot_epoch: nextEpoch,
-        updated_at: (input.now ?? new Date()).toISOString(),
+      .rpc('takeover_inbox_conversation', {
+        p_org_id: input.orgId,
+        p_conversation_id: input.conversationId,
+        p_updated_at: (input.now ?? new Date()).toISOString(),
       })
-      .eq('id', input.conversationId)
-      .eq('org_id', input.orgId)
-      .select(CONVERSATION_BASE_SELECT)
       .maybeSingle();
 
     if (error) {
@@ -160,7 +149,11 @@ export class InboxService {
       });
     }
 
-    await this.audit?.writeAudit({
+    const conversation = data as ConversationRow;
+    const nextEpoch = conversation.bot_epoch;
+    const previousEpoch = nextEpoch - 1;
+
+    await this.audit.writeAudit({
       orgId: input.orgId,
       actorUserId: input.actorUserId,
       actorType: 'user',
@@ -173,7 +166,7 @@ export class InboxService {
       },
     });
 
-    return { conversation: mapConversation(data as ConversationRow) };
+    return { conversation: mapConversation(conversation) };
   }
 
   private async requireConversation(orgId: string, conversationId: string) {

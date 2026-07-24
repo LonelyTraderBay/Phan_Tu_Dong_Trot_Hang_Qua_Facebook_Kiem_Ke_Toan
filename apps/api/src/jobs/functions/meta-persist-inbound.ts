@@ -387,13 +387,14 @@ function parseInboundMessages(payload: JsonObject) {
         continue;
       }
 
+      const bodyText = toNonEmptyString(message.text) ?? null;
       messages.push({
         channel,
         connectionLookupId,
         contactScopedId: senderId,
         providerMessageId,
-        bodyText: toNonEmptyString(message.text) ?? null,
-        rawType: 'message',
+        bodyText,
+        rawType: bodyText ? 'text' : 'message',
         payload: event,
         createdAt: timestampToIso(event.timestamp) ?? new Date().toISOString(),
       });

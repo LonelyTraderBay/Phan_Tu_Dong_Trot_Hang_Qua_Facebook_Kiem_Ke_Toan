@@ -8,8 +8,10 @@ const CONVERSATION_ID = '33333333-3333-3333-3333-333333333333';
 
 type Row = Record<string, unknown>;
 type SupabaseCall = {
+  args?: Row;
   columns?: string;
   field?: string;
+  fn?: string;
   op: string;
   table?: string;
   value?: unknown;
@@ -39,6 +41,31 @@ function mockSupabase(row: Row) {
   const state = { conversation: { ...row } };
 
   const client = {
+    rpc(fn: string, args: Row) {
+      calls.push({ args, fn, op: 'rpc' });
+      if (fn !== 'takeover_inbox_conversation') {
+        throw new Error(`Unexpected RPC ${fn}`);
+      }
+
+      return {
+        maybeSingle: async () => {
+          if (
+            state.conversation.id !== args.p_conversation_id ||
+            state.conversation.org_id !== args.p_org_id
+          ) {
+            return { data: null, error: null };
+          }
+
+          state.conversation = {
+            ...state.conversation,
+            bot_paused: true,
+            bot_epoch: Number(state.conversation.bot_epoch) + 1,
+            updated_at: args.p_updated_at,
+          };
+          return { data: state.conversation, error: null };
+        },
+      };
+    },
     from(table: string) {
       if (table !== 'conversations') {
         throw new Error(`Unexpected table ${table}`);
@@ -129,14 +156,15 @@ describe('InboxService', () => {
     });
 
     expect(calls).toContainEqual({
-      op: 'update',
-      table: 'conversations',
-      values: {
-        bot_paused: true,
-        bot_epoch: 5,
-        updated_at: fixedNow.toISOString(),
+      args: {
+        p_org_id: ORG_ID,
+        p_conversation_id: CONVERSATION_ID,
+        p_updated_at: fixedNow.toISOString(),
       },
+      fn: 'takeover_inbox_conversation',
+      op: 'rpc',
     });
+    expect(calls.some((call) => call.op === 'update')).toBe(false);
     expect(auditCalls).toEqual([
       {
         orgId: ORG_ID,
@@ -151,5 +179,22 @@ describe('InboxService', () => {
         },
       },
     ]);
+  });
+
+  it('surfaces audit write failures after takeover', async () => {
+    const { client } = mockSupabase(conversationRow());
+    const service = new InboxService(client, {
+      writeAudit: async () => {
+        throw new Error('audit unavailable');
+      },
+    });
+
+    await expect(
+      service.takeoverConversation({
+        orgId: ORG_ID,
+        conversationId: CONVERSATION_ID,
+        actorUserId: USER_ID,
+      }),
+    ).rejects.toThrow('audit unavailable');
   });
 });

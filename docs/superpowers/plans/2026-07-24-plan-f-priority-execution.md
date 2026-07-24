@@ -1,6 +1,6 @@
 # Plan F — Kế hoạch thực thi theo thứ tự ưu tiên (Phase 2 Operations)
 
-**Status:** **IN PROGRESS** — start after Plan E code/docs DoD  
+**Status:** **DONE** — Plan F code path closed; Plan G JIT plan is next
 **Authority (tasks):** [plan-f-phase2-operations](./2026-07-24-plan-f-phase2-operations.md)  
 **Roadmap:** [priority-execution-roadmap](./2026-07-24-priority-execution-roadmap.md) · [path-to-completion](./2026-07-24-path-to-completion-priority.md)  
 **Baseline:** Plan E evidence `plan-e-dod-evidence.md` (paid drills may remain AMBER)
@@ -12,8 +12,9 @@
 ```
 DONE   A–D  Pilot Phase 1
 AMBER  E    M3 (code+docs GREEN)
-▶ NOW  F    Phase 2 Operations   ← tài liệu này
-THEN   G → H → CPC
+DONE   F    Phase 2 Operations   ← tài liệu này
+▶ NEXT G    Phase 3 Intelligence
+THEN   H → CPC
 THEN   I → E100
 ```
 
@@ -47,7 +48,7 @@ Kho có ledger + carrier API + đối soát COD + returns + P&L đơn giản + k
 1. Branch `feat/plan-f-phase2`  
 2. Execute F0→F7 (Subagent-Driven cho code)  
 3. `plan-f-dod-evidence.md`  
-4. Merge `main` + push  
-5. Mở Plan G JIT  
+4. Push branch
+5. Mở Plan G JIT khi được yêu cầu
 
 **Không** claim CPC sau F.

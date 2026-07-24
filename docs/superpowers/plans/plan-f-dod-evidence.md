@@ -7,13 +7,15 @@
 | Wave | Status | Notes |
 |------|--------|-------|
 | **2A Inventory depth** | **GREEN (code)** | `stock_movements` + adjust RPC; confirm/cancel write ledger; API `/v1/inventory/*`; Web `/inventory`; catalog `stockQty` via ledger |
-| **2B Carrier** | **GREEN (code)** | Shipping provider interface; encrypted per-org connections; manual + GHN sandbox/mock providers; shipment API + VI order action; export fallback runbook |
+| **2B Carrier** | **GREEN (code) / AMBER (live carrier E2E)** | Shipping provider interface; encrypted per-org connections; manual + GHN sandbox/mock providers; shipment API + VI order action; export fallback runbook; live carrier E2E not run |
 | **2C COD** | **GREEN (code)** | COD expectations/collections/discrepancies; report + reconcile APIs; VI `/cod`; bigint-string VND only |
 | **2D Returns** | **GREEN (code)** | `return_order` RPC; `order_returns`; `return_restock` ledger movement; COD open write-off/discrepancy note; API + VI order action |
 | **2E P&L** | **GREEN (code)** | Variant `cogs_vnd`; order item `cogs_unit_vnd` snapshot; API `/v1/pnl/summary` + `/v1/pnl/by-sku`; VI `/pnl`; CSV download |
-| **2F Channel #2** | **GREEN (connect) / AMBER (webhook processing)** | Zalo OA encrypted-token connect; optional-secret webhook receipt + atomic outbox stub `zalo/inbound.received`; full Zalo OAuth and persistence worker deferred |
+| **2F Channel #2** | **GREEN (code) / AMBER (full OAuth + worker)** | Zalo OA encrypted-token connect; optional-secret webhook receipt + atomic outbox stub `zalo/inbound.received`; full Zalo OAuth and persistence worker deferred |
 | **2G Billing packaging** | **GREEN (invoice+flags)** | Manual billing portal endpoints, invoice table, ops issue invoice, VI `/settings/billing`, and `past_due` auto-confirm soft gate |
-| 2H Hardening | Pending | |
+| **2H Hardening** | **GREEN (docs/test)** | Phase 2 ops runbook, load-test notes, eval scope review, changelog, DoD evidence closed; `pnpm --filter api test` passed 39 files / 139 tests |
+
+**Verdict:** Plan F code path is **DONE** for Phase 2 engineering. CPC is **not** claimed; CPC still requires Plan G + Plan H completion and clearing Plan E paid/live AMBER items.
 
 ## 2A evidence
 
@@ -25,7 +27,7 @@
 | Inventory API | GREEN | `apps/api/src/modules/inventory/*` |
 | Catalog stock via adjust | GREEN | `CatalogService.updateVariant` |
 | Web VI | GREEN | `apps/web/src/app/(app)/inventory/page.tsx` + nav |
-| API unit tests | GREEN | 118 passing (incl. inventory 5) |
+| API unit tests | GREEN | `pnpm --filter api test` — 39 files / 139 tests passing (incl. inventory 5) |
 
 ## 2B evidence
 
@@ -38,6 +40,7 @@
 | Create shipment API | GREEN | `POST /v1/shipping/shipments` inserts shipment, updates `orders.shipping_fee_vnd`, calls `ship_order` for confirmed orders |
 | Web VI | GREEN | Orders page action `Tạo vận đơn` for confirmed orders |
 | Export fallback | GREEN | Existing export code untouched; runbook `docs/runbooks/shipping-carrier-fallback.md` |
+| Live carrier E2E | AMBER | GHN/manual code paths are covered; a live carrier staging shipment was not executed in Wave 2H |
 | API unit tests | GREEN | Shipping provider/service specs included in `pnpm --filter api test` |
 
 ## 2C evidence
@@ -76,7 +79,7 @@
 | Gross profit math | GREEN | Revenue/COGS/gross profit computed with `bigint`, returned as VND strings; sold statuses limited to `shipped`/`done` |
 | Web VI + export | GREEN | `/pnl` date filters, day/SKU tables, client-side CSV download; nav `Lãi gộp` |
 | OpenAPI | GREEN | `packages/contracts/openapi.yaml` includes P&L paths and COGS fields |
-| API unit tests | GREEN | `pnpm --filter api test` — 128 passing; `apps/api/src/modules/pnl/pnl.service.spec.ts` covers summary and SKU aggregate math |
+| API unit tests | GREEN | `pnpm --filter api test` — 39 files / 139 tests passing; `apps/api/src/modules/pnl/pnl.service.spec.ts` covers summary and SKU aggregate math |
 
 ## 2F evidence
 
@@ -88,6 +91,7 @@
 | Web VI | GREEN | Settings form `Kết nối Zalo OA`; connected channel list labels `Zalo OA`; inbox channel label handles `zalo` |
 | OpenAPI | GREEN | `packages/contracts/openapi.yaml` includes Zalo connect/webhook paths and channel schemas |
 | Runbook | GREEN/AMBER | `docs/runbooks/zalo-oa-connect.md` documents setup and AMBER production limitation |
+| Full OAuth + persistence worker | AMBER | Existing-token connect and webhook receipt are shipped; full Zalo OAuth and inbound message persistence worker remain deferred |
 | API unit tests | GREEN | Zalo connect encryption test and Zalo webhook happy path mock included in `pnpm --filter api test` |
 
 ## 2G evidence
@@ -104,4 +108,15 @@
 | OpenAPI | GREEN | `packages/contracts/openapi.yaml` includes billing paths and invoice schemas |
 | API unit tests | GREEN | Billing plan/usage specs, entitlements `past_due` spec, and ops invoice issuance spec included in `pnpm --filter api test` |
 
-**Next:** Wave 2H Hardening.
+## 2H evidence
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Phase 2 ops checklist | GREEN | `docs/runbooks/phase2-operations.md` covers inventory, shipping, COD, returns, P&L, Zalo, and billing |
+| Load-test notes | GREEN | `docs/superpowers/plans/plan-f-load-test-notes.md` lists k6/hey suggestions, target endpoints, and pass criteria; heavy load not run |
+| Eval scope review | GREEN | No new autonomous AI posting, stock, order, billing, or money mutation path was added in Plan F; existing AI eval suite is unchanged |
+| Changelog | GREEN | `CHANGELOG.md` records Plan F Phase 2 completion and remaining CPC blockers |
+| Priority docs | GREEN | Priority docs updated to Plan F DONE / Plan G NEXT |
+| API test gate | GREEN | `pnpm --filter api test` — 39 files / 139 tests passing |
+
+**Next:** Write Plan G JIT plan when requested. Do not claim CPC.

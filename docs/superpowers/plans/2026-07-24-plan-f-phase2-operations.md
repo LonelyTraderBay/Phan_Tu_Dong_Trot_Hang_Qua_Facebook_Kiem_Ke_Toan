@@ -23,9 +23,9 @@
 
 ## Plan F Definition of Done
 
-- [ ] 2A–2H waves complete with tests  
-- [ ] `plan-f-dod-evidence.md` GREEN/AMBER honest  
-- [ ] No claim CPC  
+- [x] 2A–2H waves complete with tests
+- [x] `plan-f-dod-evidence.md` GREEN/AMBER honest
+- [x] No claim CPC
 
 ---
 
@@ -140,9 +140,9 @@
 
 ## Wave 2H — Hardening (F7)
 
-- [ ] Load test notes; runbooks; eval; CHANGELOG
-- [ ] `plan-f-dod-evidence.md` complete
-- [ ] Commit: `docs: plan F DoD evidence`
+- [x] Load test notes; runbooks; eval; CHANGELOG
+- [x] `plan-f-dod-evidence.md` complete
+- [x] Commit: `docs: plan F wave 2H hardening and DoD close`
 
 **DoD Plan F:** Evidence file + all waves.
 

@@ -1,7 +1,7 @@
 # Priority Execution Roadmap — tới CPC / E100
 
 **Date:** 2026-07-25  
-**Status:** Active backlog — Plans A–D DONE; **Pilot Phase 1 ready**; Plan E **code+docs DONE** (`plan-e-dod-evidence.md`, paid AMBER); **Plan F NEXT**  
+**Status:** Active backlog — Plans A–D DONE; **Pilot Phase 1 ready**; Plan E **code+docs DONE** (`plan-e-dod-evidence.md`, paid AMBER); Plan F **DONE**; **Plan G NEXT**
 
 **Authority:** [CANONICAL](../specs/2026-07-24-CANONICAL-LOCKED-DECISIONS.md) · [master roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) · [WBS](../specs/2026-07-24-implementation-work-breakdown.md)  
 **Kế hoạch chi tiết từng bước (SoT ưu tiên còn lại):** [path-to-completion-priority](./2026-07-24-path-to-completion-priority.md)
@@ -30,8 +30,8 @@ Paid/live Plan E drills có thể AMBER song song với code Plan F; **không** 
 | **C** | Waves E+F — Catalog + AI | **DONE** → [DoD](./plan-c-dod-evidence.md) |
 | **D** | Waves G+H+I — Orders + Web + Hardening | **DONE** → [DoD](./plan-d-dod-evidence.md) |
 | **E** | Gate M3 — Commercial ops | **CODE+DOCS DONE** (paid AMBER) → [DoD](./plan-e-dod-evidence.md) · [playbook](./2026-07-24-plan-e-priority-execution.md) |
-| **F** | Phase 2 Operations (2A–2H) | **NEXT** → [playbook](./2026-07-24-plan-f-priority-execution.md) · [F–I index](./2026-07-24-plans-f-i-post-phase1-index.md) |
-| **G** | Phase 3 Intelligence (3A–3F) | After F |
+| **F** | Phase 2 Operations (2A–2H) | **DONE** → [DoD](./plan-f-dod-evidence.md) · [playbook](./2026-07-24-plan-f-priority-execution.md) |
+| **G** | Phase 3 Intelligence (3A–3F) | **NEXT** |
 | **H** | Phase 4 ERP-lite (4A–4F) → **CPC** | After G |
 | **I** | M4 Procurement → **E100** | Overlap from late F |
 
@@ -44,8 +44,8 @@ DONE  Plan B  Meta
 DONE  Plan C  Catalog + AI
 DONE  Plan D  Orders + Web + Hardening     → Pilot Phase 1 READY
 AMBER Plan E  M3 code+docs GREEN · paid drills AMBER
-P4a   Plan F  Phase 2 Operations                  ← NEXT eng
-P4b   Plan G  Phase 3 Intelligence
+DONE  Plan F  Phase 2 Operations
+P4b   Plan G  Phase 3 Intelligence                ← NEXT eng
 P4c   Plan H  Phase 4 ERP-lite                   → CPC
 P5    Plan I  M4                                  → E100
 P6    Epoch 5 (optional)
@@ -103,8 +103,9 @@ P6    Epoch 5 (optional)
 
 1. ~~Plans A–D~~ — **DONE** · Pilot Phase 1 ready  
 2. ~~P0 docs + Plan E code/docs~~ — [DoD E](./plan-e-dod-evidence.md) (paid AMBER)  
-3. **NEXT:** Plan F 2A→2H → [playbook F](./2026-07-24-plan-f-priority-execution.md)  
-4. Owner parallel: live §12.1 · Meta Review · Pro+PITR · always-on  
-5. Sau F: G → H → **CPC**; rồi I → **E100**
+3. ~~Plan F 2A→2H~~ — **DONE** → [DoD F](./plan-f-dod-evidence.md)
+4. **NEXT:** Write Plan G JIT plan, then execute 3A→3F
+5. Owner parallel: live §12.1 · Meta Review · Pro+PITR · always-on
+6. Sau G: H → **CPC**; rồi I → **E100**
 
 **Không** claim CPC/E100.

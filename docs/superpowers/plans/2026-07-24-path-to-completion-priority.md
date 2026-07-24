@@ -20,8 +20,8 @@
 DONE  A→D  Pilot
 DONE  P0   docs/legal/ADR (live staging/Review = owner AMBER)
 AMBER P3  E    M3 code+docs GREEN · paid drills AMBER  → [plan-e-dod-evidence]
-▶ P4a F    Phase 2 Operations
-  P4b G    Phase 3 Intelligence
+DONE  P4a F    Phase 2 Operations
+▶ P4b G    Phase 3 Intelligence
   P4c H    Phase 4 ERP-lite     → CPC
   P5  I    M4                   → E100
   P6  Epoch 5 (optional)
@@ -69,9 +69,10 @@ Restore drill · always-on webhook · spend cap · billing/entitlements · uptim
 
 ---
 
-## P4a — Plan F · Phase 2 Operations → **NEXT**
+## P4a — Plan F · Phase 2 Operations → **DONE**
 
 Evidence E: [plan-e-dod-evidence](./plan-e-dod-evidence.md). Paid drills AMBER không chặn bắt đầu code F; CPC vẫn cần clear AMBER.  
+**Evidence F:** [plan-f-dod-evidence](./plan-f-dod-evidence.md) — code path DONE; live carrier E2E / Zalo full OAuth AMBER.
 **Playbook:** [plan-f-priority-execution](./2026-07-24-plan-f-priority-execution.md) · [plan](./2026-07-24-plan-f-phase2-operations.md)
 
 **Viết full plan JIT** trước khi code. Wave order (không đảo trong F):
@@ -91,7 +92,7 @@ Evidence E: [plan-e-dod-evidence](./plan-e-dod-evidence.md). Paid drills AMBER k
 
 ---
 
-## P4b — Plan G · Phase 3 Intelligence → sau F
+## P4b — Plan G · Phase 3 Intelligence → **NEXT**
 
 | Ưu tiên | Wave | Bước | DoD wave |
 |--------:|------|------|----------|
@@ -157,8 +158,9 @@ Với mỗi plan E→I:
 
 ```
 DONE P0 docs + P3 Plan E code/docs (paid/live AMBER = owner parallel)
-▶ NEXT eng: Plan F  2A→2H
-THEN Plan G → H → CPC
+DONE Plan F 2A→2H
+▶ NEXT eng: Write Plan G JIT plan, then execute 3A→3F
+THEN Plan H → CPC
 THEN Plan I → E100
 OWNER parallel: §12.1 · Meta Review submit · Pro+PITR drill · always-on
 ```

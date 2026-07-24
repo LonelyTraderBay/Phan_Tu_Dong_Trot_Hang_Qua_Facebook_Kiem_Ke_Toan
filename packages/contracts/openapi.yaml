@@ -29,6 +29,48 @@ paths:
       responses:
         '201':
           description: Created
+  /v1/channels:
+    get:
+      summary: List channel connections for current org
+      responses:
+        '200':
+          description: OK
+  /v1/channels/meta/oauth-url:
+    get:
+      summary: Build Meta OAuth connect URL
+      responses:
+        '200':
+          description: OK
+  /v1/channels/meta/complete:
+    post:
+      summary: Complete Meta OAuth and connect pages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+              properties:
+                code:
+                  type: string
+      responses:
+        '201':
+          description: Created
+  /v1/channels/{id}/revoke:
+    post:
+      summary: Revoke a channel connection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Revoked
   /ops/v1/orgs:
     get:
       summary: List orgs (platform admin)

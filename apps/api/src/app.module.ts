@@ -8,6 +8,7 @@ import {
   SupabaseMembershipsRepository,
 } from "./common/guards/org.guard";
 import { AdminOpsModule } from "./modules/admin-ops/admin-ops.module";
+import { ChannelsModule } from "./modules/channels/channels.module";
 import { FeatureFlagsModule } from "./modules/feature-flags/feature-flags.module";
 import { HealthModule } from "./modules/health/health.module";
 import { IdentityModule } from "./modules/identity/identity.module";
@@ -18,6 +19,7 @@ import { InternalModule } from "./modules/internal/internal.module";
     HealthModule,
     IdentityModule,
     AdminOpsModule,
+    ChannelsModule,
     FeatureFlagsModule,
     InternalModule,
   ],

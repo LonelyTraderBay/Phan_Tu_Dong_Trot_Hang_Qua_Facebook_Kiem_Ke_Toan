@@ -44,3 +44,24 @@ Completed.
 
 - Unknown/unmapped page IDs are acknowledged with `{ ok: true }` after receipt recording, but no outbox event is enqueued because `outbox_events.org_id` is required.
 - If a Meta payload contains entries for multiple page IDs, this implementation maps to the first active matching `meta_page` connection and writes one receipt/outbox event for the payload, matching the task's single-receipt flow.
+
+## Review Fixes — Atomicity and Tenant Routing
+
+- Added `public.record_meta_webhook_receipt_and_enqueue(...)`, a service-role-only `security definer` RPC that inserts `webhook_receipts` and `outbox_events` in one Postgres transaction with event name `meta.inbound`.
+- Updated Meta ingestion to process each Meta `entry` independently, resolve `org_id` by that entry's active `channel_connections.external_page_id`, and pass a single-entry payload to the RPC.
+- Unmapped page entries are still receipted with `org_id = null` and intentionally create no outbox event because there is no tenant-safe destination.
+- Removed the cross-page `.limit(1)` routing path and added tests for RPC/atomic failure behavior plus multi-page/two-org routing.
+
+### Verification commands/output
+
+- `pnpm --dir "apps/api" exec vitest run src/modules/channels/meta-webhook.service.spec.ts`
+  - `Test Files  1 passed (1)`
+  - `Tests  8 passed (8)`
+- `pnpm --dir "apps/api" exec vitest run src/common/guards/jwt-auth.guard.spec.ts src/common/guards/org.guard.spec.ts src/common/guards/platform-admin.guard.spec.ts src/common/guards/service-key.guard.spec.ts src/modules/authz/permissions.guard.spec.ts`
+  - `Test Files  5 passed (5)`
+  - `Tests  16 passed (16)`
+- `pnpm --dir "apps/api" test`
+  - `Test Files  17 passed (17)`
+  - `Tests  53 passed (53)`
+- `pnpm --dir "apps/api" lint`
+  - `tsc --noEmit` passed.

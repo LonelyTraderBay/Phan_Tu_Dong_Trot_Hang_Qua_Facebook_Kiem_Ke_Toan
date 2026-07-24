@@ -8,6 +8,7 @@ import {
 } from "./meta-webhook.service";
 
 const ORG_ID = "11111111-1111-1111-1111-111111111111";
+const ORG_2_ID = "11111111-1111-1111-1111-111111111112";
 const OUTBOX_ID = "22222222-2222-2222-2222-222222222222";
 const RECEIPT_ID = "33333333-3333-3333-3333-333333333333";
 
@@ -19,13 +20,26 @@ const env = {
 } satisfies MetaWebhookEnv;
 
 type SupabaseCall = {
+  args?: unknown;
   columns?: string;
   field?: string;
+  functionName?: string;
   op: string;
   options?: unknown;
   table?: string;
   value?: unknown;
   values?: unknown;
+};
+
+type ChannelMapping = {
+  external_page_id: string;
+  org_id: string;
+};
+
+type RpcResult = {
+  outbox_event_id: string | null;
+  receipt_id: string | null;
+  receipt_inserted: boolean;
 };
 
 function signedPayload(payload: Record<string, unknown>) {
@@ -63,23 +77,13 @@ function metaPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function outboxRow() {
-  return {
-    id: OUTBOX_ID,
-    org_id: ORG_ID,
-    event_name: "meta.inbound",
-    payload_json: metaPayload(),
-    created_at: "2026-07-24T10:00:00.000Z",
-    published_at: null,
-    attempts: 0,
-  };
-}
-
 function mockSupabase(input: {
-  orgId?: string | null;
-  receiptInserted?: boolean;
+  mappings?: ChannelMapping[];
+  rpcError?: { code?: string; message?: string };
+  rpcResults?: RpcResult[];
 }) {
   const calls: SupabaseCall[] = [];
+  let rpcIndex = 0;
 
   const client = {
     from(table: string) {
@@ -95,12 +99,11 @@ function mockSupabase(input: {
           },
           in(field: string, value: unknown) {
             calls.push({ op: "in", field, value });
-            return query;
-          },
-          limit: async (value: unknown) => {
-            calls.push({ op: "limit", value });
+            const pageIds = new Set(value as string[]);
             return {
-              data: input.orgId ? [{ org_id: input.orgId }] : [],
+              data: (input.mappings ?? []).filter((row) =>
+                pageIds.has(row.external_page_id),
+              ),
               error: null,
             };
           },
@@ -108,45 +111,25 @@ function mockSupabase(input: {
         return query;
       }
 
-      if (table === "webhook_receipts") {
-        return {
-          upsert(values: unknown, options: unknown) {
-            calls.push({ op: "upsert", table, values, options });
-            return {
-              select(columns: string) {
-                calls.push({ op: "select", table, columns });
-                return {
-                  maybeSingle: async () => ({
-                    data: input.receiptInserted ? { id: RECEIPT_ID } : null,
-                    error: null,
-                  }),
-                };
-              },
-            };
-          },
-        };
-      }
-
-      if (table === "outbox_events") {
-        return {
-          insert(values: unknown) {
-            calls.push({ op: "insert", table, values });
-            return {
-              select(columns: string) {
-                calls.push({ op: "select", table, columns });
-                return {
-                  single: async () => ({
-                    data: outboxRow(),
-                    error: null,
-                  }),
-                };
-              },
-            };
-          },
-        };
-      }
-
       throw new Error(`Unexpected table ${table}`);
+    },
+    rpc(functionName: string, args: unknown) {
+      calls.push({ args, functionName, op: "rpc" });
+      return {
+        single: async () => {
+          if (input.rpcError) {
+            return { data: null, error: input.rpcError };
+          }
+
+          const data = input.rpcResults?.[rpcIndex++] ?? {
+            outbox_event_id: OUTBOX_ID,
+            receipt_id: RECEIPT_ID,
+            receipt_inserted: true,
+          };
+
+          return { data, error: null };
+        },
+      };
     },
   } as unknown as SupabaseLike;
 
@@ -167,7 +150,9 @@ describe("MetaWebhookService", () => {
   });
 
   it("rejects bad signature", async () => {
-    const { calls, client } = mockSupabase({ orgId: ORG_ID });
+    const { calls, client } = mockSupabase({
+      mappings: [{ external_page_id: "page-1", org_id: ORG_ID }],
+    });
     const service = new MetaWebhookService(client, env);
     const request = signedPayload(metaPayload());
 
@@ -180,45 +165,37 @@ describe("MetaWebhookService", () => {
     expect(calls).toEqual([]);
   });
 
-  it("enqueues outbox once for new receipt", async () => {
+  it("records receipt and outbox atomically for a new receipt", async () => {
     const { calls, client } = mockSupabase({
-      orgId: ORG_ID,
-      receiptInserted: true,
+      mappings: [{ external_page_id: "page-1", org_id: ORG_ID }],
     });
     const service = new MetaWebhookService(client, env);
     const request = signedPayload(metaPayload());
 
     await expect(service.ingest(request)).resolves.toEqual({ ok: true });
     expect(calls).toContainEqual({
-      op: "upsert",
-      table: "webhook_receipts",
-      values: expect.objectContaining({
-        provider: "meta",
-        receipt_key: "m_page_1",
-        org_id: ORG_ID,
-      }),
-      options: {
-        ignoreDuplicates: true,
-        onConflict: "provider,receipt_key",
-      },
+      columns: "external_page_id, org_id",
+      op: "select",
+      table: "channel_connections",
     });
     expect(calls).toContainEqual({
-      op: "insert",
-      table: "outbox_events",
-      values: {
-        org_id: ORG_ID,
-        event_name: "meta.inbound",
-        payload_json: request.payload,
-        published_at: null,
-        attempts: 0,
-      },
+      args: expect.objectContaining({
+        p_org_id: ORG_ID,
+        p_payload_json: request.payload,
+        p_receipt_key: "m_page_1",
+      }),
+      functionName: "record_meta_webhook_receipt_and_enqueue",
+      op: "rpc",
     });
+    expect(calls).not.toContainEqual(expect.objectContaining({ op: "limit" }));
+    expect(calls).not.toContainEqual(
+      expect.objectContaining({ op: "insert", table: "outbox_events" }),
+    );
   });
 
   it("uses entry id and time when message mid is absent", async () => {
     const { calls, client } = mockSupabase({
-      orgId: ORG_ID,
-      receiptInserted: true,
+      mappings: [{ external_page_id: "page-1", org_id: ORG_ID }],
     });
     const service = new MetaWebhookService(client, env);
     const request = signedPayload(
@@ -235,22 +212,24 @@ describe("MetaWebhookService", () => {
 
     await expect(service.ingest(request)).resolves.toEqual({ ok: true });
     expect(calls).toContainEqual({
-      op: "upsert",
-      table: "webhook_receipts",
-      values: expect.objectContaining({
-        receipt_key: "page-1-1721824400",
+      args: expect.objectContaining({
+        p_receipt_key: "page-1-1721824400",
       }),
-      options: {
-        ignoreDuplicates: true,
-        onConflict: "provider,receipt_key",
-      },
+      functionName: "record_meta_webhook_receipt_and_enqueue",
+      op: "rpc",
     });
   });
 
   it("skips outbox on duplicate receipt_key", async () => {
     const { calls, client } = mockSupabase({
-      orgId: ORG_ID,
-      receiptInserted: false,
+      mappings: [{ external_page_id: "page-1", org_id: ORG_ID }],
+      rpcResults: [
+        {
+          outbox_event_id: null,
+          receipt_id: null,
+          receipt_inserted: false,
+        },
+      ],
     });
     const service = new MetaWebhookService(client, env);
 
@@ -258,6 +237,36 @@ describe("MetaWebhookService", () => {
       ok: true,
     });
     expect(calls).toContainEqual(
+      expect.objectContaining({
+        functionName: "record_meta_webhook_receipt_and_enqueue",
+        op: "rpc",
+      }),
+    );
+    expect(calls).not.toContainEqual(
+      expect.objectContaining({
+        op: "insert",
+        table: "outbox_events",
+      }),
+    );
+  });
+
+  it("does not leave a separate receipt insert path when outbox enqueue fails", async () => {
+    const { calls, client } = mockSupabase({
+      mappings: [{ external_page_id: "page-1", org_id: ORG_ID }],
+      rpcError: { message: "outbox insert failed" },
+    });
+    const service = new MetaWebhookService(client, env);
+
+    await expect(
+      service.ingest(signedPayload(metaPayload())),
+    ).rejects.toMatchObject({ status: 500 });
+    expect(calls).toContainEqual(
+      expect.objectContaining({
+        functionName: "record_meta_webhook_receipt_and_enqueue",
+        op: "rpc",
+      }),
+    );
+    expect(calls).not.toContainEqual(
       expect.objectContaining({
         op: "upsert",
         table: "webhook_receipts",
@@ -269,5 +278,88 @@ describe("MetaWebhookService", () => {
         table: "outbox_events",
       }),
     );
+  });
+
+  it("routes multi-page payload entries to their own organizations", async () => {
+    const { calls, client } = mockSupabase({
+      mappings: [
+        { external_page_id: "page-1", org_id: ORG_ID },
+        { external_page_id: "page-2", org_id: ORG_2_ID },
+      ],
+      rpcResults: [
+        {
+          outbox_event_id: OUTBOX_ID,
+          receipt_id: RECEIPT_ID,
+          receipt_inserted: true,
+        },
+        {
+          outbox_event_id: "22222222-2222-2222-2222-222222222223",
+          receipt_id: "33333333-3333-3333-3333-333333333334",
+          receipt_inserted: true,
+        },
+      ],
+    });
+    const service = new MetaWebhookService(client, env);
+    const request = signedPayload(
+      metaPayload({
+        entry: [
+          {
+            id: "page-1",
+            time: 1_721_824_400,
+            messaging: [{ message: { mid: "m_page_1" } }],
+          },
+          {
+            id: "page-2",
+            time: 1_721_824_401,
+            messaging: [{ message: { mid: "m_page_2" } }],
+          },
+        ],
+      }),
+    );
+
+    await expect(service.ingest(request)).resolves.toEqual({ ok: true });
+
+    const rpcCalls = calls.filter((call) => call.op === "rpc");
+    expect(rpcCalls).toHaveLength(2);
+    expect(rpcCalls[0]).toEqual(
+      expect.objectContaining({
+        args: expect.objectContaining({
+          p_org_id: ORG_ID,
+          p_payload_json: expect.objectContaining({
+            entry: [expect.objectContaining({ id: "page-1" })],
+          }),
+          p_receipt_key: "m_page_1",
+        }),
+      }),
+    );
+    expect(rpcCalls[1]).toEqual(
+      expect.objectContaining({
+        args: expect.objectContaining({
+          p_org_id: ORG_2_ID,
+          p_payload_json: expect.objectContaining({
+            entry: [expect.objectContaining({ id: "page-2" })],
+          }),
+          p_receipt_key: "m_page_2",
+        }),
+      }),
+    );
+    expect(calls).not.toContainEqual(expect.objectContaining({ op: "limit" }));
+  });
+
+  it("records unmapped entries without an outbox destination", async () => {
+    const { calls, client } = mockSupabase({ mappings: [] });
+    const service = new MetaWebhookService(client, env);
+
+    await expect(service.ingest(signedPayload(metaPayload()))).resolves.toEqual({
+      ok: true,
+    });
+    expect(calls).toContainEqual({
+      args: expect.objectContaining({
+        p_org_id: null,
+        p_receipt_key: "m_page_1",
+      }),
+      functionName: "record_meta_webhook_receipt_and_enqueue",
+      op: "rpc",
+    });
   });
 });

@@ -10,15 +10,12 @@ import { createHash } from "node:crypto";
 
 import { loadEnv, type Env } from "../../config/env";
 import { verifyMetaSignature } from "../../integrations/meta/signature";
-import {
-  enqueueOutbox,
-  type JsonObject,
-} from "../../jobs/outbox.publisher";
+import { type JsonObject } from "../../jobs/outbox.publisher";
 
 export const META_WEBHOOK_SUPABASE = Symbol("META_WEBHOOK_SUPABASE");
 export const META_WEBHOOK_ENV = Symbol("META_WEBHOOK_ENV");
 
-export type SupabaseLike = Pick<SupabaseClient, "from">;
+export type SupabaseLike = Pick<SupabaseClient, "from" | "rpc">;
 export type MetaWebhookEnv = Pick<
   Env,
   | "META_APP_SECRET"
@@ -45,7 +42,12 @@ type SupabaseError = {
 };
 
 type ChannelConnectionRow = {
+  external_page_id: string;
   org_id: string;
+};
+
+type RecordMetaWebhookRow = {
+  receipt_inserted: boolean;
 };
 
 @Injectable()
@@ -95,75 +97,86 @@ export class MetaWebhookService {
     }
 
     const payload = toJsonObject(input.payload);
-    const payloadHash = hashPayload(input.rawBody);
-    const receiptKey = getReceiptKey(payload, payloadHash);
-    const orgId = await this.findOrgId(payload);
-    const receiptInserted = await this.insertReceipt({
-      orgId,
-      payloadHash,
-      receiptKey,
-    });
+    const entries = getEntries(payload);
+    const routedEntries = entries.length > 0 ? entries : [undefined];
+    const orgIdsByPageId = await this.findOrgIdsByPageId(
+      entries
+        .map((entry) => toNonEmptyString(entry.id))
+        .filter((id): id is string => id !== undefined),
+    );
 
-    if (receiptInserted && orgId) {
-      await enqueueOutbox(this.supabase, {
-        orgId,
-        eventName: "meta.inbound",
-        payload,
+    for (const entry of routedEntries) {
+      const scopedPayload = scopePayloadToEntry(payload, entry);
+      const payloadHash =
+        entry && entries.length > 1
+          ? hashPayload(Buffer.from(JSON.stringify(scopedPayload), "utf8"))
+          : hashPayload(input.rawBody);
+      const pageId = entry ? toNonEmptyString(entry.id) : undefined;
+
+      await this.recordReceiptAndMaybeOutbox({
+        orgId: pageId ? (orgIdsByPageId.get(pageId) ?? null) : null,
+        payload: scopedPayload,
+        payloadHash,
+        receiptKey: entry
+          ? getEntryReceiptKey(entry, payloadHash)
+          : getReceiptKey(payload, payloadHash),
       });
     }
 
     return { ok: true };
   }
 
-  private async findOrgId(payload: JsonObject) {
-    const pageIds = getEntryPageIds(payload);
+  private async findOrgIdsByPageId(pageIds: string[]) {
     if (pageIds.length === 0) {
-      return null;
+      return new Map<string, string>();
     }
 
     const { data, error } = await this.supabase
       .from("channel_connections")
-      .select("org_id")
+      .select("external_page_id, org_id")
       .eq("provider", "meta_page")
       .eq("status", "active")
-      .in("external_page_id", pageIds)
-      .limit(1);
+      .in("external_page_id", pageIds);
 
     if (error) {
       throwWebhookError(error, "Could not map Meta page to organization");
     }
 
-    const row = ((data ?? []) as ChannelConnectionRow[])[0];
-    return row?.org_id ?? null;
+    const orgIdsByPageId = new Map<string, string>();
+    for (const row of (data ?? []) as ChannelConnectionRow[]) {
+      const existingOrgId = orgIdsByPageId.get(row.external_page_id);
+      if (existingOrgId && existingOrgId !== row.org_id) {
+        throwWebhookError(
+          { message: "Meta page maps to multiple organizations" },
+          "Could not map Meta page to organization",
+        );
+      }
+      orgIdsByPageId.set(row.external_page_id, row.org_id);
+    }
+
+    return orgIdsByPageId;
   }
 
-  private async insertReceipt(input: {
+  private async recordReceiptAndMaybeOutbox(input: {
     orgId: string | null;
+    payload: JsonObject;
     payloadHash: string;
     receiptKey: string;
   }) {
     const { data, error } = await this.supabase
-      .from("webhook_receipts")
-      .upsert(
-        {
-          provider: "meta",
-          receipt_key: input.receiptKey,
-          org_id: input.orgId,
-          payload_hash: input.payloadHash,
-        },
-        {
-          ignoreDuplicates: true,
-          onConflict: "provider,receipt_key",
-        },
-      )
-      .select("id")
-      .maybeSingle();
+      .rpc("record_meta_webhook_receipt_and_enqueue", {
+        p_org_id: input.orgId,
+        p_payload_hash: input.payloadHash,
+        p_payload_json: input.payload,
+        p_receipt_key: input.receiptKey,
+      })
+      .single();
 
     if (error) {
       throwWebhookError(error, "Could not record Meta webhook receipt");
     }
 
-    return Boolean(data);
+    return Boolean((data as RecordMetaWebhookRow | null)?.receipt_inserted);
   }
 }
 
@@ -181,17 +194,11 @@ function hashPayload(rawBody: Buffer) {
 
 function getReceiptKey(payload: JsonObject, payloadHash: string) {
   return (
-    getFirstMessageMid(payload) ??
+    getFirstMessageMid(getEntries(payload)) ??
     `${getFirstEntryId(payload) ?? "unknown"}-${
       getFirstEntryTime(payload) ?? payloadHash
     }`
   );
-}
-
-function getEntryPageIds(payload: JsonObject) {
-  return getEntries(payload)
-    .map((entry) => toNonEmptyString(entry.id))
-    .filter((id): id is string => id !== undefined);
 }
 
 function getFirstEntryId(payload: JsonObject) {
@@ -202,8 +209,17 @@ function getFirstEntryTime(payload: JsonObject) {
   return toNonEmptyString(getEntries(payload)[0]?.time);
 }
 
-function getFirstMessageMid(payload: JsonObject) {
-  for (const entry of getEntries(payload)) {
+function getEntryReceiptKey(entry: Record<string, unknown>, payloadHash: string) {
+  return (
+    getFirstMessageMid([entry]) ??
+    `${toNonEmptyString(entry.id) ?? "unknown"}-${
+      toNonEmptyString(entry.time) ?? payloadHash
+    }`
+  );
+}
+
+function getFirstMessageMid(entries: Record<string, unknown>[]) {
+  for (const entry of entries) {
     for (const event of getMessagingEvents(entry)) {
       const mid = toNonEmptyString(asRecord(event.message)?.mid);
       if (mid) {
@@ -221,6 +237,20 @@ function getEntries(payload: JsonObject) {
 
 function getMessagingEvents(entry: Record<string, unknown>) {
   return toRecordArray(entry.messaging);
+}
+
+function scopePayloadToEntry(
+  payload: JsonObject,
+  entry: Record<string, unknown> | undefined,
+) {
+  if (!entry) {
+    return payload;
+  }
+
+  return {
+    ...payload,
+    entry: [entry],
+  };
 }
 
 function toRecordArray(value: unknown) {

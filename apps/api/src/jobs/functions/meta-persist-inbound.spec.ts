@@ -126,23 +126,54 @@ function mockSupabase(state: State) {
 }
 
 function queryBuilder(state: State, calls: SupabaseCall[], table: TableName) {
-  const filters: Array<{ field: string; value: unknown }> = [];
+  const filters: Array<{
+    field: string;
+    op: 'contains' | 'eq';
+    value: unknown;
+  }> = [];
   const query = {
     eq(field: string, value: unknown) {
       calls.push({ field, op: 'eq', value });
-      filters.push({ field, value });
+      filters.push({ field, op: 'eq', value });
+      return query;
+    },
+    contains(field: string, value: unknown) {
+      calls.push({ field, op: 'contains', value });
+      filters.push({ field, op: 'contains', value });
       return query;
     },
     maybeSingle: async () => {
       const data =
         state[table].find((candidate) =>
-          filters.every(({ field, value }) => candidate[field] === value),
+          filters.every((filter) => matchesFilter(candidate, filter)),
         ) ?? null;
       return { data, error: null };
     },
   };
 
   return query;
+}
+
+function matchesFilter(
+  candidate: Row,
+  filter: { field: string; op: 'contains' | 'eq'; value: unknown },
+) {
+  if (filter.op === 'eq') {
+    return candidate[filter.field] === filter.value;
+  }
+
+  const actual = candidate[filter.field];
+  if (!isRecord(actual) || !isRecord(filter.value)) {
+    return false;
+  }
+
+  return Object.entries(filter.value).every(
+    ([key, value]) => actual[key] === value,
+  );
+}
+
+function isRecord(value: unknown): value is Row {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function withDefaults(table: TableName, values: Row) {
@@ -237,7 +268,7 @@ describe('MetaInboundPersistenceService', () => {
     );
   });
 
-  it('does not insert a duplicate provider message', async () => {
+  it('does not insert a duplicate provider message but ensures AI outbox exists', async () => {
     const state = createState({
       contacts: [
         {
@@ -284,5 +315,15 @@ describe('MetaInboundPersistenceService', () => {
     expect(
       calls.filter((call) => call.op === 'insert' && call.table === 'messages'),
     ).toHaveLength(0);
+    expect(state.outbox_events).toContainEqual(
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'ai.process_inbound',
+        payload_json: {
+          conversationId: CONVERSATION_ID,
+          messageId: MESSAGE_ID,
+        },
+      }),
+    );
   });
 });

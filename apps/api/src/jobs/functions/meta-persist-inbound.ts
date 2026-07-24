@@ -84,6 +84,8 @@ const CONVERSATION_SELECT =
   'id, org_id, channel, channel_connection_id, contact_id, status, bot_paused, bot_epoch, assignee_user_id, last_message_at, created_at, updated_at';
 const MESSAGE_SELECT =
   'id, org_id, conversation_id, direction, sender_type, raw_type, body_text, payload_json, provider_message_id, created_at';
+const OUTBOX_SELECT =
+  'id, org_id, event_name, payload_json, created_at, published_at, attempts';
 
 export class MetaInboundPersistenceService {
   private readonly supabase: SupabaseLike;
@@ -117,25 +119,23 @@ export class MetaInboundPersistenceService {
         contactId: contact.id,
         lastMessageAt: message.createdAt,
       });
-      const inserted = await this.insertMessageIfNew({
+      const persistedMessage = await this.insertMessageIfNew({
         orgId,
         conversationId: conversation.id,
         message,
       });
 
-      if (inserted) {
+      if (persistedMessage.inserted) {
         insertedMessages += 1;
-        await enqueueOutbox(this.supabase, {
-          orgId,
-          eventName: 'ai.process_inbound',
-          payload: {
-            conversationId: conversation.id,
-            messageId: inserted.id,
-          },
-        });
       } else {
         skippedMessages += 1;
       }
+
+      await this.ensureAiProcessInboundOutbox({
+        orgId,
+        conversationId: persistedMessage.message.conversation_id,
+        messageId: persistedMessage.message.id,
+      });
     }
 
     return {
@@ -332,7 +332,7 @@ export class MetaInboundPersistenceService {
       throwPersistError(findError, 'Could not find Meta message');
     }
     if (existing) {
-      return null;
+      return { inserted: false, message: existing as MessageRow };
     }
 
     const { data, error } = await this.supabase
@@ -352,13 +352,82 @@ export class MetaInboundPersistenceService {
       .single();
 
     if (isDuplicateError(error)) {
-      return null;
+      const duplicate = await this.findMessageByProviderId(
+        input.orgId,
+        input.message.providerMessageId,
+      );
+      if (duplicate) {
+        return { inserted: false, message: duplicate };
+      }
     }
     if (error) {
       throwPersistError(error, 'Could not insert Meta message');
     }
 
-    return data as MessageRow;
+    return { inserted: true, message: data as MessageRow };
+  }
+
+  private async findMessageByProviderId(orgId: string, providerMessageId: string) {
+    const { data, error } = await this.supabase
+      .from('messages')
+      .select(MESSAGE_SELECT)
+      .eq('org_id', orgId)
+      .eq('provider_message_id', providerMessageId)
+      .maybeSingle();
+
+    if (error) {
+      throwPersistError(error, 'Could not find Meta message');
+    }
+
+    return data as MessageRow | null;
+  }
+
+  private async ensureAiProcessInboundOutbox(input: {
+    orgId: string;
+    conversationId: string;
+    messageId: string;
+  }) {
+    const existing = await this.findAiProcessInboundOutbox(input);
+    if (existing) {
+      return existing;
+    }
+
+    try {
+      return await enqueueOutbox(this.supabase, {
+        orgId: input.orgId,
+        eventName: 'ai.process_inbound',
+        payload: {
+          conversationId: input.conversationId,
+          messageId: input.messageId,
+        },
+      });
+    } catch (error) {
+      const duplicate = await this.findAiProcessInboundOutbox(input);
+      if (duplicate) {
+        return duplicate;
+      }
+
+      throw error;
+    }
+  }
+
+  private async findAiProcessInboundOutbox(input: {
+    orgId: string;
+    messageId: string;
+  }) {
+    const { data, error } = await this.supabase
+      .from('outbox_events')
+      .select(OUTBOX_SELECT)
+      .eq('org_id', input.orgId)
+      .eq('event_name', 'ai.process_inbound')
+      .contains('payload_json', { messageId: input.messageId })
+      .maybeSingle();
+
+    if (error) {
+      throwPersistError(error, 'Could not find AI process_inbound outbox event');
+    }
+
+    return data;
   }
 }
 

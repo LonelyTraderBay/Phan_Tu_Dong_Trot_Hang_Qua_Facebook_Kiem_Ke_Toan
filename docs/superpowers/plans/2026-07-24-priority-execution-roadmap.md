@@ -1,7 +1,7 @@
 # Priority Execution Roadmap — tới CPC / E100
 
 **Date:** 2026-07-24  
-**Status:** Active backlog — Plan B DONE on `main` (`2176559`); Plan C NEXT  
+**Status:** Active backlog — Plan C DONE on `feat/plan-c-catalog-ai` (`7ee2c54`); Plan D NEXT  
 **Authority:** [CANONICAL](../specs/2026-07-24-CANONICAL-LOCKED-DECISIONS.md) · [master roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) · [WBS](../specs/2026-07-24-implementation-work-breakdown.md)
 
 ---
@@ -25,8 +25,8 @@
 |------|-------|--------|
 | **A** | Waves A+B+C — Platform | **DONE** (merged + pushed `main`) |
 | **B** | Wave D — Meta channels | **DONE** (merged `main` @ `2176559`) → [DoD evidence](./plan-b-dod-evidence.md) · [chi tiết](./2026-07-24-plan-b-meta-channels.md) |
-| **C** | Waves E+F — Catalog + AI | **NEXT — C0→C9** → [playbook ưu tiên](./2026-07-24-plan-c-priority-execution.md) · [chi tiết task](./2026-07-24-plan-c-catalog-ai.md) |
-| **D** | Waves G+H+I — Orders + Web + Hardening | Queued → [plan file](./2026-07-24-plan-d-orders-web-hardening.md) |
+| **C** | Waves E+F — Catalog + AI | **DONE** (`feat/plan-c-catalog-ai` @ `7ee2c54`) → [DoD evidence](./plan-c-dod-evidence.md) · [playbook](./2026-07-24-plan-c-priority-execution.md) · [chi tiết](./2026-07-24-plan-c-catalog-ai.md) |
+| **D** | Waves G+H+I — Orders + Web + Hardening | **NEXT** → [plan file](./2026-07-24-plan-d-orders-web-hardening.md) |
 | **E** | Gate M3 — Commercial ops | Queued → [outline](./2026-07-24-plan-e-m3-commercial-ops.md) |
 | **F** | Phase 2 Operations (2A–2H) | After E / pilot |
 | **G** | Phase 3 Intelligence (3A–3F) | After F |
@@ -39,8 +39,8 @@
 
 ```
 P0  Plan B  Meta          ← DONE (DoD evidence recorded)
-P1  Plan C  Catalog + AI  ← ĐANG TỚI
-P2  Plan D  Orders + Web VI + Hardening / App Review   → Pilot Phase 1
+P1  Plan C  Catalog + AI  ← DONE (DoD evidence recorded)
+P2  Plan D  Orders + Web VI + Hardening / App Review   ← ĐANG TỚI → Pilot Phase 1
 P3  Plan E  M3 (Pro DB, always-on, billing, DR)        → khi có / sắp có khách
 P4a Plan F  Phase 2 Operations
 P4b Plan G  Phase 3 Intelligence
@@ -102,7 +102,7 @@ P6  Epoch 5 (optional)
 ## 5. Hành động ngay
 
 1. ~~Execute Plan B~~ — **DONE** ([DoD evidence](./plan-b-dod-evidence.md))  
-2. Đọc [playbook Plan C](./2026-07-24-plan-c-priority-execution.md) + [chi tiết task](./2026-07-24-plan-c-catalog-ai.md)  
-3. Execute Plan C C0→C9 (Subagent-Driven khuyến nghị)  
+2. ~~Execute Plan C C0→C9~~ — **DONE** ([DoD evidence](./plan-c-dod-evidence.md))  
+3. Đọc [Plan D](./2026-07-24-plan-d-orders-web-hardening.md) + execute Orders + Web VI + Hardening  
 
-**Không** viết/code Phase 2 / Plan D critical path trong lúc làm C.
+**Không** merge Plan C → `main` trong task này; merge Plan D sau DoD.

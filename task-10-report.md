@@ -1,10 +1,7 @@
 Task 10 complete.
 
-- Added Nest identity module for org create/list and owner-only invite stub.
-- `POST /v1/orgs` creates organization, owner membership, and entitlements row.
-- `GET /v1/orgs` uses a user-scoped Supabase client with the validated JWT.
-- Invite insert uses service role only after OrgGuard + owner role checks.
-- OrgGuard skips only exact `POST /v1/orgs` and `GET /v1/orgs`.
-- Added unit coverage for entitlements write and guard bootstrap exceptions.
-- Verified: `pnpm --filter @omni/api test`
-- Verified: `pnpm --filter @omni/api typecheck`
+- Wrote `docs/superpowers/plans/plan-c-dod-evidence.md` — DoD table all GREEN except Live Gemini/Page DM **AMBER NOT RUN**.
+- Updated `2026-07-24-priority-execution-roadmap.md`: Plan C DONE, Plan D NEXT.
+- Gates: api test 92/92 PASS, typecheck PASS, isolation 6/6 PASS, eval golden=6 adversarial=10 PASS, ai pytest 18/18 PASS.
+- Branch `feat/plan-c-catalog-ai` @ `7ee2c54`; not merged to `main`.
+- Commit: `docs: record plan C DoD evidence`.

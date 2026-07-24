@@ -1,0 +1,42 @@
+export default function HomePage() {
+  return (
+    <main
+      style={{
+        display: 'grid',
+        minHeight: '100vh',
+        placeItems: 'center',
+        padding: '48px 24px',
+      }}
+    >
+      <section style={{ maxWidth: 760, textAlign: 'center' }}>
+        <p
+          style={{
+            margin: '0 0 16px',
+            color: '#2563eb',
+            fontSize: 14,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Omni Commerce
+        </p>
+        <h1 style={{ margin: 0, fontSize: 48, lineHeight: 1.08 }}>
+          Nền tảng vận hành thương mại đa kênh cho doanh nghiệp Việt Nam
+        </h1>
+        <p
+          style={{
+            margin: '24px auto 0',
+            maxWidth: 620,
+            color: '#475569',
+            fontSize: 20,
+            lineHeight: 1.6,
+          }}
+        >
+          Trang giới thiệu đang được dựng nền tảng. Bảng điều khiển nội bộ sẽ
+          kết nối API theo ngữ cảnh tổ chức ở các bước tiếp theo.
+        </p>
+      </section>
+    </main>
+  );
+}

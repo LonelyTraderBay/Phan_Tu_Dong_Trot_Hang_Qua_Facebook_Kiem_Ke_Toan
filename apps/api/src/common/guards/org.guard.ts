@@ -81,6 +81,7 @@ function isSkippedPath(path: string, method = "GET") {
     path === "/health" ||
     path === "/ready" ||
     path === "/api/inngest" ||
+    path === "/v1/webhooks/meta" ||
     path === "/ops" ||
     path.startsWith("/ops/") ||
     path === "/internal" ||

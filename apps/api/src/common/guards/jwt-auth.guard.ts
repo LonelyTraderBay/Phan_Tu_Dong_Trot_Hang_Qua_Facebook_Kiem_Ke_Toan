@@ -38,6 +38,7 @@ function isPublicPath(path: string) {
     path === "/health" ||
     path === "/ready" ||
     path === "/api/inngest" ||
+    path === "/v1/webhooks/meta" ||
     path === "/internal" ||
     path.startsWith("/internal/")
   );

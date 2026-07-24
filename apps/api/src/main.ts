@@ -16,6 +16,7 @@ async function bootstrap() {
   const env = loadEnv();
   const app = await NestFactory.create(AppModule, {
     logger: createRedactingLogger(),
+    rawBody: true,
   });
 
   app.enableShutdownHooks();

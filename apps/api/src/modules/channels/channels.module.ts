@@ -5,11 +5,14 @@ import { AuditService } from "../audit/audit.service";
 import { PermissionsGuard } from "../authz/permissions.guard";
 import { ChannelsController } from "./channels.controller";
 import { CHANNELS_GRAPH, ChannelsService } from "./channels.service";
+import { MetaWebhookController } from "./meta-webhook.controller";
+import { MetaWebhookService } from "./meta-webhook.service";
 
 @Module({
-  controllers: [ChannelsController],
+  controllers: [ChannelsController, MetaWebhookController],
   providers: [
     ChannelsService,
+    MetaWebhookService,
     PermissionsGuard,
     AuditService,
     {

@@ -71,6 +71,63 @@ paths:
       responses:
         '201':
           description: Revoked
+  /v1/webhooks/meta:
+    get:
+      summary: Verify Meta webhook subscription
+      parameters:
+        - name: hub.mode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: hub.verify_token
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: hub.challenge
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plain text challenge
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          description: Invalid verify token
+    post:
+      summary: Ingest Meta webhook events
+      parameters:
+        - name: x-hub-signature-256
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - ok
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          description: Invalid signature
   /ops/v1/orgs:
     get:
       summary: List orgs (platform admin)

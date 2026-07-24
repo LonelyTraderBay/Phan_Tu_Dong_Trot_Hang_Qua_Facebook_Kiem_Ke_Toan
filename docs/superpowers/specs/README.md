@@ -15,6 +15,9 @@
 | 3 | [2026-07-24-external-services-catalog.md](./2026-07-24-external-services-catalog.md) | Vendors + Free-first |
 | 3b | [2026-07-24-coding-gaps-pre-implementation.md](./2026-07-24-coding-gaps-pre-implementation.md) | Gaps → closed in design §15 |
 | 3c | [2026-07-24-enterprise-upgrade-opportunities.md](./2026-07-24-enterprise-upgrade-opportunities.md) | What else to upgrade |
+| 3d | [2026-07-24-implementation-work-breakdown.md](./2026-07-24-implementation-work-breakdown.md) | Phases / Waves Phase 1 trước plan |
+| 3e | [2026-07-24-master-roadmap-commercial-complete.md](./2026-07-24-master-roadmap-commercial-complete.md) | Full path → CPC + E100 |
+| — | [plans/2026-07-24-plan-a-platform-foundation.md](../plans/2026-07-24-plan-a-platform-foundation.md) | **Plan A — Waves A+B+C (execute next)** |
 | 4 | [2026-07-24-enterprise-grade-commercialization-analysis.md](./2026-07-24-enterprise-grade-commercialization-analysis.md) | Multi-year GTM |
 | 5 | [2026-07-24-backend-python-vs-typescript-analysis.md](./2026-07-24-backend-python-vs-typescript-analysis.md) | ADR Option C (historical A/B) |
 | — | [2026-07-24-spec-audit-pre-plan.md](./2026-07-24-spec-audit-pre-plan.md) | Audit record (findings fixed) |

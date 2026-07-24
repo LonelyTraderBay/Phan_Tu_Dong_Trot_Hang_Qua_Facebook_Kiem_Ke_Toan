@@ -52,6 +52,18 @@ function auditMock() {
   } satisfies AuditWriter;
 }
 
+function entitlementsMock(input: { autoConfirmAllowed: boolean }) {
+  return {
+    getEntitlements: vi.fn(async () => ({
+      orgId: ORG_ID,
+      maxPages: 1,
+      aiMonthlyTokenLimit: 100_000,
+      autoConfirmAllowed: input.autoConfirmAllowed,
+      updatedAt: '2026-07-24T10:00:00.000Z',
+    })),
+  };
+}
+
 function autoConfirmClient(input: { stockQty: number }) {
   let stockQty = input.stockQty;
   const orders: Array<Record<string, unknown>> = [];
@@ -255,7 +267,11 @@ describe('OrdersService auto-confirm create', () => {
   it('does not leave an order row when auto-confirm stock is insufficient', async () => {
     const db = autoConfirmClient({ stockQty: 0 });
     const audit = auditMock();
-    const service = new OrdersService(db.client, audit);
+    const service = new OrdersService(
+      db.client,
+      audit,
+      entitlementsMock({ autoConfirmAllowed: true }),
+    );
 
     await expect(
       service.createDraftOrder({
@@ -284,7 +300,11 @@ describe('OrdersService auto-confirm create', () => {
   it('confirms once when auto-confirm create is replayed with the same idempotency key', async () => {
     const db = autoConfirmClient({ stockQty: 1 });
     const audit = auditMock();
-    const service = new OrdersService(db.client, audit);
+    const service = new OrdersService(
+      db.client,
+      audit,
+      entitlementsMock({ autoConfirmAllowed: true }),
+    );
     const input = {
       orgId: ORG_ID,
       actorUserId: USER_ID,
@@ -310,6 +330,84 @@ describe('OrdersService auto-confirm create', () => {
         meta: { autoConfirm: true },
       }),
     );
+  });
+
+  it('keeps a draft when org setting enables auto-confirm but entitlement is disabled', async () => {
+    const client = {
+      rpc: vi.fn(async (fn: string) => {
+        expect(fn).toBe('create_draft_order');
+        return { data: orderPayload(ORDER_ID, 'draft'), error: null };
+      }),
+      from(table: string) {
+        const chain = {
+          select() {
+            return chain;
+          },
+          eq() {
+            return chain;
+          },
+          is() {
+            return chain;
+          },
+          maybeSingle: async () => {
+            if (table === 'organizations') {
+              return {
+                data: { id: ORG_ID, settings_json: { auto_confirm: true } },
+                error: null,
+              };
+            }
+            if (table === 'product_variants') {
+              return {
+                data: {
+                  id: VARIANT_ID,
+                  org_id: ORG_ID,
+                  product_id: PRODUCT_ID,
+                  sku: 'AT-DEN-L',
+                  title: 'Black / L',
+                  price_vnd: '1000',
+                  stock_qty: 1,
+                },
+                error: null,
+              };
+            }
+            if (table === 'products') {
+              return { data: { id: PRODUCT_ID }, error: null };
+            }
+            throw new Error(`unexpected maybeSingle table ${table}`);
+          },
+          insert() {
+            expect(table).toBe('idempotency_keys');
+            return Promise.resolve({ error: null });
+          },
+          update() {
+            expect(table).toBe('idempotency_keys');
+            return chain;
+          },
+        };
+        return chain;
+      },
+    } as unknown as SupabaseLike;
+    const audit = auditMock();
+    const service = new OrdersService(
+      client,
+      audit,
+      entitlementsMock({ autoConfirmAllowed: false }),
+    );
+
+    const result = await service.createDraftOrder({
+      orgId: ORG_ID,
+      actorUserId: USER_ID,
+      body: CREATE_BODY,
+      idempotencyKey: 'create-draft-entitlement-disabled',
+      path: '/v1/orders',
+    });
+
+    expect(result.order.status).toBe('draft');
+    expect(client.rpc).toHaveBeenCalledWith(
+      'create_draft_order',
+      expect.any(Object),
+    );
+    expect(audit.writeAudit).not.toHaveBeenCalled();
   });
 });
 

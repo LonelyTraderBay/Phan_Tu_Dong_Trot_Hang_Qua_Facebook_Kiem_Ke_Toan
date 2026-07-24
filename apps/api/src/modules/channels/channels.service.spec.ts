@@ -87,6 +87,7 @@ function oauthState(overrides: Partial<OAuthStateRow> = {}): OAuthStateRow {
 
 function channelsSupabaseMock(input: {
   connectionRows?: unknown[];
+  activeRows?: unknown[];
   oauthStates?: OAuthStateRow[];
 } = {}) {
   const inserts: unknown[] = [];
@@ -142,6 +143,18 @@ function channelsSupabaseMock(input: {
 
       if (table === "channel_connections") {
         return {
+          select() {
+            return {
+              eq() {
+                return {
+                  eq: async () => ({
+                    data: input.activeRows ?? [],
+                    error: null,
+                  }),
+                };
+              },
+            };
+          },
           upsert(values: unknown, options: unknown) {
             upserts.push({ table, values, options });
             return {
@@ -253,6 +266,51 @@ describe("ChannelsService", () => {
         },
       },
     ]);
+  });
+
+  it("rejects Meta connect when active channels would exceed max_pages", async () => {
+    const { client, upserts } = channelsSupabaseMock({
+      oauthStates: [oauthState()],
+      activeRows: [connectionRow({ external_page_id: "page-existing" })],
+    });
+    const service = new ChannelsService(
+      client,
+      graphMock({
+        getManagedPages: async () => ({
+          data: [
+            {
+              id: "page-new",
+              name: "New Shop Page",
+              access_token: "EAAB_PLAIN",
+            },
+          ],
+        }),
+      }),
+      undefined,
+      env,
+      {
+        getEntitlements: async () => ({
+          orgId: ORG_ID,
+          maxPages: 1,
+          aiMonthlyTokenLimit: 100_000,
+          autoConfirmAllowed: false,
+          updatedAt: "2026-07-24T10:00:00.000Z",
+        }),
+      },
+    );
+
+    await expect(
+      service.completeOAuth({
+        orgId: ORG_ID,
+        userId: USER_ID,
+        code: "x",
+        state: "oauth-state-1",
+      }),
+    ).rejects.toMatchObject({
+      response: { code: "max_pages_exceeded" },
+      status: 403,
+    });
+    expect(upserts).toEqual([]);
   });
 
   it("rejects missing OAuth state before exchanging code", async () => {

@@ -69,6 +69,17 @@ class AiTokenQuotaClient(Protocol):
         ...
 
 
+class LlmSpendBudget(Protocol):
+    def estimate_messages(self, messages: list[dict[str, str]]):
+        ...
+
+    def would_exceed_cap(self, estimate) -> bool:
+        ...
+
+    def record_completion(self, *, prompt_tokens: int, completion_tokens: int) -> None:
+        ...
+
+
 class CoreToolsClient(Protocol):
     def get_product(
         self,
@@ -114,6 +125,7 @@ class ProcessMessageOrchestrator:
         min_relevance_similarity: float | None = None,
         quota_client: AiTokenQuotaClient | None = None,
         core_tools_client: CoreToolsClient | None = None,
+        spend_budget: LlmSpendBudget | None = None,
     ):
         self.embedding_provider = embedding_provider
         self.retriever = retriever
@@ -126,6 +138,7 @@ class ProcessMessageOrchestrator:
         )
         self.quota_client = quota_client
         self.core_tools_client = core_tools_client
+        self.spend_budget = spend_budget
 
     def process_message(
         self,
@@ -184,12 +197,26 @@ class ProcessMessageOrchestrator:
                 ),
             }
         ]
+        if self.spend_budget is not None:
+            estimate = self.spend_budget.estimate_messages(messages)
+            if self.spend_budget.would_exceed_cap(estimate):
+                return self._escalation_response(
+                    model=selected_model,
+                    tokens={"prompt": 0, "completion": 0, "total": 0},
+                    tools_used=tools_used,
+                )
+
         completion = self.llm_provider.complete(model=selected_model, messages=messages)
         tokens = {
             "prompt": completion.prompt_tokens,
             "completion": completion.completion_tokens,
             "total": completion.total_tokens,
         }
+        if self.spend_budget is not None:
+            self.spend_budget.record_completion(
+                prompt_tokens=completion.prompt_tokens,
+                completion_tokens=completion.completion_tokens,
+            )
         if self.quota_client is not None and completion.total_tokens > 0:
             self.quota_client.record_ai_token_usage(
                 org_id=org_id,

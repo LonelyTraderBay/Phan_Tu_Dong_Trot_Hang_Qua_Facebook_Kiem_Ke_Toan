@@ -8,6 +8,7 @@ import {
   SupabaseMembershipsRepository,
 } from './common/guards/org.guard';
 import { AdminOpsModule } from './modules/admin-ops/admin-ops.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { ChannelsModule } from './modules/channels/channels.module';
 import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
@@ -20,6 +21,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 @Module({
   imports: [
     HealthModule,
+    BillingModule,
     IdentityModule,
     AdminOpsModule,
     CatalogModule,

@@ -164,6 +164,71 @@ describe("AdminOpsService", () => {
     expect(result.organization.suspendedAt).toBe(suspendedAt.toISOString());
   });
 
+  it("updates organization plan and syncs catalog entitlements", async () => {
+    const updatedAt = new Date("2026-07-24T12:00:00.000Z");
+    const auditCalls: unknown[] = [];
+    const entitlementCalls: unknown[] = [];
+    const { calls, client } = mockSupabase({
+      updateResults: [
+        {
+          data: orgRow({ plan: "starter", updated_at: updatedAt.toISOString() }),
+          error: null,
+        },
+      ],
+    });
+    const service = new AdminOpsService(
+      client,
+      {
+        writeAudit: async (input) => {
+          auditCalls.push(input);
+          return { audit: { id: "audit-1" } };
+        },
+      },
+      {
+        syncPlanEntitlements: async (orgId, plan, at) => {
+          entitlementCalls.push({ orgId, plan, at });
+          return {
+            orgId,
+            maxPages: 5,
+            aiMonthlyTokenLimit: 10_000_000,
+            autoConfirmAllowed: true,
+            updatedAt: at.toISOString(),
+          };
+        },
+      },
+    );
+
+    const result = await service.updateOrganizationPlan(
+      ORG_ID,
+      { plan: "starter" },
+      updatedAt,
+    );
+
+    expect(calls).toContainEqual({
+      op: "update",
+      table: "organizations",
+      values: { plan: "starter", updated_at: updatedAt.toISOString() },
+    });
+    expect(entitlementCalls).toEqual([
+      { orgId: ORG_ID, plan: "starter", at: updatedAt },
+    ]);
+    expect(auditCalls).toEqual([
+      {
+        orgId: ORG_ID,
+        action: "organization.plan_updated",
+        entityType: "organization",
+        entityId: ORG_ID,
+        meta: { plan: "starter" },
+      },
+    ]);
+    expect(result.organization.plan).toBe("starter");
+    expect(result.entitlements).toMatchObject({
+      maxPages: 5,
+      aiMonthlyTokenLimit: 10_000_000,
+      autoConfirmAllowed: true,
+    });
+  });
+
   it("updates a global kill switch flag", async () => {
     const { calls, client } = mockSupabase({
       updateResults: [

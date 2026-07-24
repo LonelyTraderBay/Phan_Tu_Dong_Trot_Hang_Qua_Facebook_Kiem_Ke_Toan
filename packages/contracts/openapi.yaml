@@ -428,6 +428,35 @@ paths:
       responses:
         '200':
           description: OK
+  /ops/v1/orgs/{orgId}/plan:
+    patch:
+      summary: Update organization plan and sync entitlements (platform admin)
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrgPlanRequest'
+      responses:
+        '200':
+          description: Organization plan updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateOrgPlanResponse'
+        '400':
+          description: Invalid plan or org id
+        '403':
+          description: Platform admin required
+        '404':
+          description: Organization not found
   /internal/v1/ai/health:
     get:
       summary: Proxy AI health (service key)
@@ -582,6 +611,55 @@ components:
         minLength: 1
         maxLength: 128
   schemas:
+    PlanSlug:
+      type: string
+      enum:
+        - free
+        - pilot
+        - starter
+        - enterprise
+    Entitlements:
+      type: object
+      required:
+        - orgId
+        - maxPages
+        - aiMonthlyTokenLimit
+        - autoConfirmAllowed
+        - updatedAt
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        maxPages:
+          type: integer
+          minimum: 0
+        aiMonthlyTokenLimit:
+          type: integer
+          minimum: 0
+        autoConfirmAllowed:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+    UpdateOrgPlanRequest:
+      type: object
+      required:
+        - plan
+      properties:
+        plan:
+          $ref: '#/components/schemas/PlanSlug'
+      additionalProperties: false
+    UpdateOrgPlanResponse:
+      type: object
+      required:
+        - organization
+        - entitlements
+      properties:
+        organization:
+          type: object
+          additionalProperties: true
+        entitlements:
+          $ref: '#/components/schemas/Entitlements'
     PdpaExportBundle:
       type: object
       required:

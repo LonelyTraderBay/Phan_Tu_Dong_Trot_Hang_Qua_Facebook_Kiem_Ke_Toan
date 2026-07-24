@@ -10,7 +10,9 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { loadEnv } from "../../config/env";
 import { AuditService, type WriteAuditInput } from "../audit/audit.service";
-import type { SetGlobalFlagBody } from "./dto";
+import { EntitlementsService } from "../billing/entitlements.service";
+import { isPlanSlug, type PlanSlug } from "../billing/plan-catalog";
+import type { SetGlobalFlagBody, UpdateOrgPlanBody } from "./dto";
 
 export const ADMIN_OPS_SUPABASE = Symbol("ADMIN_OPS_SUPABASE");
 
@@ -58,6 +60,7 @@ type FeatureFlagRow = {
 export class AdminOpsService {
   private readonly supabase: SupabaseLike;
   private readonly audit?: AuditWriter;
+  private readonly entitlements?: Pick<EntitlementsService, "syncPlanEntitlements">;
 
   constructor(
     @Optional()
@@ -66,9 +69,13 @@ export class AdminOpsService {
     @Optional()
     @Inject(AuditService)
     audit?: AuditWriter,
+    @Optional()
+    @Inject(EntitlementsService)
+    entitlements?: Pick<EntitlementsService, "syncPlanEntitlements">,
   ) {
     this.supabase = supabase ?? createSupabaseServiceClient();
     this.audit = audit;
+    this.entitlements = entitlements;
   }
 
   async listOrganizations() {
@@ -114,6 +121,49 @@ export class AdminOpsService {
     });
 
     return { organization: mapOrganization(data as OrganizationRow) };
+  }
+
+  async updateOrganizationPlan(
+    orgId: string,
+    body: UpdateOrgPlanBody,
+    updatedAt = new Date(),
+  ) {
+    const plan = parsePlan(body.plan);
+    const timestamp = updatedAt.toISOString();
+    const { data, error } = await this.supabase
+      .from("organizations")
+      .update({ plan, updated_at: timestamp })
+      .eq("id", orgId)
+      .select(ORGANIZATION_SELECT)
+      .maybeSingle();
+
+    if (error) {
+      throwAdminOpsError(error, "Could not update organization plan");
+    }
+    if (!data) {
+      throw new NotFoundException({
+        code: "organization_not_found",
+        message: "Organization was not found",
+      });
+    }
+
+    const entitlements = await this.entitlements?.syncPlanEntitlements(
+      orgId,
+      plan,
+      updatedAt,
+    );
+    await this.audit?.writeAudit({
+      orgId,
+      action: "organization.plan_updated",
+      entityType: "organization",
+      entityId: orgId,
+      meta: { plan },
+    });
+
+    return {
+      organization: mapOrganization(data as OrganizationRow),
+      entitlements,
+    };
   }
 
   async setGlobalFlag(key: string, body: SetGlobalFlagBody) {
@@ -165,6 +215,17 @@ function isGlobalKillSwitchKey(
   key: string,
 ): key is (typeof GLOBAL_KILL_SWITCH_KEYS)[number] {
   return (GLOBAL_KILL_SWITCH_KEYS as readonly string[]).includes(key);
+}
+
+function parsePlan(plan: string): PlanSlug {
+  if (!isPlanSlug(plan)) {
+    throw new BadRequestException({
+      code: "invalid_plan",
+      message: "Unsupported organization plan",
+    });
+  }
+
+  return plan;
 }
 
 function mapOrganization(row: OrganizationRow) {

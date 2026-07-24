@@ -11,6 +11,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { loadEnv } from '../../config/env';
 import { AuditService, type WriteAuditInput } from '../audit/audit.service';
+import { EntitlementsService } from '../billing/entitlements.service';
 import type { CreateDraftOrderBody, OrderStatus } from './dto';
 import {
   buildOrdersExport,
@@ -25,6 +26,7 @@ export type SupabaseLike = Pick<SupabaseClient, 'from' | 'rpc'>;
 export type AuditWriter = {
   writeAudit(input: WriteAuditInput): Promise<unknown>;
 };
+export type EntitlementsReader = Pick<EntitlementsService, 'getEntitlements'>;
 
 type JsonObject = Record<string, unknown>;
 type PaymentMethod = 'cod' | 'bank_transfer' | 'other';
@@ -131,6 +133,7 @@ const IDEMPOTENCY_PENDING_STATUS = 102;
 export class OrdersService {
   private readonly supabase: SupabaseLike;
   private readonly audit: AuditWriter;
+  private readonly entitlements?: EntitlementsReader;
 
   constructor(
     @Optional()
@@ -138,9 +141,13 @@ export class OrdersService {
     supabase: SupabaseLike | undefined,
     @Inject(AuditService)
     audit: AuditWriter,
+    @Optional()
+    @Inject(EntitlementsService)
+    entitlements?: EntitlementsReader,
   ) {
     this.supabase = supabase ?? createSupabaseServiceClient();
     this.audit = audit;
+    this.entitlements = entitlements;
   }
 
   async listOrders(input: { orgId: string; status?: OrderStatus }) {
@@ -249,7 +256,10 @@ export class OrdersService {
       input.body.contactId,
     );
 
-    if (autoConfirmEnabled(settings.settings_json)) {
+    if (
+      autoConfirmEnabled(settings.settings_json) &&
+      (await this.autoConfirmAllowed(input.orgId))
+    ) {
       const payload = await this.createAndConfirmOrderRpc(
         { ...input, idempotencyKey },
         items,
@@ -531,6 +541,15 @@ export class OrdersService {
     }
 
     return data as OrganizationSettingsRow;
+  }
+
+  private async autoConfirmAllowed(orgId: string) {
+    if (!this.entitlements) {
+      return false;
+    }
+
+    const entitlements = await this.entitlements.getEntitlements(orgId);
+    return entitlements.autoConfirmAllowed === true;
   }
 
   private async resolveOrderItems(

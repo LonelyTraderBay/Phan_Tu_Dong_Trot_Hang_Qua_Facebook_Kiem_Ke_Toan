@@ -4,13 +4,14 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from "@nestjs/common";
 import type { z } from "zod";
 
 import { PlatformAdminGuard } from "../../common/guards/platform-admin.guard";
-import { SetGlobalFlagBodySchema } from "./dto";
+import { SetGlobalFlagBodySchema, UpdateOrgPlanBodySchema } from "./dto";
 import { AdminOpsService } from "./admin-ops.service";
 
 const UUID_PATTERN =
@@ -36,6 +37,21 @@ export class AdminOpsController {
     }
 
     return this.adminOps.suspendOrganization(orgId);
+  }
+
+  @Patch("orgs/:orgId/plan")
+  updateOrganizationPlan(@Param("orgId") orgId: string, @Body() body: unknown) {
+    if (!UUID_PATTERN.test(orgId)) {
+      throw new BadRequestException({
+        code: "invalid_org_id",
+        message: "orgId route parameter must be a UUID",
+      });
+    }
+
+    return this.adminOps.updateOrganizationPlan(
+      orgId,
+      parseBody(UpdateOrgPlanBodySchema, body),
+    );
   }
 
   @Post("flags/:key")

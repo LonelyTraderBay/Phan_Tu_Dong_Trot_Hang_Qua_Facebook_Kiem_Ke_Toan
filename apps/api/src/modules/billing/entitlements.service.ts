@@ -8,6 +8,7 @@ import {
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { loadEnv } from "../../config/env";
+import { PLAN_CATALOG, type PlanSlug } from "./plan-catalog";
 
 export const ENTITLEMENTS_SUPABASE = Symbol("ENTITLEMENTS_SUPABASE");
 
@@ -56,6 +57,31 @@ export class EntitlementsService {
         code: "entitlements_not_found",
         message: "Entitlements were not found",
       });
+    }
+
+    return mapEntitlements(data as EntitlementsRow);
+  }
+
+  async syncPlanEntitlements(orgId: string, plan: PlanSlug, updatedAt = new Date()) {
+    const catalog = PLAN_CATALOG[plan];
+    const timestamp = updatedAt.toISOString();
+    const { data, error } = await this.supabase
+      .from("entitlements")
+      .upsert(
+        {
+          org_id: orgId,
+          max_pages: catalog.maxPages,
+          ai_monthly_token_limit: catalog.aiMonthlyTokenLimit,
+          auto_confirm_allowed: catalog.autoConfirmAllowed,
+          updated_at: timestamp,
+        },
+        { onConflict: "org_id" },
+      )
+      .select(ENTITLEMENTS_SELECT)
+      .single();
+
+    if (error) {
+      throwEntitlementsError(error, "Could not sync plan entitlements");
     }
 
     return mapEntitlements(data as EntitlementsRow);

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -18,6 +19,7 @@ import {
   type MetaManagedPage,
 } from "../../integrations/meta/graph.client";
 import { AuditService, type WriteAuditInput } from "../audit/audit.service";
+import { EntitlementsService } from "../billing/entitlements.service";
 
 export const CHANNELS_SUPABASE = Symbol("CHANNELS_SUPABASE");
 export const CHANNELS_GRAPH = Symbol("CHANNELS_GRAPH");
@@ -48,6 +50,7 @@ export type GraphLike = Pick<
 export type AuditWriter = {
   writeAudit(input: WriteAuditInput): Promise<unknown>;
 };
+export type EntitlementsReader = Pick<EntitlementsService, "getEntitlements">;
 export type ChannelsEnv = Pick<
   Env,
   | "META_APP_ID"
@@ -103,6 +106,7 @@ export class ChannelsService {
   private readonly graph: GraphLike;
   private readonly audit?: AuditWriter;
   private readonly env: ChannelsEnv;
+  private readonly entitlements?: EntitlementsReader;
 
   constructor(
     @Optional()
@@ -117,11 +121,15 @@ export class ChannelsService {
     @Optional()
     @Inject(CHANNELS_ENV)
     env?: ChannelsEnv,
+    @Optional()
+    @Inject(EntitlementsService)
+    entitlements?: EntitlementsReader,
   ) {
     this.env = env ?? loadEnv();
     this.supabase = supabase ?? createSupabaseServiceClient(this.env);
     this.graph = graph ?? createGraphClientFromEnv();
     this.audit = audit;
+    this.entitlements = entitlements;
   }
 
   async getMetaOAuthUrl(input: { orgId: string; userId: string }) {
@@ -166,6 +174,7 @@ export class ChannelsService {
         })),
       );
     }
+    await this.ensureWithinMaxPages(input.orgId, rows);
 
     const { data, error } = await this.supabase
       .from("channel_connections")
@@ -390,6 +399,39 @@ export class ChannelsService {
     return rows;
   }
 
+  private async ensureWithinMaxPages(
+    orgId: string,
+    rows: ChannelConnectionUpsert[],
+  ) {
+    if (!this.entitlements) {
+      return;
+    }
+
+    const entitlements = await this.entitlements.getEntitlements(orgId);
+    const maxPages = entitlements.maxPages;
+    const { data, error } = await this.supabase
+      .from("channel_connections")
+      .select(CHANNEL_SELECT)
+      .eq("org_id", orgId)
+      .eq("status", "active");
+
+    if (error) {
+      throwChannelsError(error, "Could not count active channel connections");
+    }
+
+    const active = (data ?? []) as ChannelConnectionRow[];
+    const activeKeys = new Set(active.map(connectionKey));
+    const newActiveCount = rows.filter((row) => !activeKeys.has(connectionKey(row)))
+      .length;
+
+    if (active.length + newActiveCount > maxPages) {
+      throw new ForbiddenException({
+        code: "max_pages_exceeded",
+        message: "Plan max_pages entitlement would be exceeded",
+      });
+    }
+  }
+
   private async getPageToken(page: MetaManagedPage, userToken: string) {
     if (page.access_token) {
       return page.access_token;
@@ -415,6 +457,10 @@ function mapConnection(row: ChannelConnectionRow) {
     status: row.status,
     createdAt: row.created_at,
   };
+}
+
+function connectionKey(row: Pick<ChannelConnectionRow, "provider" | "external_page_id">) {
+  return `${row.provider}:${row.external_page_id}`;
 }
 
 function throwChannelsError(error: SupabaseError, message: string): never {

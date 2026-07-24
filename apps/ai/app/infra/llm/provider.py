@@ -21,6 +21,25 @@ class LlmProvider(Protocol):
         ...
 
 
+class FailoverLlmProvider:
+    def __init__(self, primary: LlmProvider, secondary: LlmProvider | None = None):
+        self.primary = primary
+        self.secondary = secondary
+
+    def complete(
+        self,
+        *,
+        model: str,
+        messages: list[dict[str, str]],
+    ) -> LlmCompletion:
+        try:
+            return self.primary.complete(model=model, messages=messages)
+        except Exception:
+            if self.secondary is None:
+                raise
+            return self.secondary.complete(model=model, messages=messages)
+
+
 def parse_allowlist(allowlist: str) -> set[str]:
     return {item.strip() for item in allowlist.split(",") if item.strip()}
 

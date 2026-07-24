@@ -9,15 +9,22 @@ from app.domain.orchestrator import ProcessMessageOrchestrator
 from app.infra.core import CoreKnowledgeClient
 from app.infra.embeddings.gemini import GeminiEmbeddingProvider
 from app.infra.llm.gemini import GeminiLlmProvider
+from app.infra.llm.openai import OpenAiLlmProvider
+from app.infra.llm.provider import FailoverLlmProvider
+from app.infra.llm.spend import LlmSpendTracker
 
 router = APIRouter(prefix="/internal/v1")
+
+primary_llm = GeminiLlmProvider()
+secondary_llm = OpenAiLlmProvider() if settings.openai_api_key else None
 
 orchestrator = ProcessMessageOrchestrator(
     embedding_provider=GeminiEmbeddingProvider(),
     retriever=CoreKnowledgeClient(),
-    llm_provider=GeminiLlmProvider(),
+    llm_provider=FailoverLlmProvider(primary_llm, secondary_llm),
     quota_client=CoreKnowledgeClient(),
     core_tools_client=CoreKnowledgeClient(),
+    spend_budget=LlmSpendTracker(),
 )
 
 

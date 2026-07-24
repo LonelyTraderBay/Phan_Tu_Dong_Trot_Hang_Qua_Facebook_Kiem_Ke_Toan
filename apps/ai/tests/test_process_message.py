@@ -71,6 +71,25 @@ class FakeQuotaClient:
         self.record_calls.append(kwargs)
 
 
+class FakeSpendBudget:
+    def __init__(self, *, exceeded: bool = False):
+        self.exceeded = exceeded
+        self.estimate_calls: list[list[dict[str, str]]] = []
+        self.check_calls: list[object] = []
+        self.record_calls: list[dict] = []
+
+    def estimate_messages(self, messages: list[dict[str, str]]):
+        self.estimate_calls.append(messages)
+        return {"usd": 0.01}
+
+    def would_exceed_cap(self, estimate) -> bool:
+        self.check_calls.append(estimate)
+        return self.exceeded
+
+    def record_completion(self, **kwargs) -> None:
+        self.record_calls.append(kwargs)
+
+
 class FakeCoreTools:
     def __init__(self):
         self.get_product_calls: list[dict] = []
@@ -112,6 +131,7 @@ def make_orchestrator(
     llm_text: str = DEFAULT_LLM_JSON,
     quota_client: FakeQuotaClient | None = None,
     core_tools_client: FakeCoreTools | None = None,
+    spend_budget: FakeSpendBudget | None = None,
 ):
     embeddings = FakeEmbeddings()
     retriever = FakeRetriever(chunks)
@@ -123,6 +143,7 @@ def make_orchestrator(
         prompt=PromptTemplate(version="test_prompt_v1", text="Only use context."),
         quota_client=quota_client,
         core_tools_client=core_tools_client,
+        spend_budget=spend_budget,
     )
     return orchestrator, embeddings, retriever, llm
 
@@ -195,6 +216,61 @@ def test_process_message_records_token_usage_after_successful_llm():
     )
 
     assert quota.record_calls == [{"org_id": ORG_ID, "quantity": 17}]
+
+
+def test_process_message_escalates_when_llm_spend_cap_is_exceeded():
+    spend_budget = FakeSpendBudget(exceeded=True)
+    orchestrator, _, _, llm = make_orchestrator(
+        [
+            {
+                "sourceType": "product",
+                "sourceId": "22222222-2222-2222-2222-222222222222",
+                "chunkIndex": 0,
+                "content": "Ao thun co mau den.",
+                "score": 0.92,
+            }
+        ],
+        spend_budget=spend_budget,
+    )
+
+    result = orchestrator.process_message(
+        org_id=ORG_ID,
+        message="Ao nay co mau den khong?",
+        model="gemini-2.0-flash",
+    )
+
+    assert spend_budget.estimate_calls
+    assert spend_budget.check_calls == [{"usd": 0.01}]
+    assert spend_budget.record_calls == []
+    assert llm.calls == []
+    assert result["escalate"] is True
+    assert result["tokens"] == {"prompt": 0, "completion": 0, "total": 0}
+
+
+def test_process_message_records_llm_spend_after_successful_llm():
+    spend_budget = FakeSpendBudget()
+    orchestrator, _, _, _ = make_orchestrator(
+        [
+            {
+                "sourceType": "product",
+                "sourceId": "22222222-2222-2222-2222-222222222222",
+                "chunkIndex": 0,
+                "content": "Ao thun co mau den.",
+                "score": 0.92,
+            }
+        ],
+        spend_budget=spend_budget,
+    )
+
+    orchestrator.process_message(
+        org_id=ORG_ID,
+        message="Ao nay co mau den khong?",
+        model="gemini-2.0-flash",
+    )
+
+    assert spend_budget.record_calls == [
+        {"prompt_tokens": 10, "completion_tokens": 7}
+    ]
 
 
 def test_process_message_escalates_low_relevance_chunks_and_skips_llm():

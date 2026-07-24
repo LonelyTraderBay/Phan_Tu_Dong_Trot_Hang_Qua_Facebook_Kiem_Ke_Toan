@@ -12,6 +12,17 @@ export default function DashboardPage() {
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 24 }}>
         <Link
+          href="/inbox"
+          style={{
+            color: '#2563eb',
+            fontSize: 16,
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+        >
+          Mở hộp thư
+        </Link>
+        <Link
           href="/settings/channels"
           style={{
             color: '#2563eb',

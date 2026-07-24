@@ -21,6 +21,7 @@ import { getActiveOrgId, setActiveOrgId } from '../lib/org-context';
 
 const navItems = [
   { href: '/dashboard', label: 'Tổng quan' },
+  { href: '/inbox', label: 'Hộp thư' },
   { href: '/settings/channels', label: 'Kênh' },
   { href: '/settings/invites', label: 'Lời mời' },
 ];

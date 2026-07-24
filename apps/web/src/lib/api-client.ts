@@ -13,6 +13,41 @@ export type ChannelConnection = {
   createdAt: string;
 };
 
+export type InboxConversation = {
+  id: string;
+  channel: 'messenger' | 'instagram' | string;
+  status: string;
+  botPaused: boolean;
+  botEpoch: number;
+  assigneeUserId: string | null;
+  lastMessageAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  contact?: {
+    id: string;
+    displayName: string | null;
+    pageScopedId: string | null;
+    igScopedId: string | null;
+  };
+  channelConnection?: {
+    id: string;
+    provider: string;
+    externalPageId: string;
+    externalIgId: string | null;
+  };
+};
+
+export type InboxMessage = {
+  id: string;
+  conversationId: string;
+  direction: 'inbound' | 'outbound' | string;
+  senderType: 'customer' | 'ai' | 'staff' | 'system' | string;
+  rawType: string;
+  bodyText: string | null;
+  providerMessageId: string | null;
+  createdAt: string;
+};
+
 export type ApiAuthContext = {
   accessToken: string;
   orgId: string;
@@ -143,6 +178,35 @@ export async function apiFetch<T>(
 
 export async function listChannels(): Promise<ChannelConnection[]> {
   return apiFetch<ChannelConnection[]>('/v1/channels');
+}
+
+export async function listInboxConversations(): Promise<InboxConversation[]> {
+  const { conversations } = await apiFetch<{
+    conversations: InboxConversation[];
+  }>('/v1/inbox/conversations');
+
+  return conversations;
+}
+
+export async function listInboxMessages(
+  conversationId: string,
+): Promise<InboxMessage[]> {
+  const { messages } = await apiFetch<{ messages: InboxMessage[] }>(
+    `/v1/inbox/conversations/${encodeURIComponent(conversationId)}/messages`,
+  );
+
+  return messages;
+}
+
+export async function takeoverInboxConversation(
+  conversationId: string,
+): Promise<InboxConversation> {
+  const { conversation } = await apiFetch<{ conversation: InboxConversation }>(
+    `/v1/inbox/conversations/${encodeURIComponent(conversationId)}/takeover`,
+    { method: 'POST' },
+  );
+
+  return conversation;
 }
 
 export async function listOrganizations(

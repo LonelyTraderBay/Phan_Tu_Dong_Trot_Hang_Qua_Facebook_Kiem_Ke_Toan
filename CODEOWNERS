@@ -1,0 +1,9 @@
+* @LonelyTraderBay
+
+/apps/web/ @LonelyTraderBay
+/apps/api/ @LonelyTraderBay
+/apps/ai/ @LonelyTraderBay
+/packages/ @LonelyTraderBay
+/supabase/ @LonelyTraderBay
+/docs/adr/ @LonelyTraderBay
+/docs/runbooks/ @LonelyTraderBay

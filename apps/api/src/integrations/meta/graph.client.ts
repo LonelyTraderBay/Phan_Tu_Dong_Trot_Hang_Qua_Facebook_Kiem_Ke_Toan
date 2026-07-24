@@ -45,6 +45,18 @@ export type MetaPageAccessTokenResponse = {
   access_token: string;
 };
 
+export type MetaSendMessageInput = {
+  accessToken: string;
+  recipientId: string;
+  senderId: string;
+  text: string;
+};
+
+export type MetaSendMessageResponse = {
+  message_id?: string;
+  recipient_id?: string;
+};
+
 export class GraphClient {
   constructor(private readonly config: GraphClientConfig) {}
 
@@ -117,6 +129,28 @@ export class GraphClient {
       throw new Error(`Meta getPageAccessToken failed: ${res.status}`);
     }
     return (await res.json()) as MetaPageAccessTokenResponse;
+  }
+
+  async sendMessage(input: MetaSendMessageInput): Promise<MetaSendMessageResponse> {
+    const url = this.graphUrl(`${input.senderId}/messages`, {
+      access_token: input.accessToken,
+    });
+    const res = await this.fetchFn(url.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_type: "RESPONSE",
+        recipient: { id: input.recipientId },
+        message: { text: input.text },
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Meta sendMessage failed: ${res.status}`);
+    }
+
+    return (await res.json()) as MetaSendMessageResponse;
   }
 }
 

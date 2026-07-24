@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { loadEnv } from '../../config/env';
 import { inngest } from '../inngest.client';
+import { enqueueOutbox } from '../outbox.publisher';
 
 export type SupabaseLike = Pick<SupabaseClient, 'from'>;
 export type JsonObject = Record<string, unknown>;
@@ -124,6 +125,14 @@ export class MetaInboundPersistenceService {
 
       if (inserted) {
         insertedMessages += 1;
+        await enqueueOutbox(this.supabase, {
+          orgId,
+          eventName: 'ai.process_inbound',
+          payload: {
+            conversationId: conversation.id,
+            messageId: inserted.id,
+          },
+        });
       } else {
         skippedMessages += 1;
       }
@@ -323,10 +332,10 @@ export class MetaInboundPersistenceService {
       throwPersistError(findError, 'Could not find Meta message');
     }
     if (existing) {
-      return false;
+      return null;
     }
 
-    const { error } = await this.supabase
+    const { data, error } = await this.supabase
       .from('messages')
       .insert({
         org_id: input.orgId,
@@ -343,13 +352,13 @@ export class MetaInboundPersistenceService {
       .single();
 
     if (isDuplicateError(error)) {
-      return false;
+      return null;
     }
     if (error) {
       throwPersistError(error, 'Could not insert Meta message');
     }
 
-    return true;
+    return data as MessageRow;
   }
 }
 

@@ -268,6 +268,65 @@ describe("outbox publisher", () => {
     ]);
   });
 
+  it("maps AI inbound and Meta send outbox events to Inngest events", async () => {
+    const { client } = mockSupabase({
+      selectResults: [
+        {
+          data: [
+            outboxRow({
+              event_name: "ai.process_inbound",
+              payload_json: {
+                conversationId: "33333333-3333-3333-3333-333333333333",
+                messageId: "44444444-4444-4444-4444-444444444444",
+              },
+            }),
+            outboxRow({
+              id: "55555555-5555-5555-5555-555555555555",
+              event_name: "meta.send",
+              payload_json: {
+                botEpoch: 1,
+                conversationId: "33333333-3333-3333-3333-333333333333",
+                replyText: "Xin chao",
+              },
+            }),
+          ],
+          error: null,
+        },
+      ],
+    });
+    const sentEvents: unknown[] = [];
+    const publisher = new OutboxPublisher(client, {
+      send: async (event) => {
+        sentEvents.push(event);
+        return { ids: ["evt_1"] };
+      },
+    });
+
+    await publisher.publishPending(10);
+
+    expect(sentEvents).toEqual([
+      {
+        name: "ai/process_inbound",
+        data: {
+          conversationId: "33333333-3333-3333-3333-333333333333",
+          messageId: "44444444-4444-4444-4444-444444444444",
+          orgId: ORG_ID,
+          outboxEventId: OUTBOX_ID,
+        },
+      },
+      {
+        name: "meta/send",
+        data: {
+          botEpoch: 1,
+          conversationId: "33333333-3333-3333-3333-333333333333",
+          replyText: "Xin chao",
+          orgId: ORG_ID,
+          outboxEventId: "55555555-5555-5555-5555-555555555555",
+        },
+      },
+    ]);
+  });
+
   it("increments attempts and dead-letters exhausted events", async () => {
     const { calls, client } = mockSupabase({
       selectResults: [{ data: [outboxRow()], error: null }],

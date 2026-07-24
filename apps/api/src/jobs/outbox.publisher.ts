@@ -267,6 +267,12 @@ function toInngestEventName(eventName: string) {
   if (eventName === "meta.inbound") {
     return "meta/persist_inbound";
   }
+  if (eventName === "ai.process_inbound") {
+    return "ai/process_inbound";
+  }
+  if (eventName === "meta.send") {
+    return "meta/send";
+  }
 
   return eventName.replaceAll(".", "/");
 }

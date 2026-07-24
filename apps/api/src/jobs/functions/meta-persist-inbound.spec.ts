@@ -15,7 +15,11 @@ const MESSAGE_ID = '55555555-5555-5555-5555-555555555555';
 
 type Row = Record<string, unknown>;
 type TableName =
-  'channel_connections' | 'contacts' | 'conversations' | 'messages';
+  | 'channel_connections'
+  | 'contacts'
+  | 'conversations'
+  | 'messages'
+  | 'outbox_events';
 
 type SupabaseCall = {
   columns?: string;
@@ -55,6 +59,7 @@ function createState(overrides: Partial<State> = {}): State {
     contacts: [],
     conversations: [],
     messages: [],
+    outbox_events: [],
     ...overrides,
   };
 }
@@ -164,6 +169,13 @@ function withDefaults(table: TableName, values: Row) {
       ...values,
     };
   }
+  if (table === 'outbox_events') {
+    return {
+      id: '66666666-6666-6666-6666-666666666666',
+      created_at: '2026-07-24T10:00:00.000Z',
+      ...values,
+    };
+  }
 
   return values;
 }
@@ -209,6 +221,18 @@ describe('MetaInboundPersistenceService', () => {
         raw_type: 'text',
         provider_message_id: 'm_page_1',
         body_text: 'hello from messenger',
+      }),
+    );
+    expect(state.outbox_events).toContainEqual(
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'ai.process_inbound',
+        payload_json: {
+          conversationId: CONVERSATION_ID,
+          messageId: MESSAGE_ID,
+        },
+        published_at: null,
+        attempts: 0,
       }),
     );
   });

@@ -1,8 +1,10 @@
 # Phân tích: Thương mại hóa Enterprise-Grade (không làm demo)
 
-**Date:** 2026-07-24  
-**Liên quan:** [2026-07-24-omni-commerce-ai-saas-design.md](./2026-07-24-omni-commerce-ai-saas-design.md)  
+**Date:** 2026-07-24 · **Sync:** [CANONICAL](./2026-07-24-CANONICAL-LOCKED-DECISIONS.md)  
+**Liên quan:** [design](./2026-07-24-omni-commerce-ai-saas-design.md) · [maturity M0–M4](./2026-07-24-enterprise-maturity-scorecard-to-100.md) · [structure](./2026-07-24-enterprise-structure-and-data-architecture.md) · [README](./README.md)  
 **Mục đích:** Định nghĩa “Enterprise-Grade” cho sản phẩm Omnichannel + AI này, chỉ ra khoảng cách với Phase 1 hiện tại, và kế hoạch làm việc lâu dài (nền tảng trước, tính năng theo lớp).
+
+**Topology (locked):** C từ ngày 1 — Next.js + NestJS + FastAPI AI — **không** “một stack TS xuyên suốt” và **không** đợi năm 2–3 mới tách AI.
 
 ---
 
@@ -64,7 +66,7 @@ Những thứ sau **không được** để “làm sau khi demo chạy”:
 | Nền tảng | Việc tối thiểu ngay từ đầu | Lý do |
 |----------|----------------------------|-------|
 | Tenant isolation tests | Test tự động chứng minh shop A không đọc shop B | An toàn sống còn |
-| Encryption secrets | Token Meta trong Vault / encrypted column | Leak token = chiếm page |
+| Encryption secrets | Token Meta: **AES-256-GCM** + `TOKEN_ENCRYPTION_KEY` trên Core | Leak token = chiếm page |
 | Structured audit log | Ai / khi nào / entity nào đổi | Enterprise mua cái này |
 | Idempotent webhooks | Dedupe `message_id` Meta | Tránh double reply / double order |
 | Job queue + retry/DLQ | Worker tách khỏi request HTTP | Reliability |
@@ -318,14 +320,19 @@ Khuyến nghị: chọn hàng giữa — **4–8 tháng tới pilot có hợp đ
 
 ---
 
-## 13. Trạng thái chốt (cập nhật sau audit)
+## 13. Trạng thái chốt (sync 2026-07-24)
 
 | Mục | Trạng thái |
 |-----|------------|
 | Foundations-first Phase 1 | **Đã chốt** — design §2.2 + charter |
-| Cập nhật design theo DoD enterprise | **Đã làm** |
-| Topology C + Free-first | **Đã chốt** |
-| ICP năm 1 (shop lẻ vs chuỗi/agency) | **Mở** — không chặn scaffold; ảnh hưởng GTM/SSO sau |
-| Quy mô team / ngân sách eng | **Mở** — ảnh hưởng tốc độ, không đổi architecture |
+| Topology C + Free-first | **Đã chốt** — web = Render Free Node |
+| Structure + schema + scaffold DoD | **Đã chốt** — structure doc |
+| Maturity M0–M4 / 100@M4 only | **Đã chốt** — scorecard |
+| Conflict SoT | **CANONICAL-LOCKED-DECISIONS** |
+| ICP năm 1 (shop lẻ vs chuỗi/agency) | **Mở** — GTM; không chặn scaffold |
+| Quy mô team / ngân sách eng | **Mở** — tốc độ, không đổi architecture |
+| Render vs Fly single vendor | **Mở** — task đầu Plan A |
 
-**Bước tiếp:** user OK spec → `docs/superpowers/plans/` implementation plan (platform trước → commerce).
+**Bước tiếp:** user **OK / duyệt spec** → `docs/superpowers/plans/` (Platform → Meta → Catalog/AI → Orders). Plan A phải gồm **M2 DoD**.
+
+**Không** market 100/100 trước M4.

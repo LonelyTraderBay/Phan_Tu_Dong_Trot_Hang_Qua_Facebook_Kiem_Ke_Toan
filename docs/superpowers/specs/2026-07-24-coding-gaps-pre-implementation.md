@@ -1,17 +1,19 @@
 # Coding gap analysis — lỗ hổng khi bắt tay code
 
 **Date:** 2026-07-24  
-**Scope:** All specs under `docs/superpowers/specs/`  
+**Status:** **CLOSED / SUPERSEDED** — blockers B1–B8 closed in design **§15** + [CANONICAL-LOCKED-DECISIONS](./2026-07-24-CANONICAL-LOCKED-DECISIONS.md)  
+**Scope:** Historical gap hunt (kept for audit trail)  
 **Lens:** “Engineer opens repo Monday — what will block, thrash, or force rewrite?”  
-**Companion:** Defaults to close blockers → design **§15** (added same day)
+**Companion:** Closed defaults → design **§15** · structure §11 · maturity M2  
+
+> **Implementers:** Do **not** treat sections below as open debates. Use CANONICAL + design §15. Only residual opens: Render vs Fly vendor pick, Gemini model IDs + vector dims.
 
 ---
 
-## Verdict
+## Verdict (post-sync 2026-07-24)
 
-Spec đủ để **định hướng sản phẩm + topology**, nhưng **chưa đủ để code tuần 1 mà không đoán**. Có **~12 lỗ hổng blocker** (phải chốt trước/khi scaffold) và nhiều lỗ hổng nên chốt trong plan task đầu.
-
-Nếu không đóng blockers: rủi ro cao nhất là (1) **Next.js × Cloudflare Pages**, (2) **Inngest × Python AI**, (3) **multi-org context**, (4) **ai_runs / RAG write path vs “AI không ghi DB”**, (5) **cold start webhook Meta trên free host**.
+**Blockers B1–B8 đã đóng.** Scaffold có thể bắt đầu theo structure §11 + maturity M2 hooks.  
+Historical risks (CF Pages × Next, Inngest × Python, multi-org, ai_runs write path, cold start) → **đã có default locked**.
 
 ---
 
@@ -26,9 +28,36 @@ Nếu không đóng blockers: rủi ro cao nhất là (1) **Next.js × Cloudflar
 
 ---
 
-## B — Blockers (phải đóng trước khi code sâu)
+## B — Blockers (đã đóng — giữ nguyên nội dung gốc bên dưới để audit)
 
-### B1. Next.js trên Cloudflare Pages chưa khả thi rõ
+**Resolution map → design §15 / CANONICAL:**
+
+| ID | Resolution |
+|----|------------|
+| B1 CF Pages × Next | Web = Render Free Node Phase 1 |
+| B2 Inngest × Python | Inngest only in `apps/api`; AI via HTTP |
+| B3 ai_runs / RAG write | Core writes `ai_runs`; knowledge via org RPC/Core |
+| B4 X-Org-Id | Required header |
+| B5–B8 | See design §15 |
+
+---
+
+## Original gap text (historical)
+
+<details>
+<summary>Expand only for audit history</summary>
+
+Spec đủ để **định hướng sản phẩm + topology**, nhưng **chưa đủ để code tuần 1 mà không đoán**. Có **~12 lỗ hổng blocker** (phải chốt trước/khi scaffold) và nhiều lỗ hổng nên chốt trong plan task đầu.
+
+Nếu không đóng blockers: rủi ro cao nhất là (1) **Next.js × Cloudflare Pages**, (2) **Inngest × Python AI**, (3) **multi-org context**, (4) **ai_runs / RAG write path vs “AI không ghi DB”**, (5) **cold start webhook Meta trên free host**.
+
+</details>
+
+---
+
+## B — Blockers detail (CLOSED)
+
+### B1. Next.js trên Cloudflare Pages — **CLOSED** (Render Free)
 
 | | |
 |--|--|
@@ -36,6 +65,19 @@ Nếu không đóng blockers: rủi ro cao nhất là (1) **Next.js × Cloudflar
 | **Lỗ hổng** | App Router + Node APIs + Supabase SSR + middleware thường **không** “drop-in” Pages. OpenNext/CF adapter có giới hạn; fail spike = đổi host giữa chừng. |
 | **Hậu quả** | Mất 3–10 ngày; env/CI viết lại |
 | **Đóng mặc định (đề xuất §15)** | Phase 1 Free-first: host **`apps/web` trên Render Free (Node)** giống api; Cloudflare Pages chỉ là Opt sau khi spike xanh. DNS/CDN vẫn Cloudflare. |
+
+### B2. Inngest với AI Service Python — **CLOSED** (Inngest in api only)
+### B3. `ai_runs` / `knowledge_chunks` — **CLOSED** (Core writes)
+### B4. Multi-org: user thuộc nhiều shop — **CLOSED** (`X-Org-Id`)
+### B5. Platform operator vs shop `owner` — **CLOSED** (`platform_admins` / `/ops`)
+### B6. Meta webhook + cold start free host — **CLOSED** (verify→receipt→enqueue→200)
+### B7. Package/monorepo tooling — **CLOSED** (pnpm + Turborepo + uv)
+### B8. Mã hóa token Meta — **CLOSED** (AES-256-GCM)
+
+---
+
+<details>
+<summary>Original B2–B8 gap writeups (audit history)</summary>
 
 ### B2. Inngest với AI Service Python — ai chạy function?
 
@@ -71,7 +113,7 @@ Nếu không đóng blockers: rủi ro cao nhất là (1) **Next.js × Cloudflar
 | **Spec nói** | Admin-ops suspend org — roles chỉ owner/cskh/kho |
 | **Lỗ hổng** | Ai được vào operator console? Thiếu `platform_admins` |
 | **Hậu quả** | Dùng owner đầu tiên làm superadmin = lỗ bảo mật |
-| **Đóng mặc định (§15)** | Bảng `platform_admins(user_id)`; chỉ họ gọi `/ops/*`. Seed bằng env `PLATFORM_ADMIN_EMAILS`. |
+| **Đóng mặc định (§15)** | Bảng `platform_admins(user_id)`; chỉ họ gọi `/ops/v1/*`. Seed bằng env `PLATFORM_ADMIN_EMAILS`. |
 
 ### B6. Meta webhook + cold start free host
 
@@ -95,6 +137,8 @@ Nếu không đóng blockers: rủi ro cao nhất là (1) **Next.js × Cloudflar
 |--|--|
 | **Lỗ hổng** | “Encrypted” không nói AES-GCM, key length, rotation |
 | **Đóng (§15)** | AES-256-GCM; env `TOKEN_ENCRYPTION_KEY` (32-byte base64); rotation = re-encrypt job (Phase 1: single key OK). |
+
+</details>
 
 ---
 
@@ -134,7 +178,7 @@ Sai dimension = migration đau.
 
 ### H8. Timezone giờ làm việc AI
 
-**Đóng (§15):** Default `Asia/Ho_Chi_Minh` trong `organizations.settings_json`.
+**Đóng (§15):** Default timezone column `organizations.timezone = Asia/Ho_Chi_Minh` (không nhét vào `settings_json`).
 
 ### H9. Phone / address
 
@@ -219,4 +263,4 @@ Mỗi plan ship được + test được độc lập.
 
 ## Approval
 
-Gaps listed for owner review. Critical blockers proposed closed in design §15. Remaining model IDs / Render-vs-Fly left to first plan task.
+**CLOSED.** Blockers resolved in design §15 + CANONICAL. Residual: Gemini model IDs, Render vs Fly — first Plan A tasks.

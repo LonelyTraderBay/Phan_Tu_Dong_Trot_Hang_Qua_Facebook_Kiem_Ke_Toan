@@ -18,7 +18,9 @@
 
 **Trạng thái:** Option **C đã khóa** trong design + foundation charter. Không còn là “đích mơ hồ A→C”; scaffold **ba deployable từ commit đầu**.
 
-Chi tiết vận hành: [design §3](./2026-07-24-omni-commerce-ai-saas-design.md) · [charter](./2026-07-24-enterprise-engineering-foundation-charter.md).
+Chi tiết vận hành: [**CANONICAL**](./2026-07-24-CANONICAL-LOCKED-DECISIONS.md) · [design §3](./2026-07-24-omni-commerce-ai-saas-design.md) · [charter](./2026-07-24-enterprise-engineering-foundation-charter.md).
+
+> Historical A/B sections below are **ADR context only**. Do not scaffold Option A.
 
 ---
 
@@ -160,13 +162,15 @@ Next.js (FE)
 
 **Phù hợp khi:** dự án lâu dài, Enterprise, muốn “chỉ xây thêm”, chấp nhận đầu tư foundation contract ngay từ đầu.
 
-**Thứ tự triển khai thực dụng (tránh over-engineering tuần 1):**
+**Thứ tự triển khai (đã khóa C — không làm A rồi tách):**
 
-1. **Giai đoạn Foundation (tháng 1–3):** Phương án A *có biên module sẵn* + **interface** `LlmProvider` / job queue (như charter).  
-2. **Khi AI pipeline nặng hoặc team AI Python vào:** tách **AI Service Python** (bước tới C) — **không** viết lại orders/Meta.  
-3. **Khi Core API cần tách khỏi Next:** nâng `packages/modules` → NestJS/Go service — FE không đổi.
+1. **Foundation (tháng 1–3):** Scaffold **ba deployable** `web` + `api` + `ai` ngay từ commit #1 + `LlmProvider` + Inngest trong api (xem structure §11).  
+2. **Khi AI pipeline nặng:** scale **replicas `apps/ai`** / queue depth — **không** viết lại orders/Meta.  
+3. **Khi Core cần tách thêm:** extract domain workers từ Nest — FE không đổi.
 
 Đây mới là “không sửa nhiều, chỉ xây thêm”.
+
+> Đoạn A→C tuần tự trong bản ADR cũ **đã hủy** — không scaffold monolith rồi tách AI.
 
 ---
 

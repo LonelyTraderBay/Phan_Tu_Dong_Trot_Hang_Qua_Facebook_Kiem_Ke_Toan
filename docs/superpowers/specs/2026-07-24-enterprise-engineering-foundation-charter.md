@@ -4,7 +4,7 @@
 **Status:** Locked with product design  
 **Applies to:** Every commit from repository initialization onward  
 **Runtime topology:** **C — FE + Core API + AI Service**  
-**Related:** [specs README](./README.md) · [Phase 1 design](./2026-07-24-omni-commerce-ai-saas-design.md) · [External services / Free-first](./2026-07-24-external-services-catalog.md) · [Commercialization](./2026-07-24-enterprise-grade-commercialization-analysis.md) · [Stack ADR](./2026-07-24-backend-python-vs-typescript-analysis.md)
+**Related:** [**CANONICAL**](./2026-07-24-CANONICAL-LOCKED-DECISIONS.md) · [specs README](./README.md) · [Phase 1 design](./2026-07-24-omni-commerce-ai-saas-design.md) · [**Structure & data architecture (LOCKED)**](./2026-07-24-enterprise-structure-and-data-architecture.md) · [maturity → 100](./2026-07-24-enterprise-maturity-scorecard-to-100.md) · [External services / Free-first](./2026-07-24-external-services-catalog.md) · [Commercialization](./2026-07-24-enterprise-grade-commercialization-analysis.md) · [Stack ADR](./2026-07-24-backend-python-vs-typescript-analysis.md)
 
 ## 1. Purpose
 
@@ -13,55 +13,47 @@ This charter turns the mandate *“nền móng vững chắc từ đầu — sau
 **Goal:** Change later work from *rewrite* to *add modules/services*.  
 **Topology locked:** Next.js FE · NestJS Core API (TypeScript) · FastAPI AI Service (Python) · Supabase data platform.
 
+**Structure & schema:** From commit #1, folder layout, module map, naming, API errors, and canonical tables **must** follow [enterprise-structure-and-data-architecture.md](./2026-07-24-enterprise-structure-and-data-architecture.md).
+
+**Maturity to 100/100:** Follow [enterprise-maturity-scorecard-to-100.md](./2026-07-24-enterprise-maturity-scorecard-to-100.md). **M1** (Tier A) locked in docs; **M2** mandatory in Platform plan DoD; **M4 = only official 100/100**. Never market “100 Enterprise” before M4.
+
 **Cost / deploy (locked with Free-first):**
 
-- Pre-customer hosts: **Render Free** (web Node + api + ai; hoặc Fly cho api/ai), Supabase Free ×2, Inngest Free (functions in **api only**), Gemini Free, Resend Free, Sentry Free  
+- Pre-customer hosts: **Render Free** (web Node + api + ai; hoặc Fly), Supabase Free ×2, Inngest Free (functions in **api only**), Gemini Free, Resend Free, Sentry Free  
 - Details: [external-services-catalog §0](./2026-07-24-external-services-catalog.md) · coding defaults: design §15
 
 ## 2. Non-negotiables (from commit #1)
 
 1. **Three deployables** — `apps/web`, `apps/api`, `apps/ai` exist from scaffold; AI is not embedded in Next/Nest as the end state.
-2. **Multi-tenant by default** — every business table has `org_id`; Supabase RLS enabled; no service-role from the browser.
-3. **Server secrets stay on server** — Meta tokens in Core only; LLM keys in AI only; never `NEXT_PUBLIC_*` secrets.
-4. **Async boundaries** — Meta webhooks and AI/LLM work use durable jobs with idempotency, retry, DLQ.
-5. **FE → Core only** — browser never calls AI Service or Supabase service role.
-6. **AI → Core for mutations** — create/confirm order, read live price/stock via Core tool HTTP APIs (m2m); AI does not bypass RLS with ad-hoc SQL using broad credentials for writes.
-7. **Contracts first** — OpenAPI (Core) + shared error model; FE and AI generate/consume clients.
-8. **Provider interfaces** — `ChannelProvider` (Core), `LlmProvider` (AI), stubs for Shipping/Payment.
-9. **Observability** — `request_id`, `org_id`, `actor_user_id` / `job_id` across services (propagate trace headers).
-10. **Audit** — Core writes audit for security/money events; AI writes `ai_runs` (prompt version, tools, citations, cost).
-11. **Tests gate merge** — CI: web typecheck, api typecheck/tests, ai pytest, isolation tests.
-12. **Migrations only** — Supabase migrations; single schema owned by platform, consumed by api/ai.
-13. **VI product / EN code** — UI Vietnamese; code identifiers English (TS + Python).
+2. **Enterprise folder/module map** — matches structure doc §1–4 on day one (empty modules allowed; missing domains forbidden).
+3. **Multi-tenant by default** — every business table has `org_id`; Supabase RLS enabled; no service-role from the browser.
+4. **Server secrets stay on server** — Meta tokens in Core only; LLM keys in AI only; never `NEXT_PUBLIC_*` secrets.
+5. **Async boundaries** — Meta webhooks and AI/LLM work use durable jobs with idempotency, retry, DLQ.
+6. **FE → Core only** — browser never calls AI Service or Supabase service role.
+7. **AI → Core for mutations** — orders/stock via Core m2m; `ai_runs` persisted by **Core**; knowledge via org-forced RPC or Core ingest.
+8. **Contracts first** — OpenAPI (Core) + shared error model; FE and AI generate/consume clients.
+9. **Provider interfaces** — `ChannelProvider` (Core), `LlmProvider` (AI), stubs for Shipping/Payment.
+10. **Observability** — `request_id`, `org_id`, `actor_user_id` / `job_id` across services (propagate trace headers).
+11. **Audit** — Core writes `audit_logs` + `ai_runs`; append-only audit.
+12. **Tests gate merge** — CI: web typecheck, api typecheck/tests, ai pytest, isolation tests.
+13. **Migrations only** — Supabase migrations; canonical table/column names per structure doc §8.
+14. **VI product / EN code** — UI Vietnamese; code identifiers English (TS + Python).
+15. **Required headers** — `X-Org-Id` on shop business APIs; platform routes under `/ops/v1` for `platform_admins` only.
 
 ## 3. Target repository shape (Option C)
 
+**Canonical detail:** [enterprise-structure-and-data-architecture.md](./2026-07-24-enterprise-structure-and-data-architecture.md) §§1–4.
+
+Summary:
+
 ```text
-/
-├── apps/
-│   ├── web/                     # Next.js — VI UI (Supabase Auth client)
-│   ├── api/                     # NestJS — Core API (Meta, orders, catalog, inbox, jobs producer)
-│   └── ai/                      # FastAPI — RAG, LLM, embed, eval workers
-├── packages/
-│   ├── db/                      # SQL types / zod schemas shared with api (TS)
-│   ├── authz-types/             # role/permission enums shared FE+API
-│   ├── api-client/              # generated OpenAPI client for web (+ optional)
-│   └── contracts/               # OpenAPI specs, event/job payload JSON schemas
-├── supabase/
-│   ├── migrations/
-│   └── seed/
-├── tests/
-│   ├── isolation/               # cross-tenant (against API + RLS)
-│   ├── integration/             # webhook → job → ai → order draft
-│   └── eval/                    # AI golden set (VI) — run against apps/ai
-├── docs/
-└── .github/workflows/
-    ├── web.yml
-    ├── api.yml
-    └── ai.yml
+apps/web | apps/api | apps/ai
+packages/db | authz-types | contracts | api-client
+supabase/migrations | seed
+tests/isolation | integration | eval
 ```
 
-**Rule:** Feature PRs name the deployable (`web` | `api` | `ai`) and module. Do not put order writes in `web` or LLM calls in `api`.
+**Rule:** Feature PRs name the deployable (`web` | `api` | `ai`) and module. Do not put order writes in `web` or LLM calls in `api`. Scaffold DoD = structure doc §11.
 
 ## 4. Trust & auth between services
 
@@ -138,7 +130,7 @@ Separate staging/production projects mandatory.
 1. Monorepo scaffold: `web` + `api` + `ai` + CI matrices + OpenAPI skeleton  
 2. Supabase migrations: orgs, memberships, RLS + isolation tests via API  
 3. Core authz + entitlements + feature flags + audit  
-4. Job infrastructure (enqueue from API, worker stubs API+AI)  
+4. Job infrastructure (**Inngest in `apps/api` only**; HTTP stubs to call `apps/ai`)  
 5. Admin-ops (suspend org, health)  
 6. Channels Meta on **api** (OAuth, webhook verify, idempotent enqueue)  
 7. Catalog on **api** + knowledge index jobs → **ai** embed  
@@ -155,4 +147,5 @@ Steps 1–5 block customer Meta traffic.
 - Topology **C** (FE + Core API TS + AI Python) — locked 2026-07-24  
 - Core API language default **NestJS/TypeScript** (not Go) unless later explicit change  
 - **Free-first** vendors — locked 2026-07-24  
-- Jobs **Inngest**; LLM default **Gemini** (pre-customer) — locked
+- Jobs **Inngest**; LLM default **Gemini** (pre-customer) — locked  
+- **Structure & data architecture** — locked ([structure doc](./2026-07-24-enterprise-structure-and-data-architecture.md))

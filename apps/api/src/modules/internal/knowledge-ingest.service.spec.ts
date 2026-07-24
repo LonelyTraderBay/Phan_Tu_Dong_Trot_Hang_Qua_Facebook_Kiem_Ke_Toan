@@ -162,6 +162,36 @@ describe("KnowledgeIngestService", () => {
     });
   });
 
+  it("purges chunks for a soft-deleted product without requiring deleted_at null", async () => {
+    const { calls, client } = mockSupabase({ productFound: true });
+    const service = new KnowledgeIngestService(client);
+
+    await expect(
+      service.replaceChunks({
+        orgId: ORG_ID,
+        sourceType: "product",
+        sourceId: SOURCE_ID,
+        chunks: [],
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(calls).not.toContainEqual({
+      op: "is",
+      field: "deleted_at",
+      value: null,
+    });
+    expect(calls).toContainEqual({
+      op: "rpc",
+      fn: "replace_knowledge_chunks",
+      args: {
+        p_org_id: ORG_ID,
+        p_source_type: "product",
+        p_source_id: SOURCE_ID,
+        p_chunks: [],
+      },
+    });
+  });
+
   it("does not replace chunks when a product is missing from the org", async () => {
     const { calls, client } = mockSupabaseWithOwnershipError();
     const service = new KnowledgeIngestService(client);

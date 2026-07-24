@@ -35,3 +35,16 @@ Verification:
 - `pnpm --dir apps/api exec vitest run src/modules/internal/knowledge-ingest.service.spec.ts src/jobs/functions/knowledge-reindex.spec.ts` (pass, 6 tests)
 - `python -m pytest tests/test_reindex.py` in `apps/ai` (pass, 3 tests, existing warnings)
 - `pnpm --dir apps/api run typecheck` (pass)
+
+---
+
+### Re-review fix - soft-deleted product chunk purge
+
+Status: completed.
+
+Implemented:
+- Empty-chunk replace (purge) skips `deleted_at IS NULL` on product ownership check so reindex after soft-delete can clear `knowledge_chunks`.
+- Non-empty ingest still requires a live (non-deleted) product.
+
+Verification:
+- `pnpm --dir apps/api exec vitest run src/modules/internal/knowledge-ingest.service.spec.ts` (pass, 5 tests)

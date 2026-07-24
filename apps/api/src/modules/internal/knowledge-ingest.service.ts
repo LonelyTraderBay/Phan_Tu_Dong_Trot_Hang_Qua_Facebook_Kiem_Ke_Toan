@@ -86,13 +86,17 @@ export class KnowledgeIngestService {
       return;
     }
 
-    const { data: product, error } = await this.supabase
+    let query = this.supabase
       .from("products")
       .select("id")
       .eq("id", input.sourceId)
-      .eq("org_id", input.orgId)
-      .is("deleted_at", null)
-      .maybeSingle();
+      .eq("org_id", input.orgId);
+
+    if (input.chunks.length > 0) {
+      query = query.is("deleted_at", null);
+    }
+
+    const { data: product, error } = await query.maybeSingle();
 
     if (error) {
       throwKnowledgeError(error, "Could not verify knowledge source ownership");

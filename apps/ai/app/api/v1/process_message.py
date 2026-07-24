@@ -17,6 +17,7 @@ orchestrator = ProcessMessageOrchestrator(
     retriever=CoreKnowledgeClient(),
     llm_provider=GeminiLlmProvider(),
     quota_client=CoreKnowledgeClient(),
+    core_tools_client=CoreKnowledgeClient(),
 )
 
 
@@ -27,6 +28,14 @@ class ProcessMessageRequest(BaseModel):
     message: str = Field(min_length=1, max_length=10_000)
     top_k: int = Field(default=5, alias="topK", ge=1, le=20)
     model: str | None = Field(default=None, max_length=100)
+    conversation_id: UUID | None = Field(default=None, alias="conversationId")
+    contact_id: UUID | None = Field(default=None, alias="contactId")
+    message_id: UUID | None = Field(default=None, alias="messageId")
+    channel: str | None = Field(default=None, max_length=64)
+    channel_connection_id: UUID | None = Field(
+        default=None,
+        alias="channelConnectionId",
+    )
 
 
 @router.post("/ai/process-message")
@@ -43,6 +52,13 @@ def process_message(
             message=body.message,
             top_k=body.top_k,
             model=body.model,
+            conversation_id=str(body.conversation_id) if body.conversation_id else None,
+            contact_id=str(body.contact_id) if body.contact_id else None,
+            message_id=str(body.message_id) if body.message_id else None,
+            channel=body.channel,
+            channel_connection_id=(
+                str(body.channel_connection_id) if body.channel_connection_id else None
+            ),
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

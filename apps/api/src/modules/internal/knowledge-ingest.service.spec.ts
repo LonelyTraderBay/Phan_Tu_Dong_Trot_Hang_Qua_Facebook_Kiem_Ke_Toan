@@ -220,6 +220,24 @@ describe("KnowledgeIngestService", () => {
     });
   });
 
+  it("does not purge chunks when a product is missing from the org", async () => {
+    const { calls, client } = mockSupabase({ productFound: false });
+    const service = new KnowledgeIngestService(client);
+
+    await expect(
+      service.replaceChunks({
+        orgId: ORG_ID,
+        sourceType: "product",
+        sourceId: SOURCE_ID,
+        chunks: [],
+      }),
+    ).rejects.toThrow(NotFoundException);
+
+    expect(calls).not.toContainEqual(
+      expect.objectContaining({ op: "rpc" }),
+    );
+  });
+
   it("does not replace chunks when a product is missing from the org", async () => {
     const { calls, client } = mockSupabaseWithOwnershipError();
     const service = new KnowledgeIngestService(client);

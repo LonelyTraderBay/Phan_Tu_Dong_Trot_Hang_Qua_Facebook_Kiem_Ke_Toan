@@ -76,6 +76,14 @@ type AiProcessResponse = {
   escalate: boolean;
 };
 
+type AiProcessContext = {
+  conversationId: string;
+  contactId: string;
+  messageId: string;
+  channel: ConversationRow["channel"];
+  channelConnectionId: string;
+};
+
 type SupabaseError = {
   code?: string;
   message?: string;
@@ -145,7 +153,13 @@ export class ProcessInboundMessageJobService {
     const quota = await this.aiTokenUsage.getQuotaStatus(event.orgId);
     const aiResponse = quota.exceeded
       ? buildQuotaExceededResponse()
-      : await this.callAiProcessMessage(event.orgId, inboundText);
+      : await this.callAiProcessMessage(event.orgId, inboundText, {
+          conversationId: conversation.id,
+          contactId: conversation.contact_id,
+          messageId: message.id,
+          channel: conversation.channel,
+          channelConnectionId: conversation.channel_connection_id,
+        });
 
     await this.aiRuns.writeRun({
       orgId: event.orgId,
@@ -231,7 +245,11 @@ export class ProcessInboundMessageJobService {
     return data as ConversationRow | null;
   }
 
-  private async callAiProcessMessage(orgId: string, message: string) {
+  private async callAiProcessMessage(
+    orgId: string,
+    message: string,
+    context: AiProcessContext,
+  ) {
     const response = await this.fetchFn(
       `${this.env.AI_BASE_URL}/internal/v1/ai/process-message`,
       {
@@ -243,6 +261,11 @@ export class ProcessInboundMessageJobService {
         body: JSON.stringify({
           orgId,
           message,
+          conversationId: context.conversationId,
+          contactId: context.contactId,
+          messageId: context.messageId,
+          channel: context.channel,
+          channelConnectionId: context.channelConnectionId,
         }),
       },
     );

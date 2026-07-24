@@ -7,6 +7,11 @@ from app.infra.llm.provider import LlmCompletion
 from app.main import app
 
 ORG_ID = "11111111-1111-1111-1111-111111111111"
+PRODUCT_ID = "22222222-2222-2222-2222-222222222222"
+VARIANT_ID = "33333333-3333-3333-3333-333333333333"
+CONVERSATION_ID = "44444444-4444-4444-4444-444444444444"
+CONTACT_ID = "55555555-5555-5555-5555-555555555555"
+MESSAGE_ID = "66666666-6666-6666-6666-666666666666"
 
 client = TestClient(app)
 
@@ -66,11 +71,47 @@ class FakeQuotaClient:
         self.record_calls.append(kwargs)
 
 
+class FakeCoreTools:
+    def __init__(self):
+        self.get_product_calls: list[dict] = []
+        self.create_draft_order_calls: list[dict] = []
+
+    def get_product(self, **kwargs) -> dict:
+        self.get_product_calls.append(kwargs)
+        return {
+            "product": {
+                "id": PRODUCT_ID,
+                "title": "Ao thun den",
+                "status": "active",
+                "variants": [
+                    {
+                        "id": VARIANT_ID,
+                        "title": "Mac dinh",
+                        "sku": "AO-DEN",
+                        "priceVnd": "120000",
+                        "stockQty": 9,
+                    }
+                ],
+            }
+        }
+
+    def create_draft_order(self, **kwargs) -> dict:
+        self.create_draft_order_calls.append(kwargs)
+        return {
+            "order": {
+                "id": "77777777-7777-7777-7777-777777777777",
+                "totalVnd": "240000",
+            },
+            "items": [],
+        }
+
+
 def make_orchestrator(
     chunks: list[dict],
     *,
     llm_text: str = DEFAULT_LLM_JSON,
     quota_client: FakeQuotaClient | None = None,
+    core_tools_client: FakeCoreTools | None = None,
 ):
     embeddings = FakeEmbeddings()
     retriever = FakeRetriever(chunks)
@@ -81,6 +122,7 @@ def make_orchestrator(
         llm_provider=llm,
         prompt=PromptTemplate(version="test_prompt_v1", text="Only use context."),
         quota_client=quota_client,
+        core_tools_client=core_tools_client,
     )
     return orchestrator, embeddings, retriever, llm
 
@@ -236,6 +278,58 @@ def test_process_message_answers_with_subset_citations_from_good_chunks():
     }
 
 
+def test_process_message_uses_core_tools_for_draft_order_intent():
+    core_tools = FakeCoreTools()
+    orchestrator, _, _, llm = make_orchestrator(
+        [
+            {
+                "sourceType": "product",
+                "sourceId": PRODUCT_ID,
+                "chunkIndex": 0,
+                "content": "Ao thun den gia 120000.",
+                "score": 0.95,
+            }
+        ],
+        llm_text=(
+            '{"replyText":"Shop da tao don nhap cho 2 ao thun den [1].",'
+            '"citedIndices":[1],"escalate":false}'
+        ),
+        core_tools_client=core_tools,
+    )
+
+    result = orchestrator.process_message(
+        org_id=ORG_ID,
+        message="Chot 2 cai nay giup minh",
+        model="gemini-2.0-flash",
+        conversation_id=CONVERSATION_ID,
+        contact_id=CONTACT_ID,
+        message_id=MESSAGE_ID,
+        channel="messenger",
+        channel_connection_id="88888888-8888-8888-8888-888888888888",
+    )
+
+    assert core_tools.get_product_calls == [
+        {"org_id": ORG_ID, "product_id": PRODUCT_ID}
+    ]
+    assert core_tools.create_draft_order_calls == [
+        {
+            "org_id": ORG_ID,
+            "conversation_id": CONVERSATION_ID,
+            "contact_id": CONTACT_ID,
+            "idempotency_key": f"ai:{MESSAGE_ID}",
+            "items": [{"variantId": VARIANT_ID, "qty": 2}],
+        }
+    ]
+    assert [tool["name"] for tool in result["toolsUsed"]] == [
+        "getProduct",
+        "createDraftOrder",
+    ]
+    assert result["toolsUsed"][1]["orderId"] == "77777777-7777-7777-7777-777777777777"
+    assert "Product from Core" in llm.calls[0]["messages"][0]["content"]
+    assert "Draft order created by Core" in llm.calls[0]["messages"][0]["content"]
+    assert result["escalate"] is False
+
+
 def test_process_message_honors_model_escalate_flag():
     orchestrator, _, _, llm = make_orchestrator(
         [
@@ -328,6 +422,11 @@ def test_process_message_route_uses_service_key(monkeypatch):
         "message": "hello",
         "top_k": 4,
         "model": None,
+        "conversation_id": None,
+        "contact_id": None,
+        "message_id": None,
+        "channel": None,
+        "channel_connection_id": None,
     }
 
 

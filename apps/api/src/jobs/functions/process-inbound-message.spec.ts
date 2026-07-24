@@ -201,6 +201,15 @@ describe("ProcessInboundMessageJobService", () => {
     });
 
     expect(writeRun).toHaveBeenCalledOnce();
+    expect(JSON.parse(fetchFn.mock.calls[0][1].body as string)).toMatchObject({
+      orgId: ORG_ID,
+      message: "Co ao mau den khong?",
+      conversationId: CONVERSATION_ID,
+      contactId: CONTACT_ID,
+      messageId: MESSAGE_ID,
+      channel: "messenger",
+      channelConnectionId: CONNECTION_ID,
+    });
     expect(state.outbox_events).toEqual([]);
   });
 

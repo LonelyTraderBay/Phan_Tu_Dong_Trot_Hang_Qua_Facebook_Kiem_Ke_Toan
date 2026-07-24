@@ -83,6 +83,79 @@ class CoreKnowledgeClient:
 
         return chunks
 
+    def get_product(
+        self,
+        *,
+        org_id: str,
+        product_id: str,
+    ) -> dict:
+        req = request.Request(
+            f"{self.base_url}/internal/v1/tools/get-product",
+            data=json.dumps(
+                {
+                    "orgId": org_id,
+                    "productId": product_id,
+                }
+            ).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "X-Service-Key": self.service_key,
+            },
+            method="POST",
+        )
+
+        try:
+            with self.opener(req, timeout=15) as response:
+                body = json.loads(response.read().decode("utf-8"))
+        except error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"Core get-product tool failed: {exc.code} {detail}"
+            ) from exc
+
+        if not isinstance(body.get("product"), dict):
+            raise RuntimeError("Core get-product tool returned invalid product")
+        return body
+
+    def create_draft_order(
+        self,
+        *,
+        org_id: str,
+        conversation_id: str | None,
+        contact_id: str | None,
+        idempotency_key: str | None,
+        items: list[dict],
+    ) -> dict:
+        payload: dict[str, object] = {
+            "orgId": org_id,
+            "conversationId": conversation_id,
+            "contactId": contact_id,
+            "idempotencyKey": idempotency_key,
+            "items": items,
+        }
+        req = request.Request(
+            f"{self.base_url}/internal/v1/tools/create-draft-order",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "X-Service-Key": self.service_key,
+            },
+            method="POST",
+        )
+
+        try:
+            with self.opener(req, timeout=30) as response:
+                body = json.loads(response.read().decode("utf-8"))
+        except error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"Core create-draft-order tool failed: {exc.code} {detail}"
+            ) from exc
+
+        if not isinstance(body.get("order"), dict):
+            raise RuntimeError("Core create-draft-order tool returned invalid order")
+        return body
+
     def check_ai_token_quota(self, *, org_id: str) -> dict:
         req = request.Request(
             f"{self.base_url}/internal/v1/billing/ai-token-quota/check",

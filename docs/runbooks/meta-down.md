@@ -9,6 +9,8 @@
 
 ## Kiểm tra
 
+Chạy các truy vấn SQL dưới đây trong Supabase SQL Editor hoặc với client `service_role` (bypass RLS).
+
 1. **Meta platform status** — [Meta for Developers status](https://developers.facebook.com/status/) và trang trạng thái Facebook nếu lỗi hàng loạt.
 2. **Webhook subscription** — Trong Meta App → Webhooks: Callback URL trỏ đúng `https://<host>/v1/webhooks/meta`, Verify Token khớp `META_VERIFY_TOKEN`, field `messages` đã subscribe.
 3. **Chữ ký và log API** — Tìm request tới `/v1/webhooks/meta`:
@@ -28,12 +30,12 @@ limit 20;
 - Có row mới sau thời điểm DM → webhook đã nhận; lỗi ở bước enqueue/persist.
 - Không có row → webhook chưa tới API (tunnel, URL, subscription, hoặc page chưa map `channel_connections`).
 
-5. **`outbox_events` unpublished** — Sau receipt, event `meta/persist_inbound` phải được publish sang Inngest:
+5. **`outbox_events` unpublished** — Sau receipt, outbox `meta.inbound` phải được publish sang Inngest (dashboard: `meta/persist_inbound`):
 
 ```sql
 select id, org_id, event_name, attempts, published_at, created_at
 from public.outbox_events
-where event_name = 'meta/persist_inbound'
+where event_name = 'meta.inbound'
   and published_at is null
 order by created_at desc
 limit 20;
@@ -45,21 +47,21 @@ limit 20;
 6. **Inngest DLQ** — Event hết retry được ghi `job_dead_letters`:
 
 ```sql
-select id, job_name, org_id, payload_json, error_message, created_at
+select id, job_name, payload_json->>'orgId' as org_id, payload_json, error_text, created_at
 from public.job_dead_letters
-where job_name = 'meta/persist_inbound'
+where job_name = 'meta.inbound'
 order by created_at desc
 limit 20;
 ```
 
-- Có dead letter → xem `error_message`, sửa dữ liệu/schema/org mapping rồi replay thủ công nếu cần (chỉ sau khi hiểu nguyên nhân).
+- Có dead letter → xem `error_text`, sửa dữ liệu/schema/org mapping rồi replay thủ công nếu cần (chỉ sau khi hiểu nguyên nhân).
 
 7. **Kênh đã nối** — Page ID trong webhook phải khớp `channel_connections.external_page_id`:
 
 ```sql
 select org_id, provider, external_page_id, status, updated_at
 from public.channel_connections
-where provider = 'meta';
+where provider in ('meta_page', 'meta_ig');
 ```
 
 ## Hành động

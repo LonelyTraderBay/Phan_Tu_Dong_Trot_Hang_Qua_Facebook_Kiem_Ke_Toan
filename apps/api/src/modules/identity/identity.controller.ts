@@ -2,13 +2,12 @@ import {
   BadRequestException,
   Body,
   Controller,
-  ForbiddenException,
   Get,
   Headers,
   Param,
   Post,
-  Req,
   UnauthorizedException,
+  UseGuards,
 } from "@nestjs/common";
 import type { z } from "zod";
 
@@ -17,7 +16,8 @@ import {
   type AuthenticatedUser,
 } from "../../common/decorators/current-user.decorator";
 import { OrgId } from "../../common/decorators/org-id.decorator";
-import type { Membership } from "../../common/guards/org.guard";
+import { RequirePermission } from "../../common/decorators/require-permission.decorator";
+import { PermissionsGuard } from "../authz/permissions.guard";
 import {
   CreateInviteBodySchema,
   CreateOrgBodySchema,
@@ -26,10 +26,6 @@ import { IdentityService } from "./identity.service";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-type RequestWithMembership = {
-  membership?: Membership;
-};
 
 @Controller("v1/orgs")
 export class IdentityController {
@@ -58,10 +54,11 @@ export class IdentityController {
   }
 
   @Post(":orgId/invites")
+  @UseGuards(PermissionsGuard)
+  @RequirePermission("members.invite")
   createInvite(
     @Param("orgId") orgId: string,
     @OrgId() guardOrgId: string | undefined,
-    @Req() request: RequestWithMembership,
     @Body() body: unknown,
   ) {
     if (!UUID_PATTERN.test(orgId)) {
@@ -75,13 +72,6 @@ export class IdentityController {
       throw new BadRequestException({
         code: "org_context_mismatch",
         message: "orgId route parameter must match X-Org-Id",
-      });
-    }
-
-    if (request.membership?.role !== "owner") {
-      throw new ForbiddenException({
-        code: "owner_required",
-        message: "Only organization owners can invite members",
       });
     }
 

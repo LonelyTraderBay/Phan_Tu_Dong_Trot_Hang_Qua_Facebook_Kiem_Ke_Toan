@@ -8,9 +8,10 @@
 
 **Tech Stack:** NestJS · Next.js · ExcelJS (or similar) · Vitest · Playwright optional smoke
 
-**Depends on:** Plan C DoD  
+**Depends on:** Plan C DoD (`main` @ `127624e`+)  
 **Next:** [Plan E M3](./2026-07-24-plan-e-m3-commercial-ops.md) when customer imminent  
-**Pilot exit:** Design §12.1 + §12.2 sign-off
+**Pilot exit:** Design §12.1 + §12.2 sign-off  
+**Playbook ưu tiên (đọc trước khi code):** [plan-d-priority-execution](./2026-07-24-plan-d-priority-execution.md)
 
 ## Global Constraints
 
@@ -100,6 +101,29 @@
 - GHN/GHTK API (Plan F)  
 - Advisor AI (Plan G)  
 
+## Thứ tự ưu tiên *trong* Plan D (không đảo)
+
+| Ưu tiên | Task | Vì sao trước |
+|--------:|------|----------------|
+| **D0** | Task 1 Schema gap-fill | Orders lifecycle cần schema đủ §8.7 |
+| **D1** | Task 2 Lifecycle + stock | Critical path đơn hàng |
+| **D2** | Task 3 Export | Phụ thuộc orders API |
+| **D3** | Task 4 Auth + org switcher | Nền Web |
+| **D4** | Task 5 Inbox UI | Sau auth |
+| **D5** | Task 6 Catalog/Orders/Dashboard | Sau D1+D3 |
+| **D6** | Task 7 Legal | Wave I |
+| **D7** | Task 8 PDPA | Wave I |
+| **D8** | Task 9 Rate limits | Wave I |
+| **D9** | Task 10 App Review docs | Trước đóng pilot |
+| **D10** | Task 11 DoD + §12 | Pilot Phase 1 |
+
+Chi tiết cổng giai đoạn: [plan-d-priority-execution](./2026-07-24-plan-d-priority-execution.md).
+
 ## Execution handoff
 
-After Plan C → execute Plan D → **Phase 1 pilot**. Then Plan E when onboarding paying customer.
+**Thứ tự ưu tiên + cổng:** [plan-d-priority-execution](./2026-07-24-plan-d-priority-execution.md)  
+**Chi tiết file/code:** file này (Task 1–11).
+
+After Plan C → execute Plan D (Subagent-Driven khuyến nghị) → **Phase 1 pilot**. Then Plan E when onboarding paying customer.
+
+**Which approach?**

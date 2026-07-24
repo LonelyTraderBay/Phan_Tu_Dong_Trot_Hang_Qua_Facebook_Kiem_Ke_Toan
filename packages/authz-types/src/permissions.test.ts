@@ -12,10 +12,10 @@ describe("roleHasPermission", () => {
   it("kho cannot reply inbox", () => {
     expect(roleHasPermission("kho", "inbox.reply")).toBe(false);
   });
-  it("owner and cskh can confirm orders, kho cannot", () => {
-    expect(roleHasPermission("owner", "orders.confirm")).toBe(true);
-    expect(roleHasPermission("cskh", "orders.confirm")).toBe(true);
-    expect(roleHasPermission("kho", "orders.confirm")).toBe(false);
+  it("owner and cskh can approve orders, kho cannot", () => {
+    expect(roleHasPermission("owner", "orders.approve")).toBe(true);
+    expect(roleHasPermission("cskh", "orders.approve")).toBe(true);
+    expect(roleHasPermission("kho", "orders.approve")).toBe(false);
   });
   it("platform ops.suspend only via platform admin path later", () => {
     expect(roleHasPermission("owner", "ops.org.suspend")).toBe(false);

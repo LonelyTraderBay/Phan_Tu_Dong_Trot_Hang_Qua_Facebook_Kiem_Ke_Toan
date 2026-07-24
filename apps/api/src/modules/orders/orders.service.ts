@@ -116,6 +116,7 @@ const ORDER_WITH_ITEMS_SELECT = `${ORDER_SELECT}, items:order_items(${ITEM_SELEC
 const VARIANT_SELECT =
   'id, org_id, product_id, sku, title, price_vnd, stock_qty';
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
+const IDEMPOTENCY_PENDING_STATUS = 102;
 
 @Injectable()
 export class OrdersService {
@@ -538,39 +539,106 @@ export class OrdersService {
       });
     }
 
-    const existing = await this.getIdempotencyRow(input.orgId, key);
-    if (existing) {
-      if (existing.method !== input.method || existing.path !== input.path) {
+    const claimed = await this.claimIdempotencyKey(input.orgId, key, input);
+    if (!claimed) {
+      const existing = await this.getIdempotencyRow(input.orgId, key);
+      if (!existing) {
         throw new ConflictException({
-          code: 'idempotency_key_reused',
-          message: 'Idempotency-Key was already used for another request',
+          code: 'idempotency_conflict',
+          message: 'Idempotent request is already in progress',
         });
       }
-      return existing.response_json as T;
+      return this.resolveIdempotencyReplay(existing, input);
     }
 
-    const response = await handler();
+    try {
+      const response = await handler();
+      await this.completeIdempotencyKey(
+        input.orgId,
+        key,
+        input.statusCode,
+        response,
+      );
+      return response;
+    } catch (error) {
+      await this.releaseIdempotencyKey(input.orgId, key);
+      throw error;
+    }
+  }
+
+  private resolveIdempotencyReplay<T extends JsonObject>(
+    row: IdempotencyRow,
+    input: { method: string; path: string },
+  ): T {
+    if (this.isPendingIdempotency(row)) {
+      throw new ConflictException({
+        code: 'idempotency_conflict',
+        message: 'Idempotent request is already in progress',
+      });
+    }
+    if (row.method !== input.method || row.path !== input.path) {
+      throw new ConflictException({
+        code: 'idempotency_key_reused',
+        message: 'Idempotency-Key was already used for another request',
+      });
+    }
+    return row.response_json as T;
+  }
+
+  private isPendingIdempotency(row: IdempotencyRow) {
+    return row.status_code === IDEMPOTENCY_PENDING_STATUS;
+  }
+
+  private async claimIdempotencyKey(
+    orgId: string,
+    key: string,
+    input: { method: string; path: string },
+  ) {
     const { error } = await this.supabase.from('idempotency_keys').insert({
-      org_id: input.orgId,
+      org_id: orgId,
       key,
       method: input.method,
       path: input.path,
-      status_code: input.statusCode,
-      response_json: response,
+      status_code: IDEMPOTENCY_PENDING_STATUS,
+      response_json: { _pending: true },
       expires_at: new Date(Date.now() + IDEMPOTENCY_TTL_MS).toISOString(),
     });
 
+    if (error?.code === '23505') {
+      return false;
+    }
     if (error) {
-      if (error.code === '23505') {
-        const replay = await this.getIdempotencyRow(input.orgId, key);
-        if (replay) {
-          return replay.response_json as T;
-        }
-      }
+      throwOrdersError(error, 'Could not claim idempotency key');
+    }
+    return true;
+  }
+
+  private async completeIdempotencyKey(
+    orgId: string,
+    key: string,
+    statusCode: number,
+    response: JsonObject,
+  ) {
+    const { error } = await this.supabase
+      .from('idempotency_keys')
+      .update({
+        status_code: statusCode,
+        response_json: response,
+      })
+      .eq('org_id', orgId)
+      .eq('key', key);
+
+    if (error) {
       throwOrdersError(error, 'Could not persist idempotency key');
     }
+  }
 
-    return response;
+  private async releaseIdempotencyKey(orgId: string, key: string) {
+    await this.supabase
+      .from('idempotency_keys')
+      .delete()
+      .eq('org_id', orgId)
+      .eq('key', key);
   }
 
   private async getIdempotencyRow(orgId: string, key: string) {

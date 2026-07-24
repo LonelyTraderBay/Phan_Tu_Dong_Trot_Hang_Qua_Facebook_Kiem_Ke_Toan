@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Post,
@@ -79,7 +80,8 @@ export class OrdersController {
   }
 
   @Post(':orderId/confirm')
-  @RequirePermission('orders.confirm')
+  @HttpCode(200)
+  @RequirePermission('orders.approve')
   confirmOrder(
     @OrgId() orgId: string | undefined,
     @CurrentUser() user: AuthenticatedUser | undefined,
@@ -96,6 +98,7 @@ export class OrdersController {
   }
 
   @Post(':orderId/cancel')
+  @HttpCode(200)
   @RequirePermission('orders.write')
   cancelOrder(
     @OrgId() orgId: string | undefined,
@@ -110,6 +113,7 @@ export class OrdersController {
   }
 
   @Post(':orderId/ship')
+  @HttpCode(200)
   @RequirePermission('orders.write')
   shipOrder(
     @OrgId() orgId: string | undefined,

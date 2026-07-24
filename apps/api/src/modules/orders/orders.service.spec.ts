@@ -156,3 +156,132 @@ describe('OrdersService lifecycle stock handling', () => {
     );
   });
 });
+
+describe('OrdersService idempotency', () => {
+  it('does not double-audit concurrent confirm requests with the same idempotency key', async () => {
+    let releaseRpc: (() => void) | undefined;
+    const rpcGate = new Promise<void>((resolve) => {
+      releaseRpc = resolve;
+    });
+    const idempotencyRows = new Map<string, Record<string, unknown>>();
+    const client = {
+      rpc: vi.fn(async () => {
+        await rpcGate;
+        return {
+          data: orderPayload(ORDER_ID, 'confirmed'),
+          error: null,
+        };
+      }),
+      from(table: string) {
+        if (table !== 'idempotency_keys') {
+          throw new Error(`unexpected table ${table}`);
+        }
+
+        return {
+          insert(row: Record<string, unknown>) {
+            const mapKey = `${row.org_id}:${row.key}`;
+            if (idempotencyRows.has(mapKey)) {
+              return Promise.resolve({ error: { code: '23505' } });
+            }
+            idempotencyRows.set(mapKey, { ...row });
+            return Promise.resolve({ error: null });
+          },
+          select() {
+            return {
+              eq(column: string, value: string) {
+                const filters: Record<string, string> = { [column]: value };
+                return {
+                  eq(nextColumn: string, nextValue: string) {
+                    filters[nextColumn] = nextValue;
+                    return {
+                      maybeSingle: async () => {
+                        const row = idempotencyRows.get(
+                          `${filters.org_id}:${filters.key}`,
+                        );
+                        if (!row) {
+                          return { data: null, error: null };
+                        }
+                        return {
+                          data: {
+                            key: row.key,
+                            method: row.method,
+                            path: row.path,
+                            status_code: row.status_code,
+                            response_json: row.response_json,
+                          },
+                          error: null,
+                        };
+                      },
+                    };
+                  },
+                };
+              },
+            };
+          },
+          update(values: Record<string, unknown>) {
+            return {
+              eq(column: string, value: string) {
+                const filters: Record<string, string> = { [column]: value };
+                return {
+                  eq(nextColumn: string, nextValue: string) {
+                    filters[nextColumn] = nextValue;
+                    const mapKey = `${filters.org_id}:${filters.key}`;
+                    const row = idempotencyRows.get(mapKey);
+                    if (row) {
+                      idempotencyRows.set(mapKey, { ...row, ...values });
+                    }
+                    return Promise.resolve({ error: null });
+                  },
+                };
+              },
+            };
+          },
+          delete() {
+            return {
+              eq(column: string, value: string) {
+                const filters: Record<string, string> = { [column]: value };
+                return {
+                  eq(nextColumn: string, nextValue: string) {
+                    filters[nextColumn] = nextValue;
+                    idempotencyRows.delete(`${filters.org_id}:${filters.key}`);
+                    return Promise.resolve({ error: null });
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    } as unknown as SupabaseLike;
+    const audit = auditMock();
+    const service = new OrdersService(client, audit);
+    const confirmInput = {
+      orgId: ORG_ID,
+      orderId: ORDER_ID,
+      actorUserId: USER_ID,
+      idempotencyKey: 'confirm-once',
+      path: `/v1/orders/${ORDER_ID}/confirm`,
+    };
+
+    const inFlight = Promise.allSettled([
+      service.confirmOrder(confirmInput),
+      service.confirmOrder(confirmInput),
+    ]);
+    await Promise.resolve();
+    releaseRpc?.();
+    const results = await inFlight;
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(
+      1,
+    );
+    const rejected = results.filter((result) => result.status === 'rejected');
+    expect(rejected).toHaveLength(1);
+    if (rejected[0].status === 'rejected') {
+      expect(rejected[0].reason).toMatchObject({
+        response: { code: 'idempotency_conflict' },
+      });
+    }
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    expect(audit.writeAudit).toHaveBeenCalledTimes(1);
+  });
+});

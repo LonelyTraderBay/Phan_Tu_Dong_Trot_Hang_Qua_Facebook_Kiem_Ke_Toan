@@ -7,3 +7,9 @@ Task 2 report
 - Added order lifecycle audit for confirm/cancel/ship.
 - Added orders.confirm permission and OpenAPI order stubs.
 - Tests: API 96/96, authz 7/7, workspace typecheck clean.
+
+Review fixes:
+- @HttpCode(200) on confirm/cancel/ship POSTs.
+- Confirm uses orders.approve (removed orders.confirm).
+- Idempotency claims key (status 102 pending) before side effects; concurrent same-key returns 409, single audit.
+- Tests: authz orders.approve matrix; idempotency concurrent confirm spec.

@@ -13,7 +13,6 @@ export type Permission =
   | "inbox.takeover"
   | "orders.read"
   | "orders.write"
-  | "orders.confirm"
   | "orders.approve"
   | "orders.export"
   | "ai.settings.write"
@@ -38,7 +37,6 @@ const MATRIX: Record<Role, readonly Permission[]> = {
     "inbox.takeover",
     "orders.read",
     "orders.write",
-    "orders.confirm",
     "orders.approve",
     "orders.export",
     "ai.settings.write",
@@ -51,7 +49,6 @@ const MATRIX: Record<Role, readonly Permission[]> = {
     "inbox.takeover",
     "orders.read",
     "orders.write",
-    "orders.confirm",
     "orders.approve",
   ],
   kho: [

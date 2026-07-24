@@ -261,6 +261,9 @@ function mapOutboxRow(row: OutboxRow) {
 }
 
 function toInngestEventName(eventName: string) {
+  if (eventName === "knowledge.reindex") {
+    return "knowledge/reindex";
+  }
   if (eventName === "meta.inbound") {
     return "meta/persist_inbound";
   }

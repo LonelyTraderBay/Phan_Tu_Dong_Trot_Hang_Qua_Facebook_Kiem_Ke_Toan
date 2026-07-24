@@ -228,6 +228,46 @@ describe("outbox publisher", () => {
     ]);
   });
 
+  it("maps knowledge.reindex to the knowledge reindex Inngest event", async () => {
+    const { client } = mockSupabase({
+      selectResults: [
+        {
+          data: [
+            outboxRow({
+              event_name: "knowledge.reindex",
+              payload_json: {
+                sourceType: "product",
+                sourceId: "33333333-3333-3333-3333-333333333333",
+              },
+            }),
+          ],
+          error: null,
+        },
+      ],
+    });
+    const sentEvents: unknown[] = [];
+    const publisher = new OutboxPublisher(client, {
+      send: async (event) => {
+        sentEvents.push(event);
+        return { ids: ["evt_1"] };
+      },
+    });
+
+    await publisher.publishPending(10);
+
+    expect(sentEvents).toEqual([
+      {
+        name: "knowledge/reindex",
+        data: {
+          sourceType: "product",
+          sourceId: "33333333-3333-3333-3333-333333333333",
+          orgId: ORG_ID,
+          outboxEventId: OUTBOX_ID,
+        },
+      },
+    ]);
+  });
+
   it("increments attempts and dead-letters exhausted events", async () => {
     const { calls, client } = mockSupabase({
       selectResults: [{ data: [outboxRow()], error: null }],

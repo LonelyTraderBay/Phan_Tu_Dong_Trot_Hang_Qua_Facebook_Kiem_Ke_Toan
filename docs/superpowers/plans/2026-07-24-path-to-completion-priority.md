@@ -22,8 +22,8 @@ DONE  P0   docs/legal/ADR (live staging/Review = owner AMBER)
 AMBER P3  E    M3 code+docs GREEN · paid drills AMBER  → [plan-e-dod-evidence]
 DONE  P4a F    Phase 2 Operations
 DONE  P4b G    Phase 3 Intelligence
-▶ P4c H    Phase 4 ERP-lite IN PROGRESS → CPC
-  P5  I    M4                   → E100
+DONE  P4c H    Phase 4 ERP-lite → CPC engineering READY (live ops AMBER)
+▶ P5  I    M4                   → E100
   P6  Epoch 5 (optional)
 ```
 
@@ -109,18 +109,20 @@ Evidence E: [plan-e-dod-evidence](./plan-e-dod-evidence.md). Paid drills AMBER k
 
 ---
 
-## P4c — Plan H · Phase 4 ERP-lite → **CPC** — **IN PROGRESS**
+## P4c — Plan H · Phase 4 ERP-lite → **CPC engineering** — **DONE**
 
 **Playbook:** [plan-h-priority-execution](./2026-07-24-plan-h-priority-execution.md) · [plan](./2026-07-24-plan-h-phase4-erp-lite.md) · [evidence](./plan-h-dod-evidence.md)
 
 | Ưu tiên | Wave | Bước | DoD wave |
 |--------:|------|------|----------|
-| **H0** | 4A Multi-warehouse | 4A.1–4A.4 branches/warehouses, transfer, RLS | 2 kho / org đúng — IN PROGRESS |
-| **H1** | 4B Supplier & PO | 4B.1–4B.4 suppliers, PO → nhập kho | PO → tồn có truy vết |
-| **H2** | 4C E-invoice | 4C.1–4C.4 provider hooks, DLQ | 1 provider sandbox |
-| **H3** | 4D Staff mobile | 4D.1–4D.3 PWA/app mỏng inbox+ship | CSKH/kho dùng mobile |
-| **H4** | 4E Accounting export | 4E.1–4E.3 export sổ chi tiết | Kế toán import được |
-| **H5** | 4F CPC hardening | 4F.1–4F.4 regression, DR, CPC checklist, API freeze | **CPC ĐẠT** |
+| **H0** | 4A Multi-warehouse | 4A.1–4A.4 branches/warehouses, transfer, RLS | 2 kho / org đúng — DONE |
+| **H1** | 4B Supplier & PO | 4B.1–4B.4 suppliers, PO → nhập kho | PO → tồn có truy vết — DONE |
+| **H2** | 4C E-invoice | 4C.1–4C.4 provider hooks, DLQ | Stub provider GREEN; live sandbox AMBER |
+| **H3** | 4D Staff mobile | 4D.1–4D.3 PWA/app mỏng inbox+ship | CSKH/kho mobile surface — DONE |
+| **H4** | 4E Accounting export | 4E.1–4E.3 export sổ chi tiết | CSV import aid — DONE |
+| **H5** | 4F CPC hardening | 4F.1–4F.4 regression, DR, CPC checklist, API freeze | CPC engineering READY; live ops AMBER |
+
+**Evidence H:** [plan-h-dod-evidence](./plan-h-dod-evidence.md) — Plan H DONE. CPC engineering path READY with AMBERs for Plan E paid ops, live carrier, Zalo worker/OAuth, real e-invoice provider, and owner-run Meta/staging tasks.
 
 ---
 
@@ -166,8 +168,8 @@ Với mỗi plan E→I:
 DONE P0 docs + P3 Plan E code/docs (paid/live AMBER = owner parallel)
 DONE Plan F 2A→2H
 DONE Plan G 3A→3F
-▶ NOW eng: Execute Plan H → CPC
-THEN Plan I → E100
+DONE Plan H 4A→4F → CPC engineering READY (live ops AMBER)
+▶ NEXT eng: Execute Plan I → E100
 OWNER parallel: §12.1 · Meta Review submit · Pro+PITR drill · always-on
 ```
 

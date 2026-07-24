@@ -7,6 +7,7 @@ import {
   OrgGuard,
   SupabaseMembershipsRepository,
 } from './common/guards/org.guard';
+import { AccountingModule } from './modules/accounting/accounting.module';
 import { AdSpendModule } from './modules/ad-spend/ad-spend.module';
 import { AdminOpsModule } from './modules/admin-ops/admin-ops.module';
 import { AdvisorModule } from './modules/advisor/advisor.module';
@@ -16,6 +17,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { ChannelsModule } from './modules/channels/channels.module';
 import { CodModule } from './modules/cod/cod.module';
 import { ContentCalendarModule } from './modules/content-calendar/content-calendar.module';
+import { EinvoiceModule } from './modules/einvoice/einvoice.module';
 import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
 import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
@@ -26,6 +28,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { PnlModule } from './modules/pnl/pnl.module';
 import { PublicApiModule } from './modules/public-api/public-api.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
+import { SupplierPoModule } from './modules/supplier-po/supplier-po.module';
 import { WarehousesModule } from './modules/warehouses/warehouses.module';
 
 @Module({
@@ -48,6 +51,9 @@ import { WarehousesModule } from './modules/warehouses/warehouses.module';
     ContentCalendarModule,
     PublicApiModule,
     WarehousesModule,
+    SupplierPoModule,
+    EinvoiceModule,
+    AccountingModule,
     FeatureFlagsModule,
     InternalModule,
   ],

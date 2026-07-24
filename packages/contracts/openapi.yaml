@@ -581,6 +581,164 @@ paths:
           description: Invalid quantity, same warehouse, or insufficient stock
         '404':
           description: Warehouse or variant not found for current org
+  /v1/suppliers:
+    get:
+      summary: List suppliers for current org
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSuppliersResponse'
+    post:
+      summary: Create a supplier for current org
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSupplierRequest'
+      responses:
+        '201':
+          description: Supplier created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierEnvelope'
+  /v1/purchase-orders:
+    get:
+      summary: List purchase orders for current org
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PurchaseOrderStatus'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListPurchaseOrdersResponse'
+    post:
+      summary: Create a purchase order with line items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePurchaseOrderRequest'
+      responses:
+        '201':
+          description: Purchase order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrderEnvelope'
+  /v1/purchase-orders/{purchaseOrderId}/status:
+    patch:
+      summary: Mark a purchase order ordered or cancelled
+      parameters:
+        - name: purchaseOrderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePurchaseOrderStatusRequest'
+      responses:
+        '200':
+          description: Purchase order status updated
+  /v1/purchase-orders/{purchaseOrderId}/receive:
+    post:
+      summary: Receive a purchase order into a warehouse and post inbound stock ledger rows
+      parameters:
+        - name: purchaseOrderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceivePurchaseOrderRequest'
+      responses:
+        '200':
+          description: Purchase order received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceivePurchaseOrderResponse'
+  /v1/einvoice/jobs:
+    get:
+      summary: List e-invoice jobs for current org
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/EinvoiceJobStatus'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEinvoiceJobsResponse'
+  /v1/einvoice/issue:
+    post:
+      summary: Issue a stub e-invoice for a done order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueEinvoiceRequest'
+      responses:
+        '201':
+          description: E-invoice job created and attempted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EinvoiceJobEnvelope'
+  /v1/accounting/export:
+    get:
+      summary: Export journal-like accounting CSV lines
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - csv
+      responses:
+        '200':
+          description: CSV with date, account_hint, amount_vnd, ref columns
+          content:
+            text/csv:
+              schema:
+                type: string
   /v1/catalog/products:
     get:
       summary: List products for current org
@@ -1834,6 +1992,358 @@ components:
           maxItems: 2
           items:
             $ref: '#/components/schemas/WarehouseStockMovement'
+    Supplier:
+      type: object
+      required:
+        - id
+        - orgId
+        - name
+        - taxCode
+        - email
+        - phone
+        - addressText
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        taxCode:
+          type:
+            - string
+            - 'null'
+        email:
+          type:
+            - string
+            - 'null'
+        phone:
+          type:
+            - string
+            - 'null'
+        addressText:
+          type:
+            - string
+            - 'null'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    SupplierEnvelope:
+      type: object
+      required:
+        - supplier
+      properties:
+        supplier:
+          $ref: '#/components/schemas/Supplier'
+    ListSuppliersResponse:
+      type: object
+      required:
+        - suppliers
+      properties:
+        suppliers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Supplier'
+    CreateSupplierRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        taxCode:
+          type: string
+          maxLength: 64
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          maxLength: 64
+        addressText:
+          type: string
+          maxLength: 500
+      additionalProperties: false
+    PurchaseOrderStatus:
+      type: string
+      enum:
+        - draft
+        - ordered
+        - received
+        - cancelled
+    PurchaseOrderItem:
+      type: object
+      required:
+        - id
+        - orgId
+        - purchaseOrderId
+        - variantId
+        - qty
+        - unitCostVnd
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        purchaseOrderId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+        qty:
+          type: integer
+          minimum: 1
+        unitCostVnd:
+          type: string
+          pattern: ^[0-9]+$
+        createdAt:
+          type: string
+          format: date-time
+    PurchaseOrder:
+      type: object
+      required:
+        - id
+        - orgId
+        - supplierId
+        - warehouseId
+        - status
+        - note
+        - orderedAt
+        - receivedAt
+        - createdAt
+        - updatedAt
+        - supplier
+        - items
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        supplierId:
+          type: string
+          format: uuid
+        warehouseId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        status:
+          $ref: '#/components/schemas/PurchaseOrderStatus'
+        note:
+          type:
+            - string
+            - 'null'
+        orderedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        receivedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        supplier:
+          oneOf:
+            - $ref: '#/components/schemas/Supplier'
+            - type: 'null'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseOrderItem'
+    PurchaseOrderEnvelope:
+      type: object
+      required:
+        - purchaseOrder
+      properties:
+        purchaseOrder:
+          $ref: '#/components/schemas/PurchaseOrder'
+    ListPurchaseOrdersResponse:
+      type: object
+      required:
+        - purchaseOrders
+      properties:
+        purchaseOrders:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseOrder'
+    CreatePurchaseOrderRequest:
+      type: object
+      required:
+        - supplierId
+        - items
+      properties:
+        supplierId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/PurchaseOrderStatus'
+        note:
+          type: string
+          maxLength: 500
+        items:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            type: object
+            required:
+              - variantId
+              - qty
+              - unitCostVnd
+            properties:
+              variantId:
+                type: string
+                format: uuid
+              qty:
+                type: integer
+                minimum: 1
+              unitCostVnd:
+                type: string
+                pattern: ^[0-9]+$
+      additionalProperties: false
+    UpdatePurchaseOrderStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ordered
+            - cancelled
+      additionalProperties: false
+    ReceivePurchaseOrderRequest:
+      type: object
+      required:
+        - warehouseId
+      properties:
+        warehouseId:
+          type: string
+          format: uuid
+      additionalProperties: false
+    ReceivePurchaseOrderResponse:
+      allOf:
+        - $ref: '#/components/schemas/PurchaseOrderEnvelope'
+        - type: object
+          required:
+            - receive
+          properties:
+            receive:
+              type: object
+              additionalProperties: true
+    EinvoiceJobStatus:
+      type: string
+      enum:
+        - pending
+        - sent
+        - failed
+        - dead
+    EinvoiceJob:
+      type: object
+      required:
+        - id
+        - orgId
+        - orderId
+        - provider
+        - status
+        - attempts
+        - lastError
+        - payload
+        - createdAt
+        - updatedAt
+        - sentAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum:
+            - stub
+        status:
+          $ref: '#/components/schemas/EinvoiceJobStatus'
+        attempts:
+          type: integer
+          minimum: 0
+        lastError:
+          type:
+            - string
+            - 'null'
+        payload:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        sentAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+    EinvoiceJobEnvelope:
+      type: object
+      required:
+        - job
+      properties:
+        job:
+          $ref: '#/components/schemas/EinvoiceJob'
+    ListEinvoiceJobsResponse:
+      type: object
+      required:
+        - jobs
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/EinvoiceJob'
+    IssueEinvoiceRequest:
+      type: object
+      required:
+        - orderId
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum:
+            - stub
+          default: stub
+      additionalProperties: false
     OrderStatus:
       type: string
       enum:

@@ -1,0 +1,10 @@
+{
+  "name": "Omni Commerce Staff",
+  "short_name": "Omni Staff",
+  "description": "Mobile staff surface for inbox and shipping actions.",
+  "start_url": "/m",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "icons": []
+}

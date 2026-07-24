@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-25 — Plan H Phase 4 ERP-lite
+
+- Completed Plan H engineering path for multi-warehouse stock, supplier/PO receiving, stub e-invoice jobs, staff mobile PWA surface, and accounting CSV export.
+- Added `receive_po` inbound stock RPC, `/suppliers`, `/purchase-orders`, `/einvoice`, `/m`, and `/v1/accounting/export`.
+- CPC engineering path is READY with honest AMBERs for Plan E paid ops, live carrier, Zalo worker/OAuth, real e-invoice provider, and owner-run Meta/staging tasks.
+- E100 is not claimed; Plan I remains next.
+
 ## 2026-07-25 — Plan G Phase 3 Intelligence
 
 - Completed Plan G engineering path for ads spend/P&L, attribution, owner advisor, content calendar, public API keys, signed webhook test pings, and hardening docs.

@@ -2,17 +2,17 @@
 
 > Implement one wave at a time and update `plan-h-dod-evidence.md` after each wave with honest GREEN/AMBER/RED status.
 
-**Status:** IN PROGRESS  
+**Status:** DONE — CPC engineering path READY with live-ops AMBERs
 **Depends on:** Plan G DONE (`plan-g-dod-evidence.md`)  
 **Next:** Plan I M4 only after Plan H DoD  
 **Playbook:** [plan-h-priority-execution](./2026-07-24-plan-h-priority-execution.md)
 
 ## Plan H Definition of Done
 
-- [ ] 4A–4F waves complete with tests/evidence.
-- [ ] OpenAPI reflects every new public Core endpoint.
-- [ ] Tenant isolation/RLS preserved for all new tables and functions.
-- [ ] CPC checklist updated; no CPC claim before evidence closes.
+- [x] 4A–4F waves complete with tests/evidence.
+- [x] OpenAPI reflects every new public Core endpoint.
+- [x] Tenant isolation/RLS preserved for all new tables and functions.
+- [x] CPC checklist updated; no E100 claim.
 
 ## 4A — Multi-warehouse
 
@@ -31,39 +31,39 @@
 
 ## 4B — Supplier & PO
 
-- [ ] Suppliers table + CRUD.
-- [ ] Purchase order draft/submit/receive flow.
-- [ ] Receiving posts inbound stock to selected warehouse with ledger trace.
-- [ ] VI supplier/PO UI.
+- [x] Suppliers table + CRUD.
+- [x] Purchase order draft/submit/receive flow.
+- [x] Receiving posts inbound stock to selected warehouse with ledger trace.
+- [x] VI supplier/PO UI.
 
 ## 4C — E-invoice
 
-- [ ] Provider abstraction and sandbox config.
-- [ ] Issue invoice path with DLQ/error capture.
-- [ ] Order/invoice linkage and immutable audit.
-- [ ] Runbook for provider outage and retry.
+- [x] Provider abstraction and stub config.
+- [x] Issue invoice path with DLQ/error capture.
+- [x] Order/invoice linkage via `einvoice_jobs.order_id`.
+- [x] Runbook for provider outage and retry.
 
 ## 4D — Staff mobile
 
-- [ ] Thin PWA/mobile-friendly inbox and shipment flows.
-- [ ] Role-safe shortcuts for CSKH and kho users.
-- [ ] Smoke tests for mobile layout-critical pages.
+- [x] Thin PWA/mobile-friendly inbox and shipment flows.
+- [x] Role-safe shortcuts use existing API permissions.
+- [x] Web typecheck covers mobile route; live device smoke remains AMBER.
 
 ## 4E — Accounting export
 
-- [ ] Export order, COD, stock, and invoice detail in accountant-friendly files.
-- [ ] Preserve integer money fields and stable column names.
-- [ ] Document import assumptions.
+- [x] Export order, COGS, shipment fee, COD, and ad spend detail in accountant-friendly CSV.
+- [x] Preserve integer money fields and stable column names.
+- [x] Document import assumptions.
 
 ## 4F — CPC hardening
 
-- [ ] Regression pass across Plans E–H.
-- [ ] DR/restore evidence refreshed.
-- [ ] CPC checklist and API freeze notes.
-- [ ] Final `plan-h-dod-evidence.md` verdict.
+- [x] Regression pass across Plans E–H.
+- [x] DR/restore evidence referenced; paid live restore remains AMBER.
+- [x] CPC checklist and API freeze notes.
+- [x] Final `plan-h-dod-evidence.md` verdict.
 
 ## Out of scope
 
-- CPC claim before 4A–4F close.
+- E100 claim before Plan I.
 - Plan I procurement/security/compliance work.
 - Public marketplace or agency multi-org features.

@@ -4,6 +4,7 @@ import { type CSSProperties, useCallback, useEffect, useState } from 'react';
 
 import {
   ApiClientError,
+  downloadAccountingExport,
   getPnlBySku,
   getPnlSummary,
   type PnlSku,
@@ -21,6 +22,7 @@ export default function PnlPage() {
   const [summary, setSummary] = useState<PnlSummary | null>(null);
   const [skuRows, setSkuRows] = useState<PnlSku[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accountingExporting, setAccountingExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadReport = useCallback(async () => {
@@ -97,6 +99,24 @@ export default function PnlPage() {
     downloadCsv(`pnl-${range.from}-${range.to}.csv`, rows);
   }
 
+  async function handleAccountingExport() {
+    setAccountingExporting(true);
+    setError(null);
+    try {
+      const file = await downloadAccountingExport(range);
+      const url = URL.createObjectURL(file.blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Không thể tải export kế toán.'));
+    } finally {
+      setAccountingExporting(false);
+    }
+  }
+
   return (
     <main>
       <header style={headerStyle}>
@@ -145,6 +165,14 @@ export default function PnlPage() {
             style={secondaryButtonStyle}
           >
             Tải CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleAccountingExport()}
+            disabled={loading || accountingExporting}
+            style={secondaryButtonStyle}
+          >
+            {accountingExporting ? 'Đang tải...' : 'Export kế toán'}
           </button>
         </div>
       </header>

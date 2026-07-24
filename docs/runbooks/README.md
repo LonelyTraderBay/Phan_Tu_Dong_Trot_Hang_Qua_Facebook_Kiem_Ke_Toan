@@ -8,6 +8,7 @@ Runbook vận hành cho nền tảng Omni Commerce.
 - [DB failover](./db-failover.md)
 - [Meta down](./meta-down.md)
 - [PDPA delete/anonymize](./pdpa-delete.md)
+- [Phase 4 ERP-lite](./phase4-erp-lite.md)
 
 ## Go-live / pilot
 

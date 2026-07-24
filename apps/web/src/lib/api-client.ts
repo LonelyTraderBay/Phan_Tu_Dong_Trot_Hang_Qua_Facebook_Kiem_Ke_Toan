@@ -92,6 +92,49 @@ export type WarehouseStock = {
   variant: CatalogVariant | null;
 };
 
+export type Supplier = {
+  id: string;
+  orgId: string;
+  name: string;
+  taxCode: string | null;
+  email: string | null;
+  phone: string | null;
+  addressText: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PurchaseOrderStatus =
+  | 'draft'
+  | 'ordered'
+  | 'received'
+  | 'cancelled';
+
+export type PurchaseOrderItem = {
+  id: string;
+  orgId: string;
+  purchaseOrderId: string;
+  variantId: string;
+  qty: number;
+  unitCostVnd: string;
+  createdAt: string;
+};
+
+export type PurchaseOrder = {
+  id: string;
+  orgId: string;
+  supplierId: string;
+  warehouseId: string | null;
+  status: PurchaseOrderStatus;
+  note: string | null;
+  orderedAt: string | null;
+  receivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  supplier: Supplier | null;
+  items: PurchaseOrderItem[];
+};
+
 export type ProductInput = {
   title: string;
   description?: string | null;
@@ -384,6 +427,22 @@ export type ContentCalendarInput = {
 };
 
 export type OrdersExportFormat = 'csv' | 'xlsx' | 'pdf';
+
+export type EinvoiceJobStatus = 'pending' | 'sent' | 'failed' | 'dead';
+
+export type EinvoiceJob = {
+  id: string;
+  orgId: string;
+  orderId: string;
+  provider: 'stub' | string;
+  status: EinvoiceJobStatus | string;
+  attempts: number;
+  lastError: string | null;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  sentAt: string | null;
+};
 
 export type ApiAuthContext = {
   accessToken: string;
@@ -749,6 +808,79 @@ export async function transferWarehouseStock(input: {
   });
 }
 
+export async function listSuppliers(): Promise<Supplier[]> {
+  const { suppliers } = await apiFetch<{ suppliers: Supplier[] }>('/v1/suppliers');
+  return suppliers;
+}
+
+export async function createSupplier(input: {
+  name: string;
+  taxCode?: string;
+  email?: string;
+  phone?: string;
+  addressText?: string;
+}): Promise<Supplier> {
+  const { supplier } = await apiFetch<{ supplier: Supplier }>('/v1/suppliers', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return supplier;
+}
+
+export async function listPurchaseOrders(
+  status?: PurchaseOrderStatus,
+): Promise<PurchaseOrder[]> {
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  const { purchaseOrders } = await apiFetch<{
+    purchaseOrders: PurchaseOrder[];
+  }>(`/v1/purchase-orders${query}`);
+  return purchaseOrders;
+}
+
+export async function createPurchaseOrder(input: {
+  supplierId: string;
+  warehouseId?: string;
+  status?: PurchaseOrderStatus;
+  note?: string;
+  items: Array<{ variantId: string; qty: number; unitCostVnd: string }>;
+}): Promise<PurchaseOrder> {
+  const { purchaseOrder } = await apiFetch<{ purchaseOrder: PurchaseOrder }>(
+    '/v1/purchase-orders',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+  return purchaseOrder;
+}
+
+export async function updatePurchaseOrderStatus(
+  purchaseOrderId: string,
+  status: 'ordered' | 'cancelled',
+): Promise<PurchaseOrder> {
+  const { purchaseOrder } = await apiFetch<{ purchaseOrder: PurchaseOrder }>(
+    `/v1/purchase-orders/${encodeURIComponent(purchaseOrderId)}/status`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    },
+  );
+  return purchaseOrder;
+}
+
+export async function receivePurchaseOrder(input: {
+  purchaseOrderId: string;
+  warehouseId: string;
+}): Promise<{ purchaseOrder: PurchaseOrder; receive: unknown }> {
+  return apiFetch<{ purchaseOrder: PurchaseOrder; receive: unknown }>(
+    `/v1/purchase-orders/${encodeURIComponent(input.purchaseOrderId)}/receive`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ warehouseId: input.warehouseId }),
+    },
+  );
+}
+
 export async function listOrders(status?: OrderStatus): Promise<Order[]> {
   const query = status ? `?status=${encodeURIComponent(status)}` : '';
   const { orders } = await apiFetch<{ orders: Order[] }>(`/v1/orders${query}`);
@@ -902,6 +1034,21 @@ export async function getPnlBySku(
   return items;
 }
 
+export async function downloadAccountingExport(input: {
+  from?: string;
+  to?: string;
+}): Promise<{ blob: Blob; filename: string }> {
+  const response = await rawApiFetch(
+    `/v1/accounting/export${dateRangeQuery({ ...input, format: 'csv' })}`,
+  );
+  const disposition = response.headers.get('content-disposition');
+  return {
+    blob: await response.blob(),
+    filename:
+      disposition?.match(/filename="([^"]+)"/i)?.[1] ?? 'accounting.csv',
+  };
+}
+
 export async function importAdSpendCsv(csv: string): Promise<{
   importedCount: number;
   adSpend: AdSpendRecord[];
@@ -1017,6 +1164,22 @@ export async function deleteContentCalendarItem(
     { method: 'DELETE' },
   );
   return item;
+}
+
+export async function listEinvoiceJobs(status?: EinvoiceJobStatus): Promise<EinvoiceJob[]> {
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  const { jobs } = await apiFetch<{ jobs: EinvoiceJob[] }>(
+    `/v1/einvoice/jobs${query}`,
+  );
+  return jobs;
+}
+
+export async function issueEinvoice(orderId: string): Promise<EinvoiceJob> {
+  const { job } = await apiFetch<{ job: EinvoiceJob }>('/v1/einvoice/issue', {
+    method: 'POST',
+    body: JSON.stringify({ orderId, provider: 'stub' }),
+  });
+  return job;
 }
 
 export async function getBillingPlan(): Promise<BillingPlan> {
@@ -1139,13 +1302,16 @@ export async function connectZalo(input: {
   );
 }
 
-function dateRangeQuery(input: { from?: string; to?: string }) {
+function dateRangeQuery(input: { from?: string; to?: string; format?: string }) {
   const params = new URLSearchParams();
   if (input.from) {
     params.set('from', input.from);
   }
   if (input.to) {
     params.set('to', input.to);
+  }
+  if (input.format) {
+    params.set('format', input.format);
   }
   return params.size > 0 ? `?${params.toString()}` : '';
 }

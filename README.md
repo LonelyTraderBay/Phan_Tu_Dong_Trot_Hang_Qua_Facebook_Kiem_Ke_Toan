@@ -116,3 +116,23 @@ npx inngest-cli@latest dev -u http://localhost:3001/api/inngest
 ```
 
 Then probe API `/health` and `/ready`, AI `/health`, web shell, `GET /internal/v1/ai/health` with `X-Service-Key`, and insert a `platform.noop` outbox row to confirm Inngest receives it.
+
+## Meta webhook (local)
+
+1. Chạy api: `pnpm --filter @omni/api dev`
+2. Tunnel: `cloudflared tunnel --url http://127.0.0.1:3001` (hoặc ngrok)
+3. Meta Webhook Callback URL: `https://<tunnel>/v1/webhooks/meta`
+4. Verify token = `META_VERIFY_TOKEN`
+
+OAuth redirect (Facebook Login) dùng web app, không qua tunnel API:
+
+- `META_REDIRECT_URI=http://127.0.0.1:3000/settings/channels/callback`
+- Trong Meta App → Facebook Login → Valid OAuth Redirect URIs: cùng giá trị trên.
+
+Chạy Inngest dev khi test luồng webhook → persist:
+
+```powershell
+npx inngest-cli@latest dev -u http://localhost:3001/api/inngest
+```
+
+Xem thêm runbook: [docs/runbooks/meta-down.md](./docs/runbooks/meta-down.md).

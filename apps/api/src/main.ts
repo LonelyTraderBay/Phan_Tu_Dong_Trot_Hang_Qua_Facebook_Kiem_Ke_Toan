@@ -8,6 +8,7 @@ import { createRedactingLogger } from "./common/logging/redacting-logger";
 import { idempotencyMiddleware } from "./common/middleware/idempotency.middleware";
 import { requestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { securityHeadersMiddleware } from "./common/middleware/security-headers.middleware";
+import { traceparentMiddleware } from "./common/middleware/traceparent.middleware";
 import { loadEnv } from "./config/env";
 
 async function bootstrap() {
@@ -18,6 +19,7 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
   app.use(requestIdMiddleware);
+  app.use(traceparentMiddleware);
   app.use(securityHeadersMiddleware);
   app.use(idempotencyMiddleware);
   app.useGlobalFilters(new ProblemDetailsFilter());

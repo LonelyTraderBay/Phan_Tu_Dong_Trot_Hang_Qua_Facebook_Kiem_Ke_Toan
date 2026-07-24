@@ -36,4 +36,23 @@ describe("JwtAuthGuard", () => {
       ),
     ).resolves.toBe(true);
   });
+
+  it("skips internal machine-to-machine endpoints", async () => {
+    const guard = new JwtAuthGuard({
+      auth: {
+        getUser: async () => {
+          throw new Error("JWT lookup should be skipped");
+        },
+      },
+    } as unknown as SupabaseClient);
+
+    await expect(
+      guard.canActivate(
+        mockContext({
+          headers: {},
+          originalUrl: "/internal/v1/ai/health",
+        }),
+      ),
+    ).resolves.toBe(true);
+  });
 });

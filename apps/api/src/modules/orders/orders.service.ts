@@ -48,6 +48,10 @@ type OrderRow = {
   shipping_fee_vnd: number | string;
   total_vnd: number | string;
   idempotency_key: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  click_id: string | null;
   confirmed_at: string | null;
   shipped_at: string | null;
   cancelled_at: string | null;
@@ -123,13 +127,10 @@ type AutoConfirmOrderPayload = OrderPayload & {
 };
 
 type LifecycleRpcName =
-  | 'confirm_order'
-  | 'cancel_order'
-  | 'ship_order'
-  | 'return_order';
+  'confirm_order' | 'cancel_order' | 'ship_order' | 'return_order';
 
 const ORDER_SELECT =
-  'id, org_id, conversation_id, contact_id, status, payment_method, customer_name, phone_e164, address_text, address_json, currency, subtotal_vnd, shipping_fee_vnd, total_vnd, idempotency_key, confirmed_at, shipped_at, cancelled_at, done_at, created_at, updated_at';
+  'id, org_id, conversation_id, contact_id, status, payment_method, customer_name, phone_e164, address_text, address_json, currency, subtotal_vnd, shipping_fee_vnd, total_vnd, idempotency_key, utm_source, utm_medium, utm_campaign, click_id, confirmed_at, shipped_at, cancelled_at, done_at, created_at, updated_at';
 const ITEM_SELECT =
   'id, product_id, variant_id, title_snapshot, sku_snapshot, qty, unit_price_vnd, line_total_vnd, cogs_unit_vnd';
 const ORDER_WITH_ITEMS_SELECT = `${ORDER_SELECT}, items:order_items(${ITEM_SELECT})`;
@@ -459,6 +460,10 @@ export class OrdersService {
       p_address_text: input.body.addressText ?? null,
       p_address_json: input.body.addressJson,
       p_idempotency_key: input.idempotencyKey ?? null,
+      p_utm_source: input.body.utmSource ?? null,
+      p_utm_medium: input.body.utmMedium ?? null,
+      p_utm_campaign: input.body.utmCampaign ?? null,
+      p_click_id: input.body.clickId ?? null,
       p_items: items.map((item) => ({
         product_id: item.productId,
         variant_id: item.variantId,
@@ -490,31 +495,38 @@ export class OrdersService {
     },
     items: VariantSnapshot[],
   ) {
-    const { data, error } = await this.supabase.rpc('create_and_confirm_order', {
-      p_org_id: input.orgId,
-      p_conversation_id: input.body.conversationId ?? null,
-      p_contact_id: input.body.contactId ?? null,
-      p_payment_method: input.body.paymentMethod,
-      p_customer_name: input.body.customerName ?? null,
-      p_phone_e164: input.body.phoneE164 ?? null,
-      p_address_text: input.body.addressText ?? null,
-      p_address_json: input.body.addressJson,
-      p_idempotency_key: input.idempotencyKey,
-      p_items: items.map((item) => ({
-        product_id: item.productId,
-        variant_id: item.variantId,
-        title_snapshot: item.title,
-        sku_snapshot: item.sku,
-        qty: item.qty,
-        unit_price_vnd: item.unitPriceVnd.toString(),
-        line_total_vnd: item.lineTotalVnd.toString(),
-        cogs_unit_vnd: item.cogsUnitVnd.toString(),
-      })),
-      p_method: 'POST',
-      p_path: input.path,
-      p_status_code: 201,
-      p_confirmed_at: new Date().toISOString(),
-    });
+    const { data, error } = await this.supabase.rpc(
+      'create_and_confirm_order',
+      {
+        p_org_id: input.orgId,
+        p_conversation_id: input.body.conversationId ?? null,
+        p_contact_id: input.body.contactId ?? null,
+        p_payment_method: input.body.paymentMethod,
+        p_customer_name: input.body.customerName ?? null,
+        p_phone_e164: input.body.phoneE164 ?? null,
+        p_address_text: input.body.addressText ?? null,
+        p_address_json: input.body.addressJson,
+        p_idempotency_key: input.idempotencyKey,
+        p_utm_source: input.body.utmSource ?? null,
+        p_utm_medium: input.body.utmMedium ?? null,
+        p_utm_campaign: input.body.utmCampaign ?? null,
+        p_click_id: input.body.clickId ?? null,
+        p_items: items.map((item) => ({
+          product_id: item.productId,
+          variant_id: item.variantId,
+          title_snapshot: item.title,
+          sku_snapshot: item.sku,
+          qty: item.qty,
+          unit_price_vnd: item.unitPriceVnd.toString(),
+          line_total_vnd: item.lineTotalVnd.toString(),
+          cogs_unit_vnd: item.cogsUnitVnd.toString(),
+        })),
+        p_method: 'POST',
+        p_path: input.path,
+        p_status_code: 201,
+        p_confirmed_at: new Date().toISOString(),
+      },
+    );
 
     if (error) {
       throwOrdersError(error, 'Could not create and confirm order');
@@ -879,10 +891,7 @@ export class OrdersService {
   }
 }
 
-function mapOrder(
-  row: OrderRow,
-  options: { includeItems?: boolean } = {},
-) {
+function mapOrder(row: OrderRow, options: { includeItems?: boolean } = {}) {
   return {
     id: row.id,
     conversationId: row.conversation_id,
@@ -898,6 +907,10 @@ function mapOrder(
     shippingFeeVnd: row.shipping_fee_vnd?.toString() ?? '0',
     totalVnd: row.total_vnd.toString(),
     idempotencyKey: row.idempotency_key,
+    utmSource: row.utm_source ?? null,
+    utmMedium: row.utm_medium ?? null,
+    utmCampaign: row.utm_campaign ?? null,
+    clickId: row.click_id ?? null,
     confirmedAt: row.confirmed_at,
     shippedAt: row.shipped_at,
     cancelledAt: row.cancelled_at,

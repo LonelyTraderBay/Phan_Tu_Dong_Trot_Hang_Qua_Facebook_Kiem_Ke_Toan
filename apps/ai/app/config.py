@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     service_m2m_key: str = "dev-m2m-key-change-me"
     core_base_url: str = "http://127.0.0.1:3001"
-    ai_model_allowlist: str = "gemini-2.0-flash"
+    ai_model_allowlist: str = "gemini-2.0-flash,advisor-stub"
     ai_relevance_min_similarity: float = Field(default=0.75, ge=0.0, le=1.0)
     gemini_api_key: str | None = None
     openai_api_key: str | None = None

@@ -382,6 +382,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdSpendSummaryResponse'
+  /v1/attribution/summary:
+    get:
+      summary: Summarize order attribution by utm_source for current org
+      description: MVP first-touch-enough report using attribution fields stored on orders at create time. No CPC metric is calculated.
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Attribution source summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttributionSummaryResponse'
+  /v1/advisor/suggest:
+    post:
+      summary: Get advise-only owner suggestions
+      description: Returns human-reviewed suggestions only. This endpoint never posts to Meta, buys ads, or mutates business tables directly.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdvisorSuggestRequest'
+      responses:
+        '200':
+          description: Advisor suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvisorSuggestResponse'
+        '503':
+          description: Advisor disabled by AI kill switch
   /v1/billing/plan:
     get:
       summary: Current billing plan, status, and entitlements for current org
@@ -1523,6 +1564,26 @@ components:
         addressJson:
           type: object
           additionalProperties: true
+        utmSource:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
+        utmMedium:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
+        utmCampaign:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
+        clickId:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
         items:
           type: array
           minItems: 1
@@ -1651,6 +1712,26 @@ components:
           type:
             - string
             - 'null'
+        utmSource:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
+        utmMedium:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
+        utmCampaign:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
+        clickId:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
         confirmedAt:
           type:
             - string
@@ -1931,6 +2012,90 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AdSpendDay'
+    AttributionSourceSummary:
+      type: object
+      required:
+        - utmSource
+        - label
+        - orderCount
+        - revenueVnd
+      properties:
+        utmSource:
+          type:
+            - string
+            - 'null'
+          description: Lower-cased utm_source, or null when the order has no source.
+        label:
+          type: string
+        orderCount:
+          type: integer
+          minimum: 0
+        revenueVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Sum of order total_vnd for the source as a bigint string.
+    AttributionSummaryResponse:
+      type: object
+      required:
+        - totalOrders
+        - totalRevenueVnd
+        - sources
+      properties:
+        totalOrders:
+          type: integer
+          minimum: 0
+        totalRevenueVnd:
+          type: string
+          pattern: '^[0-9]+$'
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttributionSourceSummary'
+    AdvisorSuggestRequest:
+      type: object
+      properties:
+        goal:
+          type: string
+          maxLength: 500
+    AdvisorSuggestResponse:
+      type: object
+      required:
+        - suggestionsText
+        - disclaimer
+        - promptVersion
+        - model
+        - citations
+        - aiRun
+        - entitlement
+      properties:
+        suggestionsText:
+          type: string
+        disclaimer:
+          type: string
+          description: States that advisor is advise-only and human-reviewed.
+        promptVersion:
+          type: string
+        model:
+          type: string
+          description: advisor-stub for Plan G MVP unless a live LLM is proven.
+        citations:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        aiRun:
+          type: object
+          additionalProperties: true
+        entitlement:
+          type: object
+          required:
+            - allowed
+            - note
+          properties:
+            allowed:
+              type: boolean
+            note:
+              type: string
     ShippingProvider:
       type: string
       enum:
@@ -2565,6 +2730,26 @@ components:
           type:
             - string
             - 'null'
+        utmSource:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
+        utmMedium:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
+        utmCampaign:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
+        clickId:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
         items:
           type: array
           minItems: 1

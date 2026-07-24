@@ -74,11 +74,11 @@
 
 ## Wave 3B — Attribution (G1)
 
-- [ ] Store UTM/click ids on contact/order where available
-- [ ] First-touch and last-touch MVP model
-- [ ] Source-of-order report
-- [ ] Privacy review: no unnecessary PII
-- [ ] Tests and OpenAPI updates
+- [x] Store UTM/click ids on contact/order where available
+- [x] First-touch and last-touch MVP model
+- [x] Source-of-order report
+- [x] Privacy review: no unnecessary PII
+- [x] Tests and OpenAPI updates
 
 **DoD 3B:** Owner can see MVP source attribution for orders.
 
@@ -86,12 +86,13 @@
 
 ## Wave 3C — Owner Advisor (G2)
 
-- [ ] Advisor skill/service in `apps/ai` or existing AI boundary
-- [ ] RAG over catalog and sales aggregates
-- [ ] Advise-only: no Meta send, no ad buying, no business-table direct mutation from AI
-- [ ] `ai_runs` logging and advisor eval set
-- [ ] Entitlement gate
-- [ ] VI UI for suggestions and approval notes
+- [x] Advisor skill/service in `apps/ai` or existing AI boundary
+- [x] RAG over catalog and sales aggregates
+- [x] Advise-only: no Meta send, no ad buying, no business-table direct mutation from AI
+- [x] `ai_runs` logging
+- [ ] Advisor eval set beyond stub tests (AMBER: live LLM/RAG not proven)
+- [x] Entitlement gate
+- [x] VI UI for suggestions and approval notes
 
 **DoD 3C:** Grounded advice for what/when to sell; human remains approver.
 

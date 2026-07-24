@@ -67,7 +67,10 @@ function entitlementsMock(input: { autoConfirmAllowed: boolean }) {
 function autoConfirmClient(input: { stockQty: number }) {
   let stockQty = input.stockQty;
   const orders: Array<Record<string, unknown>> = [];
-  const idempotentResponses = new Map<string, ReturnType<typeof orderPayload>>();
+  const idempotentResponses = new Map<
+    string,
+    ReturnType<typeof orderPayload>
+  >();
   const client = {
     rpc: vi.fn(async (fn: string, args: Record<string, unknown>) => {
       expect(fn).toBe('create_and_confirm_order');
@@ -189,12 +192,12 @@ describe('OrdersService lifecycle stock handling', () => {
       }),
     ]);
 
-    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(
-      1,
-    );
-    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(
-      1,
-    );
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === 'rejected'),
+    ).toHaveLength(1);
     expect(stockQty).toBe(0);
     expect(client.rpc).toHaveBeenCalledTimes(2);
     expect(audit.writeAudit).toHaveBeenCalledTimes(1);
@@ -458,7 +461,13 @@ describe('OrdersService auto-confirm create', () => {
     const result = await service.createDraftOrder({
       orgId: ORG_ID,
       actorUserId: USER_ID,
-      body: CREATE_BODY,
+      body: {
+        ...CREATE_BODY,
+        utmSource: 'facebook',
+        utmMedium: 'paid_social',
+        utmCampaign: 'launch',
+        clickId: 'fbclid-1',
+      },
       idempotencyKey: 'create-draft-entitlement-disabled',
       path: '/v1/orders',
     });
@@ -466,7 +475,12 @@ describe('OrdersService auto-confirm create', () => {
     expect(result.order.status).toBe('draft');
     expect(client.rpc).toHaveBeenCalledWith(
       'create_draft_order',
-      expect.any(Object),
+      expect.objectContaining({
+        p_utm_source: 'facebook',
+        p_utm_medium: 'paid_social',
+        p_utm_campaign: 'launch',
+        p_click_id: 'fbclid-1',
+      }),
     );
     expect(audit.writeAudit).not.toHaveBeenCalled();
   });
@@ -586,9 +600,9 @@ describe('OrdersService idempotency', () => {
     releaseRpc?.();
     const results = await inFlight;
 
-    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(
-      1,
-    );
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
     const rejected = results.filter((result) => result.status === 'rejected');
     expect(rejected).toHaveLength(1);
     if (rejected[0].status === 'rejected') {
@@ -682,7 +696,13 @@ describe('OrdersService export', () => {
     expect(file.buffer.length).toBeGreaterThan(0);
     expect(file.contentType).toContain('text/csv');
     expect(headerLine).toBe(EXPORT_HEADERS.join(','));
-    for (const header of ['Mã đơn', 'Địa chỉ', 'Mã SKU', 'Số lượng', 'Tên sản phẩm']) {
+    for (const header of [
+      'Mã đơn',
+      'Địa chỉ',
+      'Mã SKU',
+      'Số lượng',
+      'Tên sản phẩm',
+    ]) {
       expect(headerLine).toContain(header);
     }
     expect(csv).toContain(ORDER_ID);

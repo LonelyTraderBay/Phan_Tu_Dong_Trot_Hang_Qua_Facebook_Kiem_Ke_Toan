@@ -4,19 +4,19 @@ import {
   Injectable,
   InternalServerErrorException,
   Optional,
-} from "@nestjs/common";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { z } from "zod";
+} from '@nestjs/common';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { z } from 'zod';
 
-import { loadEnv } from "../../config/env";
+import { loadEnv } from '../../config/env';
 
-export const AI_RUNS_SUPABASE = Symbol("AI_RUNS_SUPABASE");
+export const AI_RUNS_SUPABASE = Symbol('AI_RUNS_SUPABASE');
 
-export type SupabaseLike = Pick<SupabaseClient, "from">;
+export type SupabaseLike = Pick<SupabaseClient, 'from'>;
 
-const DEFAULT_MODEL_ALLOWLIST = "gemini-2.0-flash";
+const DEFAULT_MODEL_ALLOWLIST = 'gemini-2.0-flash,advisor-stub';
 const AI_RUN_SELECT =
-  "id, org_id, conversation_id, message_id, prompt_version, model, input_tokens, output_tokens, tools_json, citations_json, status, created_at";
+  'id, org_id, conversation_id, message_id, prompt_version, model, input_tokens, output_tokens, tools_json, citations_json, status, created_at';
 
 const TokenCountSchema = z.number().int().min(0).safe();
 const JsonRecordArraySchema = z.array(z.record(z.unknown()));
@@ -81,7 +81,7 @@ export class AiRunsService {
     assertModelAllowed(input.model);
 
     const { data, error } = await this.supabase
-      .from("ai_runs")
+      .from('ai_runs')
       .insert({
         org_id: input.orgId,
         conversation_id: input.conversationId ?? null,
@@ -89,7 +89,10 @@ export class AiRunsService {
         prompt_version: input.promptVersion,
         model: input.model,
         input_tokens:
-          input.inputTokens ?? input.tokens?.input ?? input.tokens?.prompt ?? null,
+          input.inputTokens ??
+          input.tokens?.input ??
+          input.tokens?.prompt ??
+          null,
         output_tokens:
           input.outputTokens ??
           input.tokens?.output ??
@@ -103,7 +106,7 @@ export class AiRunsService {
       .single();
 
     if (error) {
-      throwAiRunError(error, "Could not write AI run");
+      throwAiRunError(error, 'Could not write AI run');
     }
 
     return { aiRun: mapAiRun(data as AiRunRow) };
@@ -114,10 +117,10 @@ export function parseWriteAiRunBody(body: unknown) {
   const parsed = WriteAiRunSchema.safeParse(body);
   if (!parsed.success) {
     throw new BadRequestException({
-      code: "invalid_request",
-      message: "Request body is invalid",
+      code: 'invalid_request',
+      message: 'Request body is invalid',
       issues: parsed.error.issues.map((issue) => ({
-        path: issue.path.join("."),
+        path: issue.path.join('.'),
         message: issue.message,
       })),
     });
@@ -128,14 +131,14 @@ export function parseWriteAiRunBody(body: unknown) {
 
 function assertModelAllowed(model: string) {
   const allowlist = (process.env.AI_MODEL_ALLOWLIST ?? DEFAULT_MODEL_ALLOWLIST)
-    .split(",")
+    .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
 
   if (!allowlist.includes(model)) {
     throw new BadRequestException({
-      code: "ai_model_not_allowed",
-      message: "AI model is not in AI_MODEL_ALLOWLIST",
+      code: 'ai_model_not_allowed',
+      message: 'AI model is not in AI_MODEL_ALLOWLIST',
     });
   }
 }
@@ -159,7 +162,7 @@ function mapAiRun(row: AiRunRow) {
 
 function throwAiRunError(error: SupabaseError, message: string): never {
   throw new InternalServerErrorException({
-    code: "ai_run_write_failed",
+    code: 'ai_run_write_failed',
     message,
   });
 }

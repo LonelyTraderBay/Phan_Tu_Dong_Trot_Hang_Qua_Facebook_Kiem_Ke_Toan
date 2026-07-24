@@ -9,6 +9,8 @@ import {
 } from './common/guards/org.guard';
 import { AdSpendModule } from './modules/ad-spend/ad-spend.module';
 import { AdminOpsModule } from './modules/admin-ops/admin-ops.module';
+import { AdvisorModule } from './modules/advisor/advisor.module';
+import { AttributionModule } from './modules/attribution/attribution.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { ChannelsModule } from './modules/channels/channels.module';
@@ -38,6 +40,8 @@ import { ShippingModule } from './modules/shipping/shipping.module';
     CodModule,
     PnlModule,
     AdSpendModule,
+    AttributionModule,
+    AdvisorModule,
     FeatureFlagsModule,
     InternalModule,
   ],

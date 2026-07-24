@@ -28,6 +28,8 @@ const navItems = [
   { href: '/cod', label: 'COD' },
   { href: '/pnl', label: 'Lãi gộp' },
   { href: '/ads', label: 'Ads' },
+  { href: '/attribution', label: 'Attribution' },
+  { href: '/advisor', label: 'Advisor' },
   { href: '/settings/channels', label: 'Kênh' },
   { href: '/settings/billing', label: 'Thanh toán' },
   { href: '/settings', label: 'Cài đặt' },
@@ -205,7 +207,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             {refreshing ? 'Đang tải...' : 'Tải tổ chức'}
           </button>
-          <button type="button" onClick={handleSignOut} style={dangerButtonStyle}>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            style={dangerButtonStyle}
+          >
             Đăng xuất
           </button>
         </div>

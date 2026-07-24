@@ -93,12 +93,7 @@ export type VariantInput = {
 };
 
 export type OrderStatus =
-  | 'draft'
-  | 'confirmed'
-  | 'shipped'
-  | 'done'
-  | 'cancelled'
-  | 'returned';
+  'draft' | 'confirmed' | 'shipped' | 'done' | 'cancelled' | 'returned';
 
 export type Order = {
   id: string;
@@ -115,6 +110,10 @@ export type Order = {
   shippingFeeVnd?: string;
   totalVnd: string;
   idempotencyKey: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  clickId: string | null;
   confirmedAt: string | null;
   shippedAt: string | null;
   cancelledAt: string | null;
@@ -314,6 +313,31 @@ export type AdSpendSummary = {
   days: AdSpendDay[];
 };
 
+export type AttributionSourceSummary = {
+  utmSource: string | null;
+  label: string;
+  orderCount: number;
+  revenueVnd: string;
+};
+
+export type AttributionSummary = {
+  totalOrders: number;
+  totalRevenueVnd: string;
+  sources: AttributionSourceSummary[];
+};
+
+export type AdvisorSuggestion = {
+  suggestionsText: string;
+  disclaimer: string;
+  promptVersion: string;
+  model: string;
+  citations: Array<Record<string, unknown>>;
+  entitlement: {
+    allowed: boolean;
+    note: string;
+  };
+};
+
 export type OrdersExportFormat = 'csv' | 'xlsx' | 'pdf';
 
 export type ApiAuthContext = {
@@ -387,10 +411,7 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const accessToken = options.accessToken ?? getAccessToken();
   if (!accessToken) {
-    throw new ApiClientError(
-      'missing_auth',
-      'Thiếu phiên đăng nhập.',
-    );
+    throw new ApiClientError('missing_auth', 'Thiếu phiên đăng nhập.');
   }
 
   const requireOrg = options.requireOrg ?? true;
@@ -512,7 +533,9 @@ export async function updateProduct(
   return product;
 }
 
-export async function deleteProduct(productId: string): Promise<CatalogProduct> {
+export async function deleteProduct(
+  productId: string,
+): Promise<CatalogProduct> {
   const { product } = await apiFetch<{ product: CatalogProduct }>(
     `/v1/catalog/products/${encodeURIComponent(productId)}`,
     { method: 'DELETE' },
@@ -759,17 +782,21 @@ export async function reconcileCodBatch(orderIds?: string[]) {
   );
 }
 
-export async function getPnlSummary(input: {
-  from?: string;
-  to?: string;
-} = {}): Promise<PnlSummary> {
+export async function getPnlSummary(
+  input: {
+    from?: string;
+    to?: string;
+  } = {},
+): Promise<PnlSummary> {
   return apiFetch<PnlSummary>(`/v1/pnl/summary${dateRangeQuery(input)}`);
 }
 
-export async function getPnlBySku(input: {
-  from?: string;
-  to?: string;
-} = {}): Promise<PnlSku[]> {
+export async function getPnlBySku(
+  input: {
+    from?: string;
+    to?: string;
+  } = {},
+): Promise<PnlSku[]> {
   const { items } = await apiFetch<{ items: PnlSku[] }>(
     `/v1/pnl/by-sku${dateRangeQuery(input)}`,
   );
@@ -789,11 +816,13 @@ export async function importAdSpendCsv(csv: string): Promise<{
   );
 }
 
-export async function listAdSpend(input: {
-  from?: string;
-  to?: string;
-  limit?: number;
-} = {}): Promise<AdSpendRecord[]> {
+export async function listAdSpend(
+  input: {
+    from?: string;
+    to?: string;
+    limit?: number;
+  } = {},
+): Promise<AdSpendRecord[]> {
   const params = new URLSearchParams();
   if (input.from) {
     params.set('from', input.from);
@@ -811,11 +840,37 @@ export async function listAdSpend(input: {
   return adSpend;
 }
 
-export async function getAdSpendSummary(input: {
-  from?: string;
-  to?: string;
-} = {}): Promise<AdSpendSummary> {
-  return apiFetch<AdSpendSummary>(`/v1/ad-spend/summary${dateRangeQuery(input)}`);
+export async function getAdSpendSummary(
+  input: {
+    from?: string;
+    to?: string;
+  } = {},
+): Promise<AdSpendSummary> {
+  return apiFetch<AdSpendSummary>(
+    `/v1/ad-spend/summary${dateRangeQuery(input)}`,
+  );
+}
+
+export async function getAttributionSummary(
+  input: {
+    from?: string;
+    to?: string;
+  } = {},
+): Promise<AttributionSummary> {
+  return apiFetch<AttributionSummary>(
+    `/v1/attribution/summary${dateRangeQuery(input)}`,
+  );
+}
+
+export async function getAdvisorSuggestion(
+  input: {
+    goal?: string;
+  } = {},
+): Promise<AdvisorSuggestion> {
+  return apiFetch<AdvisorSuggestion>('/v1/advisor/suggest', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export async function getBillingPlan(): Promise<BillingPlan> {
@@ -867,10 +922,14 @@ export async function takeoverInboxConversation(
 export async function listOrganizations(
   accessToken?: string,
 ): Promise<OrganizationMembership[]> {
-  return apiFetch<OrganizationMembership[]>('/v1/orgs', {}, {
-    accessToken,
-    requireOrg: false,
-  });
+  return apiFetch<OrganizationMembership[]>(
+    '/v1/orgs',
+    {},
+    {
+      accessToken,
+      requireOrg: false,
+    },
+  );
 }
 
 export function mapOrganizationMemberships(
@@ -924,11 +983,14 @@ export async function connectZalo(input: {
   accessToken: string;
   displayName?: string;
 }): Promise<{ connection: ChannelConnection }> {
-  return apiFetch<{ connection: ChannelConnection }>('/v1/channels/zalo/connect', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+  return apiFetch<{ connection: ChannelConnection }>(
+    '/v1/channels/zalo/connect',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 function dateRangeQuery(input: { from?: string; to?: string }) {
@@ -942,7 +1004,10 @@ function dateRangeQuery(input: { from?: string; to?: string }) {
   return params.size > 0 ? `?${params.toString()}` : '';
 }
 
-async function rawApiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+async function rawApiFetch(
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
   const accessToken = getAccessToken();
   const orgId = getActiveOrgId();
   if (!accessToken || !orgId) {

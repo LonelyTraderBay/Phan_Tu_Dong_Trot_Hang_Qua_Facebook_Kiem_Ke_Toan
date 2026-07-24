@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const JsonObjectSchema = z.record(z.unknown());
 const PaymentMethodSchema = z.enum(['cod', 'bank_transfer', 'other']);
+const AttributionTextSchema = z.string().trim().min(1).max(512);
 export const OrderStatusSchema = z.enum([
   'draft',
   'confirmed',
@@ -23,6 +24,10 @@ export const CreateDraftOrderBodySchema = z.object({
   phoneE164: PhoneE164Schema.nullable().optional(),
   addressText: z.string().trim().min(1).max(2_000).nullable().optional(),
   addressJson: JsonObjectSchema.default({}),
+  utmSource: AttributionTextSchema.nullable().optional(),
+  utmMedium: AttributionTextSchema.nullable().optional(),
+  utmCampaign: AttributionTextSchema.nullable().optional(),
+  clickId: AttributionTextSchema.nullable().optional(),
   items: z
     .array(
       z.object({

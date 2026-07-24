@@ -5,27 +5,25 @@ import {
   InternalServerErrorException,
   NotFoundException,
   Optional,
-} from "@nestjs/common";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { z } from "zod";
+} from '@nestjs/common';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { z } from 'zod';
 
-import {
-  DEFAULT_AI_DRAFT_MAX_AMOUNT_VND,
-  loadEnv,
-} from "../../config/env";
+import { DEFAULT_AI_DRAFT_MAX_AMOUNT_VND, loadEnv } from '../../config/env';
 
-export const AI_TOOLS_SUPABASE = Symbol("AI_TOOLS_SUPABASE");
+export const AI_TOOLS_SUPABASE = Symbol('AI_TOOLS_SUPABASE');
 
-export type SupabaseLike = Pick<SupabaseClient, "from" | "rpc">;
+export type SupabaseLike = Pick<SupabaseClient, 'from' | 'rpc'>;
 
 const PRODUCT_SELECT =
-  "id, org_id, title, description, status, attrs_json, created_at, updated_at, deleted_at";
+  'id, org_id, title, description, status, attrs_json, created_at, updated_at, deleted_at';
 const VARIANT_SELECT =
-  "id, org_id, product_id, sku, title, price_vnd, stock_qty, attrs_json, created_at, updated_at";
+  'id, org_id, product_id, sku, title, price_vnd, stock_qty, attrs_json, created_at, updated_at';
 const PRODUCT_WITH_VARIANTS_SELECT = `${PRODUCT_SELECT}, variants:product_variants(${VARIANT_SELECT})`;
 
 const JsonObjectSchema = z.record(z.unknown());
-const PaymentMethodSchema = z.enum(["cod", "bank_transfer", "other"]);
+const PaymentMethodSchema = z.enum(['cod', 'bank_transfer', 'other']);
+const AttributionTextSchema = z.string().trim().min(1).max(512);
 
 export const GetProductToolSchema = z.object({
   orgId: z.string().uuid(),
@@ -36,12 +34,16 @@ export const CreateDraftOrderToolSchema = z.object({
   orgId: z.string().uuid(),
   conversationId: z.string().uuid().nullable().optional(),
   contactId: z.string().uuid().nullable().optional(),
-  paymentMethod: PaymentMethodSchema.default("cod"),
+  paymentMethod: PaymentMethodSchema.default('cod'),
   customerName: z.string().trim().min(1).max(256).nullable().optional(),
   phoneE164: z.string().trim().min(1).max(32).nullable().optional(),
   addressText: z.string().trim().min(1).max(2_000).nullable().optional(),
   addressJson: JsonObjectSchema.default({}),
   idempotencyKey: z.string().trim().min(1).max(128).nullable().optional(),
+  utmSource: AttributionTextSchema.nullable().optional(),
+  utmMedium: AttributionTextSchema.nullable().optional(),
+  utmCampaign: AttributionTextSchema.nullable().optional(),
+  clickId: AttributionTextSchema.nullable().optional(),
   items: z
     .array(
       z.object({
@@ -125,15 +127,15 @@ export class AiToolsService {
 
   async getProduct(input: GetProductToolInput) {
     const { data, error } = await this.supabase
-      .from("products")
+      .from('products')
       .select(PRODUCT_WITH_VARIANTS_SELECT)
-      .eq("id", input.productId)
-      .eq("org_id", input.orgId)
-      .is("deleted_at", null)
+      .eq('id', input.productId)
+      .eq('org_id', input.orgId)
+      .is('deleted_at', null)
       .maybeSingle();
 
     if (error) {
-      throwAiToolsError(error, "Could not get product");
+      throwAiToolsError(error, 'Could not get product');
     }
     if (!data) {
       throwProductNotFound();
@@ -150,17 +152,21 @@ export class AiToolsService {
 
     if (subtotal > draftMaxAmount) {
       throw new BadRequestException({
-        code: "ai_draft_amount_exceeded",
-        message: "Draft order total exceeds the AI draft maximum",
+        code: 'ai_draft_amount_exceeded',
+        message: 'Draft order total exceeds the AI draft maximum',
         totalVnd: subtotal.toString(),
         maxVnd: draftMaxAmount.toString(),
       });
     }
 
-    await this.verifyOptionalOwner("conversations", input.orgId, input.conversationId);
-    await this.verifyOptionalOwner("contacts", input.orgId, input.contactId);
+    await this.verifyOptionalOwner(
+      'conversations',
+      input.orgId,
+      input.conversationId,
+    );
+    await this.verifyOptionalOwner('contacts', input.orgId, input.contactId);
 
-    const { data, error } = await this.supabase.rpc("create_draft_order", {
+    const { data, error } = await this.supabase.rpc('create_draft_order', {
       p_org_id: input.orgId,
       p_conversation_id: input.conversationId ?? null,
       p_contact_id: input.contactId ?? null,
@@ -170,6 +176,10 @@ export class AiToolsService {
       p_address_text: input.addressText ?? null,
       p_address_json: input.addressJson,
       p_idempotency_key: input.idempotencyKey ?? null,
+      p_utm_source: input.utmSource ?? null,
+      p_utm_medium: input.utmMedium ?? null,
+      p_utm_campaign: input.utmCampaign ?? null,
+      p_click_id: input.clickId ?? null,
       p_items: items.map((item) => ({
         product_id: item.productId,
         variant_id: item.variantId,
@@ -182,7 +192,7 @@ export class AiToolsService {
     });
 
     if (error) {
-      throwAiToolsError(error, "Could not create draft order");
+      throwAiToolsError(error, 'Could not create draft order');
     }
 
     return data as DraftOrderRpcResponse;
@@ -190,18 +200,18 @@ export class AiToolsService {
 
   private async getOrgSettings(orgId: string) {
     const { data, error } = await this.supabase
-      .from("organizations")
-      .select("id, settings_json")
-      .eq("id", orgId)
+      .from('organizations')
+      .select('id, settings_json')
+      .eq('id', orgId)
       .maybeSingle();
 
     if (error) {
-      throwAiToolsError(error, "Could not read organization settings");
+      throwAiToolsError(error, 'Could not read organization settings');
     }
     if (!data) {
       throw new NotFoundException({
-        code: "organization_not_found",
-        message: "Organization was not found",
+        code: 'organization_not_found',
+        message: 'Organization was not found',
       });
     }
 
@@ -210,7 +220,7 @@ export class AiToolsService {
 
   private async resolveOrderItems(
     orgId: string,
-    items: CreateDraftOrderToolInput["items"],
+    items: CreateDraftOrderToolInput['items'],
   ) {
     const snapshots: VariantSnapshot[] = [];
     const verifiedProducts = new Set<string>();
@@ -240,19 +250,19 @@ export class AiToolsService {
 
   private async getVariant(orgId: string, variantId: string) {
     const { data, error } = await this.supabase
-      .from("product_variants")
+      .from('product_variants')
       .select(VARIANT_SELECT)
-      .eq("id", variantId)
-      .eq("org_id", orgId)
+      .eq('id', variantId)
+      .eq('org_id', orgId)
       .maybeSingle();
 
     if (error) {
-      throwAiToolsError(error, "Could not read product variant");
+      throwAiToolsError(error, 'Could not read product variant');
     }
     if (!data) {
       throw new NotFoundException({
-        code: "product_variant_not_found",
-        message: "Product variant was not found",
+        code: 'product_variant_not_found',
+        message: 'Product variant was not found',
       });
     }
 
@@ -261,16 +271,16 @@ export class AiToolsService {
 
   private async verifyActiveProduct(orgId: string, productId: string) {
     const { data, error } = await this.supabase
-      .from("products")
-      .select("id")
-      .eq("id", productId)
-      .eq("org_id", orgId)
-      .eq("status", "active")
-      .is("deleted_at", null)
+      .from('products')
+      .select('id')
+      .eq('id', productId)
+      .eq('org_id', orgId)
+      .eq('status', 'active')
+      .is('deleted_at', null)
       .maybeSingle();
 
     if (error) {
-      throwAiToolsError(error, "Could not verify product");
+      throwAiToolsError(error, 'Could not verify product');
     }
     if (!data) {
       throwProductNotFound();
@@ -278,7 +288,7 @@ export class AiToolsService {
   }
 
   private async verifyOptionalOwner(
-    table: "contacts" | "conversations",
+    table: 'contacts' | 'conversations',
     orgId: string,
     id: string | null | undefined,
   ) {
@@ -288,9 +298,9 @@ export class AiToolsService {
 
     const { data, error } = await this.supabase
       .from(table)
-      .select("id")
-      .eq("id", id)
-      .eq("org_id", orgId)
+      .select('id')
+      .eq('id', id)
+      .eq('org_id', orgId)
       .maybeSingle();
 
     if (error) {
@@ -320,10 +330,10 @@ function parseBody<TSchema extends z.ZodTypeAny>(
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     throw new BadRequestException({
-      code: "invalid_request",
-      message: "Request body is invalid",
+      code: 'invalid_request',
+      message: 'Request body is invalid',
       issues: parsed.error.issues.map((issue) => ({
-        path: issue.path.join("."),
+        path: issue.path.join('.'),
         message: issue.message,
       })),
     });
@@ -358,26 +368,26 @@ function mapProduct(row: ProductRow) {
 function draftMaxAmountForOrg(settings: JsonObject) {
   const override = settings.aiDraftMaxAmountVnd;
   if (override !== undefined && override !== null) {
-    return parseMaxAmount(override, "organization aiDraftMaxAmountVnd");
+    return parseMaxAmount(override, 'organization aiDraftMaxAmountVnd');
   }
 
   return parseMaxAmount(
     process.env.DEFAULT_AI_DRAFT_MAX_AMOUNT_VND ??
       DEFAULT_AI_DRAFT_MAX_AMOUNT_VND,
-    "DEFAULT_AI_DRAFT_MAX_AMOUNT_VND",
+    'DEFAULT_AI_DRAFT_MAX_AMOUNT_VND',
   );
 }
 
 function parseMaxAmount(value: unknown, source: string) {
-  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) {
     return BigInt(value);
   }
-  if (typeof value === "string" && /^\d+$/.test(value)) {
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
     return BigInt(value);
   }
 
   throw new InternalServerErrorException({
-    code: "invalid_ai_draft_max_config",
+    code: 'invalid_ai_draft_max_config',
     message: `${source} must be a non-negative integer VND amount`,
   });
 }
@@ -387,11 +397,11 @@ function sumLineTotals(items: VariantSnapshot[]) {
 }
 
 function toBigintVnd(value: string | number) {
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     if (!Number.isSafeInteger(value) || value < 0) {
       throw new InternalServerErrorException({
-        code: "invalid_catalog_price",
-        message: "Catalog price must be a non-negative integer VND amount",
+        code: 'invalid_catalog_price',
+        message: 'Catalog price must be a non-negative integer VND amount',
       });
     }
     return BigInt(value);
@@ -399,8 +409,8 @@ function toBigintVnd(value: string | number) {
 
   if (!/^\d+$/.test(value)) {
     throw new InternalServerErrorException({
-      code: "invalid_catalog_price",
-      message: "Catalog price must be a non-negative integer VND amount",
+      code: 'invalid_catalog_price',
+      message: 'Catalog price must be a non-negative integer VND amount',
     });
   }
   return BigInt(value);
@@ -408,21 +418,21 @@ function toBigintVnd(value: string | number) {
 
 function throwProductNotFound(): never {
   throw new NotFoundException({
-    code: "product_not_found",
-    message: "Product was not found",
+    code: 'product_not_found',
+    message: 'Product was not found',
   });
 }
 
 function throwAiToolsError(error: SupabaseError, message: string): never {
-  if (error.code === "23505") {
+  if (error.code === '23505') {
     throw new BadRequestException({
-      code: "ai_tool_conflict",
+      code: 'ai_tool_conflict',
       message: error.message ?? message,
     });
   }
 
   throw new InternalServerErrorException({
-    code: "ai_tool_failed",
+    code: 'ai_tool_failed',
     message,
   });
 }

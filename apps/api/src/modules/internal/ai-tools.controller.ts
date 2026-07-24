@@ -1,6 +1,7 @@
 import { Body, Controller, Post, UseGuards } from "@nestjs/common";
 
 import { ServiceKeyGuard } from "../../common/guards/service-key.guard";
+import { ToolsRateLimitGuard } from "../../common/guards/tools-rate-limit.guard";
 import {
   AiToolsService,
   parseCreateDraftOrderToolBody,
@@ -8,7 +9,7 @@ import {
 } from "./ai-tools.service";
 
 @Controller("internal/v1/tools")
-@UseGuards(ServiceKeyGuard)
+@UseGuards(ServiceKeyGuard, ToolsRateLimitGuard)
 export class AiToolsController {
   constructor(private readonly aiTools: AiToolsService) {}
 

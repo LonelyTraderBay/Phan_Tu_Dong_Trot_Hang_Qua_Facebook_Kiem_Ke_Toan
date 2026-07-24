@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { ToolsRateLimitGuard } from "../../common/guards/tools-rate-limit.guard";
 import { OutboxPublisher } from "../../jobs";
 import { AiTokenUsageService } from "../billing/ai-token-usage.service";
 import { AiRunsService } from "../audit/ai-runs.service";
@@ -23,6 +24,7 @@ import { OutboxController } from "./outbox.controller";
     KnowledgeIngestController,
   ],
   providers: [
+    ToolsRateLimitGuard,
     OutboxPublisher,
     AiProxyService,
     AiRunsService,

@@ -7,6 +7,7 @@ import { AppModule } from "./app.module";
 import { ProblemDetailsFilter } from "./common/filters/problem-details.filter";
 import { createRedactingLogger } from "./common/logging/redacting-logger";
 import { idempotencyMiddleware } from "./common/middleware/idempotency.middleware";
+import { rateLimitMiddleware } from "./common/rate-limit/rate-limit.middleware";
 import { requestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { securityHeadersMiddleware } from "./common/middleware/security-headers.middleware";
 import { traceparentMiddleware } from "./common/middleware/traceparent.middleware";
@@ -21,6 +22,7 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
   app.use(requestIdMiddleware);
+  app.use(rateLimitMiddleware);
   app.use(traceparentMiddleware);
   app.use(securityHeadersMiddleware);
   app.use(idempotencyMiddleware);

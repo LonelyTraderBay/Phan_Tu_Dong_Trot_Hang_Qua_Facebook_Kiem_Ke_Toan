@@ -1,6 +1,9 @@
 import { buildApiHeaders, getActiveOrgId } from './org-context';
-
-const ACCESS_TOKEN_STORAGE_KEY = 'omni.accessToken';
+import {
+  getAccessToken,
+  type OrganizationRole,
+  type StoredOrganization,
+} from './auth-session';
 
 export type ChannelConnection = {
   id: string;
@@ -15,6 +18,35 @@ export type ApiAuthContext = {
   orgId: string;
 };
 
+export type OrganizationMembership = {
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    plan: string;
+    timezone: string;
+    locale: string;
+    suspendedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  membership: {
+    id: string;
+    orgId: string;
+    userId: string;
+    role: OrganizationRole;
+  };
+};
+
+export type MembershipInvite = {
+  id: string;
+  orgId: string;
+  email: string;
+  role: OrganizationRole;
+  expiresAt: string;
+  createdAt: string;
+};
+
 export class ApiClientError extends Error {
   constructor(
     readonly code: string,
@@ -24,14 +56,6 @@ export class ApiClientError extends Error {
     super(message);
     this.name = 'ApiClientError';
   }
-}
-
-export function getAccessToken(): string | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 }
 
 export function getApiBaseUrl(): string {
@@ -52,20 +76,35 @@ export function getApiAuthContext(): ApiAuthContext | null {
 export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
+  options: {
+    requireOrg?: boolean;
+    accessToken?: string;
+  } = {},
 ): Promise<T> {
-  const auth = getApiAuthContext();
-  if (!auth) {
+  const accessToken = options.accessToken ?? getAccessToken();
+  if (!accessToken) {
     throw new ApiClientError(
       'missing_auth',
-      'Thiếu phiên đăng nhập hoặc tổ chức đang chọn.',
+      'Thiếu phiên đăng nhập.',
     );
   }
 
+  const requireOrg = options.requireOrg ?? true;
+  const orgId = getActiveOrgId();
+  if (requireOrg && !orgId) {
+    throw new ApiClientError('missing_auth', 'Thiếu tổ chức đang chọn.');
+  }
+
   const headers = new Headers(init.headers);
-  for (const [key, value] of Object.entries(buildApiHeaders(auth))) {
-    if (!headers.has(key)) {
-      headers.set(key, value);
-    }
+  const defaultHeaders = requireOrg
+    ? buildApiHeaders({ accessToken, orgId: orgId as string })
+    : {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      };
+
+  for (const [key, value] of Object.entries(defaultHeaders)) {
+    headers.set(key, headers.get(key) ?? value);
   }
 
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
@@ -104,6 +143,43 @@ export async function apiFetch<T>(
 
 export async function listChannels(): Promise<ChannelConnection[]> {
   return apiFetch<ChannelConnection[]>('/v1/channels');
+}
+
+export async function listOrganizations(
+  accessToken?: string,
+): Promise<OrganizationMembership[]> {
+  return apiFetch<OrganizationMembership[]>('/v1/orgs', {}, {
+    accessToken,
+    requireOrg: false,
+  });
+}
+
+export function mapOrganizationMemberships(
+  memberships: OrganizationMembership[],
+): StoredOrganization[] {
+  return memberships.map((membership) => ({
+    id: membership.organization.id,
+    name: membership.organization.name,
+    slug: membership.organization.slug,
+    role: membership.membership.role,
+  }));
+}
+
+export async function createInvite(input: {
+  orgId: string;
+  email: string;
+  role: OrganizationRole;
+}): Promise<{ invite: MembershipInvite }> {
+  return apiFetch<{ invite: MembershipInvite }>(
+    `/v1/orgs/${encodeURIComponent(input.orgId)}/invites`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        email: input.email,
+        role: input.role,
+      }),
+    },
+  );
 }
 
 export async function getMetaOAuthUrl(): Promise<{ url: string }> {

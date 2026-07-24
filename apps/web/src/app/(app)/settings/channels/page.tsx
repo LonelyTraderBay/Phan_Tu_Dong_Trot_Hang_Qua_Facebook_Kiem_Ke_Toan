@@ -9,6 +9,7 @@ import {
   listChannels,
   type ChannelConnection,
 } from '../../../../lib/api-client';
+import { SESSION_CHANGED_EVENT } from '../../../../lib/auth-session';
 
 const PROVIDER_LABELS: Record<string, string> = {
   meta_page: 'Facebook Page',
@@ -59,6 +60,20 @@ function ChannelsSettingsContent() {
 
   useEffect(() => {
     void loadChannels();
+  }, [loadChannels]);
+
+  useEffect(() => {
+    function handleSessionChanged() {
+      void loadChannels();
+    }
+
+    window.addEventListener(SESSION_CHANGED_EVENT, handleSessionChanged);
+    window.addEventListener('storage', handleSessionChanged);
+
+    return () => {
+      window.removeEventListener(SESSION_CHANGED_EVENT, handleSessionChanged);
+      window.removeEventListener('storage', handleSessionChanged);
+    };
   }, [loadChannels]);
 
   useEffect(() => {

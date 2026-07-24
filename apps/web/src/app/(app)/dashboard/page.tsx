@@ -10,7 +10,7 @@ export default function DashboardPage() {
         Khu vực ứng dụng sẽ hiển thị dữ liệu theo tổ chức sau khi API nền tảng
         sẵn sàng.
       </p>
-      <p style={{ marginTop: 24 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 24 }}>
         <Link
           href="/settings/channels"
           style={{
@@ -20,9 +20,20 @@ export default function DashboardPage() {
             textDecoration: 'none',
           }}
         >
-          Kết nối kênh →
+          Kết nối kênh
         </Link>
-      </p>
+        <Link
+          href="/settings/invites"
+          style={{
+            color: '#2563eb',
+            fontSize: 16,
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+        >
+          Mời thành viên
+        </Link>
+      </div>
     </main>
   );
 }

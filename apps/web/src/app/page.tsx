@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function HomePage() {
   return (
     <main
@@ -36,6 +38,43 @@ export default function HomePage() {
           Trang giới thiệu đang được dựng nền tảng. Bảng điều khiển nội bộ sẽ
           kết nối API theo ngữ cảnh tổ chức ở các bước tiếp theo.
         </p>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 12,
+            justifyContent: 'center',
+            marginTop: 32,
+          }}
+        >
+          <Link
+            href="/login"
+            style={{
+              background: '#2563eb',
+              borderRadius: 10,
+              color: '#ffffff',
+              fontWeight: 800,
+              padding: '12px 18px',
+              textDecoration: 'none',
+            }}
+          >
+            Đăng nhập
+          </Link>
+          <Link
+            href="/dashboard"
+            style={{
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              borderRadius: 10,
+              color: '#0f172a',
+              fontWeight: 800,
+              padding: '12px 18px',
+              textDecoration: 'none',
+            }}
+          >
+            Vào dashboard
+          </Link>
+        </div>
       </section>
     </main>
   );

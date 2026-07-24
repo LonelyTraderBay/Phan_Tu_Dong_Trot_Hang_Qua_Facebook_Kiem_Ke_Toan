@@ -16,6 +16,7 @@ import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { InboxModule } from './modules/inbox/inbox.module';
 import { InternalModule } from './modules/internal/internal.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrdersModule } from './modules/orders/orders.module';
 
 @Module({
@@ -25,6 +26,7 @@ import { OrdersModule } from './modules/orders/orders.module';
     IdentityModule,
     AdminOpsModule,
     CatalogModule,
+    InventoryModule,
     ChannelsModule,
     InboxModule,
     OrdersModule,

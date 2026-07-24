@@ -33,40 +33,40 @@
 
 ### Task F0.1: Migration `stock_movements` + adjust RPC
 
-- [ ] Table `stock_movements` (`org_id`, `variant_id`, `movement_type`, `qty_delta`, `stock_after`, `order_id` nullable, `reason`, `actor_user_id`, `created_at`)
-- [ ] Types: `confirm` | `cancel_restore` | `adjust` | `inbound` | `outbound` (inbound/outbound alias adjust sign)
-- [ ] RLS: members select; service_role all
-- [ ] `adjust_variant_stock(org, variant, qty_delta, reason, actor, type)` atomic update + ledger
-- [ ] Optional org setting `low_stock_threshold` default 5 on `organizations` or query param
-- [ ] Commit: `feat(db): stock movements ledger and adjust rpc`
+- [x] Table `stock_movements` (`org_id`, `variant_id`, `movement_type`, `qty_delta`, `stock_after`, `order_id` nullable, `reason`, `actor_user_id`, `created_at`)
+- [x] Types: `confirm` | `cancel_restore` | `adjust` | `inbound` | `outbound` (inbound/outbound alias adjust sign)
+- [x] RLS: members select; service_role all
+- [x] `adjust_variant_stock(org, variant, qty_delta, reason, actor, type)` atomic update + ledger
+- [x] Optional org setting `low_stock_threshold` default 5 on `organizations` or query param
+- [x] Commit: `feat(db): stock movements ledger and adjust rpc`
 
 ### Task F0.2: Wire confirm/cancel RPCs to ledger
 
-- [ ] `confirm_order` / `create_and_confirm_order`: after stock decrement insert `confirm` rows (`qty_delta` negative)
-- [ ] `cancel_order`: on restore insert `cancel_restore` rows (positive)
-- [ ] Keep existing race / insufficient_stock behavior
-- [ ] Commit: `feat(db): order stock changes write ledger`
+- [x] `confirm_order` / `create_and_confirm_order`: after stock decrement insert `confirm` rows (`qty_delta` negative)
+- [x] `cancel_order`: on restore insert `cancel_restore` rows (positive)
+- [x] Keep existing race / insufficient_stock behavior
+- [x] Commit: `feat(db): order stock changes write ledger`
 
 ### Task F0.3: Inventory API module
 
-- [ ] `GET /v1/inventory/movements?variantId=&limit=`
-- [ ] `POST /v1/inventory/adjust` `{ variantId, qtyDelta, reason, movementType? }`
-- [ ] `GET /v1/inventory/low-stock?threshold=`
-- [ ] Permissions: read=`catalog.read`, write=`catalog.write`
-- [ ] Route catalog `stockQty` patch through adjust RPC (delta = target − current)
-- [ ] Unit tests: adjust + list + low-stock + reject negative resulting stock
-- [ ] Commit: `feat(api): inventory adjust movements low-stock`
+- [x] `GET /v1/inventory/movements?variantId=&limit=`
+- [x] `POST /v1/inventory/adjust` `{ variantId, qtyDelta, reason, movementType? }`
+- [x] `GET /v1/inventory/low-stock?threshold=`
+- [x] Permissions: read=`catalog.read`, write=`catalog.write`
+- [x] Route catalog `stockQty` patch through adjust RPC (delta = target − current)
+- [x] Unit tests: adjust + list + low-stock + reject negative resulting stock
+- [x] Commit: `feat(api): inventory adjust movements low-stock`
 
 ### Task F0.4: Web VI — low stock + adjust
 
-- [ ] Catalog/variant UI: adjust stock with reason; show recent movements
-- [ ] Dashboard widget or inventory page: low-stock list
-- [ ] Commit: `feat(web): inventory adjust and low stock`
+- [x] Catalog/variant UI: adjust stock with reason; show recent movements
+- [x] Dashboard widget or inventory page: low-stock list
+- [x] Commit: `feat(web): inventory adjust and low stock`
 
 ### Task F0.5: Wave 2A evidence note
 
-- [ ] Update working notes / partial DoD section for 2A in `plan-f-dod-evidence.md` (create stub)
-- [ ] Commit: `docs: plan F wave 2A evidence stub`
+- [x] Update working notes / partial DoD section for 2A in `plan-f-dod-evidence.md` (create stub)
+- [x] Commit: `docs: plan F wave 2A evidence stub`
 
 **DoD 2A:** Mọi đổi kho truy vết; race confirm vẫn đúng; UI adjust + low-stock.
 

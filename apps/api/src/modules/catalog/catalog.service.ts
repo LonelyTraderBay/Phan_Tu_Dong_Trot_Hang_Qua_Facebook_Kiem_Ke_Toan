@@ -13,6 +13,7 @@ import {
   enqueueOutbox,
   type EnqueueOutboxInput,
 } from '../../jobs/outbox.publisher';
+import { InventoryService } from '../inventory/inventory.service';
 import type {
   CreateProductBody,
   CreateVariantBody,
@@ -105,6 +106,7 @@ const PRODUCT_WITH_VARIANTS_SELECT = `${PRODUCT_SELECT}, variants:product_varian
 export class CatalogService {
   private readonly supabase: SupabaseLike;
   private readonly enqueue: OutboxEnqueuer;
+  private readonly inventory: InventoryService;
 
   constructor(
     @Optional()
@@ -113,9 +115,11 @@ export class CatalogService {
     @Optional()
     @Inject(CATALOG_OUTBOX)
     outbox?: OutboxEnqueuer,
+    @Optional() inventory?: InventoryService,
   ) {
     this.supabase = supabase ?? createSupabaseServiceClient();
     this.enqueue = outbox ?? enqueueOutbox;
+    this.inventory = inventory ?? new InventoryService(this.supabase);
   }
 
   async listProducts(orgId: string) {
@@ -285,11 +289,43 @@ export class CatalogService {
     if (body.priceVnd !== undefined) {
       patch.price_vnd = body.priceVnd;
     }
-    if (body.stockQty !== undefined) {
-      patch.stock_qty = body.stockQty;
-    }
     if (body.attrs !== undefined) {
       patch.attrs_json = body.attrs;
+    }
+
+    if (body.stockQty !== undefined) {
+      await this.inventory.setStockQty({
+        orgId,
+        variantId,
+        targetQty: body.stockQty,
+        reason: 'catalog stockQty update',
+      });
+    }
+
+    const hasNonStockPatch =
+      body.sku !== undefined ||
+      body.title !== undefined ||
+      body.priceVnd !== undefined ||
+      body.attrs !== undefined;
+
+    if (!hasNonStockPatch) {
+      const { data, error } = await this.supabase
+        .from('product_variants')
+        .select(VARIANT_SELECT)
+        .eq('id', variantId)
+        .eq('org_id', orgId)
+        .eq('product_id', productId)
+        .maybeSingle();
+
+      if (error) {
+        throwCatalogError(error, 'Could not read product variant');
+      }
+      if (!data) {
+        throwVariantNotFound();
+      }
+
+      await this.enqueueProductReindex(orgId, productId);
+      return { variant: mapVariant(data as VariantRow) };
     }
 
     const { data, error } = await this.supabase

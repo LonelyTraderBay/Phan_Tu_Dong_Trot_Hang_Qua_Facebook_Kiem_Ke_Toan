@@ -23,6 +23,7 @@ const navItems = [
   { href: '/dashboard', label: 'Tổng quan' },
   { href: '/inbox', label: 'Hộp thư' },
   { href: '/catalog', label: 'Sản phẩm' },
+  { href: '/inventory', label: 'Kho' },
   { href: '/orders', label: 'Đơn hàng' },
   { href: '/settings/channels', label: 'Kênh' },
   { href: '/settings', label: 'Cài đặt' },

@@ -5,23 +5,20 @@ import { type CSSProperties, useCallback, useEffect, useState } from 'react';
 
 import {
   ApiClientError,
-  getProduct,
   listChannels,
+  listLowStock,
   listOrders,
-  listProducts,
-  type CatalogProduct,
   type CatalogVariant,
   type ChannelConnection,
   type Order,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 
-const LOW_STOCK_THRESHOLD = 5;
-
 type DashboardState = {
   orders: Order[];
   channels: ChannelConnection[];
-  lowStockVariants: Array<{ product: CatalogProduct; variant: CatalogVariant }>;
+  lowStockVariants: CatalogVariant[];
+  lowStockThreshold: number;
 };
 
 export default function DashboardPage() {
@@ -29,6 +26,7 @@ export default function DashboardPage() {
     orders: [],
     channels: [],
     lowStockVariants: [],
+    lowStockThreshold: 5,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,23 +37,17 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const [orders, products, channels] = await Promise.all([
+      const [orders, channels, lowStock] = await Promise.all([
         listOrders(),
-        listProducts(),
         listChannels(),
+        listLowStock(),
       ]);
-      const productDetails = await Promise.all(
-        products.map((product) => getProduct(product.id)),
-      );
 
       setState({
         orders,
         channels,
-        lowStockVariants: productDetails.flatMap((product) =>
-          (product.variants ?? [])
-            .filter((variant) => variant.stockQty <= LOW_STOCK_THRESHOLD)
-            .map((variant) => ({ product, variant })),
-        ),
+        lowStockVariants: lowStock.variants,
+        lowStockThreshold: lowStock.threshold,
       });
       setLastUpdatedAt(new Date());
     } catch (err) {
@@ -127,7 +119,7 @@ export default function DashboardPage() {
         <MetricCard
           label="Sắp hết hàng"
           value={state.lowStockVariants.length}
-          href="/catalog"
+          href="/inventory"
         />
         <MetricCard
           label="Cần chú ý"
@@ -151,14 +143,14 @@ export default function DashboardPage() {
                 {formatMoney(order.totalVnd)}
               </Link>
             ))}
-            {state.lowStockVariants.slice(0, 5).map(({ product, variant }) => (
+            {state.lowStockVariants.slice(0, 5).map((variant) => (
               <Link
                 key={variant.id}
-                href="/catalog"
+                href="/inventory"
                 style={{ ...itemLinkStyle, color: '#92400e' }}
               >
-                Tồn kho thấp: {product.title} / {variant.title} còn{' '}
-                {variant.stockQty}
+                Tồn kho thấp: {variant.sku} / {variant.title} còn{' '}
+                {variant.stockQty} (ngưỡng {state.lowStockThreshold})
               </Link>
             ))}
             {channelIssues.map((channel) => (

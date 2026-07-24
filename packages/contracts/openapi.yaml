@@ -108,6 +108,68 @@ paths:
       responses:
         '201':
           description: Revoked
+  /v1/inventory/movements:
+    get:
+      summary: List stock movements for current org
+      parameters:
+        - name: variantId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: OK
+  /v1/inventory/low-stock:
+    get:
+      summary: List variants at or below low-stock threshold
+      parameters:
+        - name: threshold
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: OK
+  /v1/inventory/adjust:
+    post:
+      summary: Adjust variant stock and write ledger row
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - variantId
+                - qtyDelta
+              properties:
+                variantId:
+                  type: string
+                  format: uuid
+                qtyDelta:
+                  type: integer
+                reason:
+                  type: string
+                movementType:
+                  type: string
+                  enum:
+                    - adjust
+                    - inbound
+                    - outbound
+      responses:
+        '201':
+          description: Adjusted
+        '200':
+          description: Adjusted
   /v1/catalog/products:
     get:
       summary: List products for current org

@@ -386,6 +386,65 @@ export async function deleteVariant(
   return variant;
 }
 
+export type StockMovement = {
+  id: string;
+  orgId: string;
+  variantId: string;
+  movementType: string;
+  qtyDelta: number;
+  stockAfter: number;
+  orderId: string | null;
+  reason: string | null;
+  actorUserId: string | null;
+  createdAt: string;
+};
+
+export async function listStockMovements(input?: {
+  variantId?: string;
+  limit?: number;
+}): Promise<StockMovement[]> {
+  const params = new URLSearchParams();
+  if (input?.variantId) {
+    params.set('variantId', input.variantId);
+  }
+  if (input?.limit) {
+    params.set('limit', String(input.limit));
+  }
+  const query = params.size > 0 ? `?${params.toString()}` : '';
+  const { movements } = await apiFetch<{ movements: StockMovement[] }>(
+    `/v1/inventory/movements${query}`,
+  );
+  return movements;
+}
+
+export async function listLowStock(threshold?: number): Promise<{
+  threshold: number;
+  variants: CatalogVariant[];
+}> {
+  const query =
+    threshold === undefined
+      ? ''
+      : `?threshold=${encodeURIComponent(String(threshold))}`;
+  return apiFetch<{ threshold: number; variants: CatalogVariant[] }>(
+    `/v1/inventory/low-stock${query}`,
+  );
+}
+
+export async function adjustStock(input: {
+  variantId: string;
+  qtyDelta: number;
+  reason?: string;
+  movementType?: 'adjust' | 'inbound' | 'outbound';
+}): Promise<{ variant: CatalogVariant; movement: StockMovement }> {
+  return apiFetch<{ variant: CatalogVariant; movement: StockMovement }>(
+    '/v1/inventory/adjust',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
 export async function listOrders(status?: OrderStatus): Promise<Order[]> {
   const query = status ? `?status=${encodeURIComponent(status)}` : '';
   const { orders } = await apiFetch<{ orders: Order[] }>(`/v1/orders${query}`);

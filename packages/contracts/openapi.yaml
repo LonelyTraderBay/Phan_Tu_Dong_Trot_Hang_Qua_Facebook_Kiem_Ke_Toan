@@ -84,6 +84,97 @@ paths:
       responses:
         '201':
           description: Revoked
+  /v1/catalog/products:
+    get:
+      summary: List products for current org
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create product with optional variants
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                description:
+                  type:
+                    - string
+                    - 'null'
+                status:
+                  type: string
+                  enum:
+                    - active
+                    - archived
+                attrs:
+                  type: object
+                  additionalProperties: true
+                variants:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ProductVariantWrite'
+      responses:
+        '201':
+          description: Created
+  /v1/catalog/products/{productId}:
+    get:
+      summary: Get product with variants
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: OK
+    patch:
+      summary: Update product
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: Updated
+    delete:
+      summary: Soft-delete product
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: Deleted
+  /v1/catalog/products/{productId}/variants:
+    post:
+      summary: Create product variant
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductVariantWrite'
+      responses:
+        '201':
+          description: Created
+  /v1/catalog/products/{productId}/variants/{variantId}:
+    patch:
+      summary: Update product variant
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+        - $ref: '#/components/parameters/VariantId'
+      responses:
+        '200':
+          description: Updated
+    delete:
+      summary: Delete product variant
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+        - $ref: '#/components/parameters/VariantId'
+      responses:
+        '200':
+          description: Deleted
   /v1/inbox/conversations:
     get:
       summary: List inbox conversations for current org
@@ -185,3 +276,44 @@ paths:
       responses:
         '200':
           description: OK
+components:
+  parameters:
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    VariantId:
+      name: variantId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    ProductVariantWrite:
+      type: object
+      required:
+        - sku
+        - title
+        - priceVnd
+      properties:
+        sku:
+          type: string
+        title:
+          type: string
+        priceVnd:
+          oneOf:
+            - type: string
+              pattern: '^[0-9]+$'
+            - type: integer
+              format: int64
+          description: Whole VND amount; floats are not accepted.
+        stockQty:
+          type: integer
+          minimum: 0
+        attrs:
+          type: object
+          additionalProperties: true

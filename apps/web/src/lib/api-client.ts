@@ -69,6 +69,7 @@ export type CatalogVariant = {
   title: string;
   priceVnd: string;
   stockQty: number;
+  cogsVnd: string;
   attrs: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -87,6 +88,7 @@ export type VariantInput = {
   title: string;
   priceVnd: string;
   stockQty: number;
+  cogsVnd?: string;
   attrs?: Record<string, unknown>;
 };
 
@@ -217,6 +219,32 @@ export type OrderItem = {
   qty: number;
   unitPriceVnd: string;
   lineTotalVnd: string;
+  cogsUnitVnd?: string;
+};
+
+export type PnlDay = {
+  day: string;
+  revenueVnd: string;
+  cogsVnd: string;
+  grossProfitVnd: string;
+  orderCount: number;
+};
+
+export type PnlSummary = {
+  revenueVnd: string;
+  cogsVnd: string;
+  grossProfitVnd: string;
+  orderCount: number;
+  days: PnlDay[];
+};
+
+export type PnlSku = {
+  sku: string;
+  qty: number;
+  revenueVnd: string;
+  cogsVnd: string;
+  grossProfitVnd: string;
+  orderCount: number;
 };
 
 export type OrdersExportFormat = 'csv' | 'xlsx' | 'pdf';
@@ -664,6 +692,23 @@ export async function reconcileCodBatch(orderIds?: string[]) {
   );
 }
 
+export async function getPnlSummary(input: {
+  from?: string;
+  to?: string;
+} = {}): Promise<PnlSummary> {
+  return apiFetch<PnlSummary>(`/v1/pnl/summary${dateRangeQuery(input)}`);
+}
+
+export async function getPnlBySku(input: {
+  from?: string;
+  to?: string;
+} = {}): Promise<PnlSku[]> {
+  const { items } = await apiFetch<{ items: PnlSku[] }>(
+    `/v1/pnl/by-sku${dateRangeQuery(input)}`,
+  );
+  return items;
+}
+
 export async function downloadOrdersExport(input: {
   format: OrdersExportFormat;
   status?: OrderStatus;
@@ -748,6 +793,17 @@ export async function completeMetaOAuth(
       body: JSON.stringify({ code, state }),
     },
   );
+}
+
+function dateRangeQuery(input: { from?: string; to?: string }) {
+  const params = new URLSearchParams();
+  if (input.from) {
+    params.set('from', input.from);
+  }
+  if (input.to) {
+    params.set('to', input.to);
+  }
+  return params.size > 0 ? `?${params.toString()}` : '';
 }
 
 async function rawApiFetch(path: string, init: RequestInit = {}): Promise<Response> {

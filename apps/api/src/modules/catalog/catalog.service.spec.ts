@@ -37,6 +37,7 @@ function variantRow(overrides: Record<string, unknown> = {}) {
     title: 'Black / L',
     price_vnd: '1234567890123',
     stock_qty: 7,
+    cogs_vnd: '456000',
     attrs_json: { size: 'L' },
     created_at: CREATED_AT,
     updated_at: CREATED_AT,
@@ -115,6 +116,7 @@ describe('CatalogService', () => {
             title: 'Black / L',
             priceVnd: '1234567890123',
             stockQty: 7,
+            cogsVnd: '456000',
             attrs: { size: 'L' },
           },
         ],
@@ -136,6 +138,7 @@ describe('CatalogService', () => {
               title: 'Black / L',
               price_vnd: '1234567890123',
               stock_qty: 7,
+              cogs_vnd: '456000',
               attrs_json: { size: 'L' },
             },
           ],
@@ -146,6 +149,7 @@ describe('CatalogService', () => {
       expect.objectContaining({
         id: VARIANT_ID,
         priceVnd: '1234567890123',
+        cogsVnd: '456000',
       }),
     ]);
     expect(enqueue).not.toHaveBeenCalled();

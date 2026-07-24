@@ -46,6 +46,7 @@ type VariantRow = {
   title: string;
   price_vnd: number | string;
   stock_qty: number;
+  cogs_vnd: number | string;
   attrs_json: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -58,7 +59,7 @@ type OrgRow = {
 const MOVEMENT_SELECT =
   'id, org_id, variant_id, movement_type, qty_delta, stock_after, order_id, reason, actor_user_id, created_at';
 const VARIANT_SELECT =
-  'id, org_id, product_id, sku, title, price_vnd, stock_qty, attrs_json, created_at, updated_at';
+  'id, org_id, product_id, sku, title, price_vnd, stock_qty, cogs_vnd, attrs_json, created_at, updated_at';
 
 @Injectable()
 export class InventoryService {
@@ -253,6 +254,7 @@ function mapVariant(row: VariantRow) {
     title: row.title,
     priceVnd: String(row.price_vnd),
     stockQty: row.stock_qty,
+    cogsVnd: row.cogs_vnd?.toString() ?? '0',
     attrs: row.attrs_json ?? {},
     createdAt: row.created_at,
     updatedAt: row.updated_at,

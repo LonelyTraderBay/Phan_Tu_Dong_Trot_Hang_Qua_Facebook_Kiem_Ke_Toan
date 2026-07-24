@@ -19,6 +19,7 @@ import { InboxModule } from './modules/inbox/inbox.module';
 import { InternalModule } from './modules/internal/internal.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { PnlModule } from './modules/pnl/pnl.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
 
 @Module({
@@ -34,6 +35,7 @@ import { ShippingModule } from './modules/shipping/shipping.module';
     OrdersModule,
     ShippingModule,
     CodModule,
+    PnlModule,
     FeatureFlagsModule,
     InternalModule,
   ],

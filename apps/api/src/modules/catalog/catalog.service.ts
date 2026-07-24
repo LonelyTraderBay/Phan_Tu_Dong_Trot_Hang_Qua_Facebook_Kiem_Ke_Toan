@@ -54,6 +54,7 @@ type VariantRow = {
   title: string;
   price_vnd: number | string;
   stock_qty: number;
+  cogs_vnd: number | string;
   attrs_json: JsonObject;
   created_at: string;
   updated_at: string;
@@ -78,6 +79,7 @@ type VariantInsert = {
   title: string;
   price_vnd: string;
   stock_qty: number;
+  cogs_vnd: string;
   attrs_json: JsonObject;
 };
 
@@ -99,7 +101,7 @@ type CreateProductRpcRow = {
 const PRODUCT_SELECT =
   'id, org_id, title, description, status, attrs_json, created_at, updated_at, deleted_at';
 const VARIANT_SELECT =
-  'id, org_id, product_id, sku, title, price_vnd, stock_qty, attrs_json, created_at, updated_at';
+  'id, org_id, product_id, sku, title, price_vnd, stock_qty, cogs_vnd, attrs_json, created_at, updated_at';
 const PRODUCT_WITH_VARIANTS_SELECT = `${PRODUCT_SELECT}, variants:product_variants(${VARIANT_SELECT})`;
 
 @Injectable()
@@ -163,6 +165,7 @@ export class CatalogService {
           title: variant.title,
           price_vnd: variant.priceVnd,
           stock_qty: variant.stockQty,
+          cogs_vnd: variant.cogsVnd,
           attrs_json: variant.attrs,
         })),
       })
@@ -289,6 +292,9 @@ export class CatalogService {
     if (body.priceVnd !== undefined) {
       patch.price_vnd = body.priceVnd;
     }
+    if (body.cogsVnd !== undefined) {
+      patch.cogs_vnd = body.cogsVnd;
+    }
     if (body.attrs !== undefined) {
       patch.attrs_json = body.attrs;
     }
@@ -306,6 +312,7 @@ export class CatalogService {
       body.sku !== undefined ||
       body.title !== undefined ||
       body.priceVnd !== undefined ||
+      body.cogsVnd !== undefined ||
       body.attrs !== undefined;
 
     if (!hasNonStockPatch) {
@@ -386,6 +393,7 @@ export class CatalogService {
           title: variant.title,
           price_vnd: variant.priceVnd,
           stock_qty: variant.stockQty,
+          cogs_vnd: variant.cogsVnd,
           attrs_json: variant.attrs,
         }) satisfies VariantInsert,
     );
@@ -467,6 +475,7 @@ function mapVariant(row: VariantRow) {
     title: row.title,
     priceVnd: row.price_vnd.toString(),
     stockQty: row.stock_qty,
+    cogsVnd: row.cogs_vnd?.toString() ?? '0',
     attrs: row.attrs_json,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

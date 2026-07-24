@@ -10,7 +10,7 @@
 | **2B Carrier** | **GREEN (code)** | Shipping provider interface; encrypted per-org connections; manual + GHN sandbox/mock providers; shipment API + VI order action; export fallback runbook |
 | **2C COD** | **GREEN (code)** | COD expectations/collections/discrepancies; report + reconcile APIs; VI `/cod`; bigint-string VND only |
 | **2D Returns** | **GREEN (code)** | `return_order` RPC; `order_returns`; `return_restock` ledger movement; COD open write-off/discrepancy note; API + VI order action |
-| 2E P&L | Pending | |
+| **2E P&L** | **GREEN (code)** | Variant `cogs_vnd`; order item `cogs_unit_vnd` snapshot; API `/v1/pnl/summary` + `/v1/pnl/by-sku`; VI `/pnl`; CSV download |
 | 2F Channel #2 | Pending | |
 | 2G Billing packaging | Pending | |
 | 2H Hardening | Pending | |
@@ -65,4 +65,17 @@
 | Web VI | GREEN | Orders page shows `Hoàn hàng` for `shipped`/`done` orders |
 | API unit tests | GREEN | `OrdersService` return/restock RPC mock test included in `pnpm --filter api test` |
 
-**Next:** Wave 2E Simple P&L.
+## 2E evidence
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| COGS schema | GREEN | `supabase/migrations/20260727130000_simple_pnl.sql` adds `product_variants.cogs_vnd` and `order_items.cogs_unit_vnd` as non-negative BIGINT VND |
+| COGS snapshot | GREEN | Order RPC payloads and `OrdersService.resolveOrderItems` copy current variant `cogs_vnd` into `order_items.cogs_unit_vnd` |
+| Catalog COGS input | GREEN | `UpdateVariantBodySchema.cogsVnd`; `CatalogService.updateVariant`; web catalog SKU form/table |
+| P&L API | GREEN | `GET /v1/pnl/summary?from=&to=` and `GET /v1/pnl/by-sku?from=&to=` protected by `orders.read` |
+| Gross profit math | GREEN | Revenue/COGS/gross profit computed with `bigint`, returned as VND strings; sold statuses limited to `shipped`/`done` |
+| Web VI + export | GREEN | `/pnl` date filters, day/SKU tables, client-side CSV download; nav `Lãi gộp` |
+| OpenAPI | GREEN | `packages/contracts/openapi.yaml` includes P&L paths and COGS fields |
+| API unit tests | GREEN | `pnpm --filter api test` — 128 passing; `apps/api/src/modules/pnl/pnl.service.spec.ts` covers summary and SKU aggregate math |
+
+**Next:** Wave 2F Channel #2.

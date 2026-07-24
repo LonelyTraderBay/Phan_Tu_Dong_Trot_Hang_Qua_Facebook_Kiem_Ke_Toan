@@ -112,8 +112,8 @@
 
 ## Wave 2E — Simple P&L (F4)
 
-- [ ] COGS inputs; revenue − cost; day/SKU dashboard; export
-- [ ] Commit: `feat: simple pnl`
+- [x] COGS inputs; revenue - cost; day/SKU dashboard; export
+- [x] Commit: `feat: plan F wave 2E simple pnl`
 
 **DoD 2E:** Lãi gộp ngày/SKU.
 

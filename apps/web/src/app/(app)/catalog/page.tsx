@@ -36,6 +36,7 @@ const emptyVariantForm = {
   title: '',
   priceVnd: '',
   stockQty: 0,
+  cogsVnd: '',
 };
 
 export default function CatalogPage() {
@@ -126,6 +127,7 @@ export default function CatalogPage() {
       title: editingVariant.title,
       priceVnd: editingVariant.priceVnd,
       stockQty: editingVariant.stockQty,
+      cogsVnd: editingVariant.cogsVnd ?? '0',
     });
   }, [editingVariant]);
 
@@ -214,9 +216,10 @@ export default function CatalogPage() {
     const sku = variantForm.sku.trim();
     const title = variantForm.title.trim();
     const priceVnd = variantForm.priceVnd.trim();
+    const cogsVnd = variantForm.cogsVnd.trim();
 
-    if (!sku || !title || !/^\d+$/.test(priceVnd)) {
-      setError('Vui lòng nhập SKU, tên phiên bản và giá VND hợp lệ.');
+    if (!sku || !title || !/^\d+$/.test(priceVnd) || (cogsVnd && !/^\d+$/.test(cogsVnd))) {
+      setError('Vui lòng nhập SKU, tên phiên bản, giá và COGS VND hợp lệ.');
       setSavingVariant(false);
       return;
     }
@@ -227,6 +230,7 @@ export default function CatalogPage() {
         title,
         priceVnd,
         stockQty: Number(variantForm.stockQty),
+        cogsVnd: cogsVnd || '0',
         attrs: {},
       };
 
@@ -466,6 +470,21 @@ export default function CatalogPage() {
                     />
                   </label>
                   <label style={labelStyle}>
+                    COGS VND / đơn vị
+                    <input
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={variantForm.cogsVnd}
+                      onChange={(event) =>
+                        setVariantForm((current) => ({
+                          ...current,
+                          cogsVnd: event.target.value,
+                        }))
+                      }
+                      style={inputStyle}
+                    />
+                  </label>
+                  <label style={labelStyle}>
                     Tồn kho
                     <input
                       min={0}
@@ -515,6 +534,7 @@ export default function CatalogPage() {
                         <th style={tableHeaderStyle}>SKU</th>
                         <th style={tableHeaderStyle}>Tên</th>
                         <th style={tableHeaderStyle}>Giá</th>
+                        <th style={tableHeaderStyle}>COGS</th>
                         <th style={tableHeaderStyle}>Tồn</th>
                         <th style={tableHeaderStyle}>Thao tác</th>
                       </tr>
@@ -526,6 +546,9 @@ export default function CatalogPage() {
                           <td style={tableCellStyle}>{variant.title}</td>
                           <td style={tableCellStyle}>
                             {formatMoney(variant.priceVnd)}
+                          </td>
+                          <td style={tableCellStyle}>
+                            {formatMoney(variant.cogsVnd ?? '0')}
                           </td>
                           <td style={tableCellStyle}>{variant.stockQty}</td>
                           <td style={tableCellStyle}>

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const JsonObjectSchema = z.record(z.unknown());
 const StatusSchema = z.enum(['active', 'archived']);
-const PriceVndSchema = z
+const VndAmountSchema = z
   .union([
     z.string().regex(/^\d+$/, 'Expected a whole number of VND'),
     z.number().int().nonnegative().safe(),
@@ -15,8 +15,9 @@ const PriceVndSchema = z
 export const CreateVariantBodySchema = z.object({
   sku: z.string().trim().min(1).max(128),
   title: z.string().trim().min(1).max(256),
-  priceVnd: PriceVndSchema,
+  priceVnd: VndAmountSchema,
   stockQty: z.number().int().min(0).default(0),
+  cogsVnd: VndAmountSchema.default('0'),
   attrs: JsonObjectSchema.default({}),
 });
 
@@ -24,8 +25,9 @@ export const UpdateVariantBodySchema = z
   .object({
     sku: z.string().trim().min(1).max(128).optional(),
     title: z.string().trim().min(1).max(256).optional(),
-    priceVnd: PriceVndSchema.optional(),
+    priceVnd: VndAmountSchema.optional(),
     stockQty: z.number().int().min(0).optional(),
+    cogsVnd: VndAmountSchema.optional(),
     attrs: JsonObjectSchema.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {

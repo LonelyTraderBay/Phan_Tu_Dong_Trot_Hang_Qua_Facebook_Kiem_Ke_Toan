@@ -229,6 +229,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CodReconcileBatchResponse'
+  /v1/pnl/summary:
+    get:
+      summary: Gross profit summary by sold day for shipped/done orders
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            description: Inclusive YYYY-MM-DD or ISO date-time.
+        - name: to
+          in: query
+          schema:
+            type: string
+            description: Inclusive YYYY-MM-DD or ISO date-time.
+      responses:
+        '200':
+          description: P&L summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PnlSummaryResponse'
+  /v1/pnl/by-sku:
+    get:
+      summary: Gross profit by SKU for shipped/done orders
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            description: Inclusive YYYY-MM-DD or ISO date-time.
+        - name: to
+          in: query
+          schema:
+            type: string
+            description: Inclusive YYYY-MM-DD or ISO date-time.
+      responses:
+        '200':
+          description: P&L by SKU
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PnlBySkuResponse'
   /v1/inventory/movements:
     get:
       summary: List stock movements for current org
@@ -1022,6 +1064,13 @@ components:
         stockQty:
           type: integer
           minimum: 0
+        cogsVnd:
+          oneOf:
+            - type: string
+              pattern: '^[0-9]+$'
+            - type: integer
+              format: int64
+          description: Whole per-unit COGS VND amount; floats are not accepted.
         attrs:
           type: object
           additionalProperties: true
@@ -1113,6 +1162,7 @@ components:
         - qty
         - unitPriceVnd
         - lineTotalVnd
+        - cogsUnitVnd
       properties:
         id:
           type: string
@@ -1138,6 +1188,10 @@ components:
           type: string
           pattern: '^[0-9]+$'
           description: Whole VND amount as a bigint string.
+        cogsUnitVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Snapshot per-unit COGS VND as a bigint string.
     Order:
       type: object
       required:
@@ -1266,6 +1320,72 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Order'
+    PnlMoneyAggregate:
+      type: object
+      required:
+        - revenueVnd
+        - cogsVnd
+        - grossProfitVnd
+        - orderCount
+      properties:
+        revenueVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Revenue VND as a bigint string.
+        cogsVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: COGS VND as a bigint string.
+        grossProfitVnd:
+          type: string
+          pattern: '^-?[0-9]+$'
+          description: revenueVnd minus cogsVnd as a bigint string.
+        orderCount:
+          type: integer
+          minimum: 0
+    PnlDailyAggregate:
+      allOf:
+        - $ref: '#/components/schemas/PnlMoneyAggregate'
+        - type: object
+          required:
+            - day
+          properties:
+            day:
+              type: string
+              format: date
+    PnlSummaryResponse:
+      allOf:
+        - $ref: '#/components/schemas/PnlMoneyAggregate'
+        - type: object
+          required:
+            - days
+          properties:
+            days:
+              type: array
+              items:
+                $ref: '#/components/schemas/PnlDailyAggregate'
+    PnlSkuAggregate:
+      allOf:
+        - $ref: '#/components/schemas/PnlMoneyAggregate'
+        - type: object
+          required:
+            - sku
+            - qty
+          properties:
+            sku:
+              type: string
+            qty:
+              type: integer
+              minimum: 0
+    PnlBySkuResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PnlSkuAggregate'
     ShippingProvider:
       type: string
       enum:

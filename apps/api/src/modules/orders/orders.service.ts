@@ -66,6 +66,7 @@ type OrderItemRow = {
   qty: number;
   unit_price_vnd: number | string;
   line_total_vnd: number | string;
+  cogs_unit_vnd: number | string;
 };
 
 type VariantRow = {
@@ -76,6 +77,7 @@ type VariantRow = {
   title: string;
   price_vnd: number | string;
   stock_qty: number;
+  cogs_vnd?: number | string | null;
 };
 
 type OrganizationSettingsRow = {
@@ -91,6 +93,7 @@ type VariantSnapshot = {
   qty: number;
   unitPriceVnd: bigint;
   lineTotalVnd: bigint;
+  cogsUnitVnd: bigint;
 };
 
 type SupabaseError = {
@@ -128,10 +131,10 @@ type LifecycleRpcName =
 const ORDER_SELECT =
   'id, org_id, conversation_id, contact_id, status, payment_method, customer_name, phone_e164, address_text, address_json, currency, subtotal_vnd, shipping_fee_vnd, total_vnd, idempotency_key, confirmed_at, shipped_at, cancelled_at, done_at, created_at, updated_at';
 const ITEM_SELECT =
-  'id, product_id, variant_id, title_snapshot, sku_snapshot, qty, unit_price_vnd, line_total_vnd';
+  'id, product_id, variant_id, title_snapshot, sku_snapshot, qty, unit_price_vnd, line_total_vnd, cogs_unit_vnd';
 const ORDER_WITH_ITEMS_SELECT = `${ORDER_SELECT}, items:order_items(${ITEM_SELECT})`;
 const VARIANT_SELECT =
-  'id, org_id, product_id, sku, title, price_vnd, stock_qty';
+  'id, org_id, product_id, sku, title, price_vnd, stock_qty, cogs_vnd';
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 const IDEMPOTENCY_PENDING_STATUS = 102;
 
@@ -464,6 +467,7 @@ export class OrdersService {
         qty: item.qty,
         unit_price_vnd: item.unitPriceVnd.toString(),
         line_total_vnd: item.lineTotalVnd.toString(),
+        cogs_unit_vnd: item.cogsUnitVnd.toString(),
       })),
     });
 
@@ -504,6 +508,7 @@ export class OrdersService {
         qty: item.qty,
         unit_price_vnd: item.unitPriceVnd.toString(),
         line_total_vnd: item.lineTotalVnd.toString(),
+        cogs_unit_vnd: item.cogsUnitVnd.toString(),
       })),
       p_method: 'POST',
       p_path: input.path,
@@ -631,6 +636,7 @@ export class OrdersService {
       }
 
       const unitPriceVnd = toBigintVnd(variant.price_vnd);
+      const cogsUnitVnd = toBigintVnd(variant.cogs_vnd ?? '0');
       snapshots.push({
         productId: variant.product_id,
         variantId: variant.id,
@@ -639,6 +645,7 @@ export class OrdersService {
         qty: item.qty,
         unitPriceVnd,
         lineTotalVnd: unitPriceVnd * BigInt(item.qty),
+        cogsUnitVnd,
       });
     }
 
@@ -913,6 +920,7 @@ function mapOrderItem(row: OrderItemRow) {
     qty: row.qty,
     unitPriceVnd: row.unit_price_vnd.toString(),
     lineTotalVnd: row.line_total_vnd.toString(),
+    cogsUnitVnd: row.cogs_unit_vnd?.toString() ?? '0',
   };
 }
 

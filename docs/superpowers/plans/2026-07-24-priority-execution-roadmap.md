@@ -1,7 +1,7 @@
 # Priority Execution Roadmap — tới CPC / E100
 
 **Date:** 2026-07-24  
-**Status:** Active backlog — Plan C DONE on `main` (`127624e`); Plan D NEXT  
+**Status:** Active backlog — Plan D DONE on `feat/plan-d-orders-web-hardening` (`b8dcbfb`); **Pilot Phase 1 ready**; Plan E NEXT when customer imminent  
 
 **Authority:** [CANONICAL](../specs/2026-07-24-CANONICAL-LOCKED-DECISIONS.md) · [master roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) · [WBS](../specs/2026-07-24-implementation-work-breakdown.md)
 
@@ -27,8 +27,8 @@
 | **A** | Waves A+B+C — Platform | **DONE** (merged + pushed `main`) |
 | **B** | Wave D — Meta channels | **DONE** (merged `main` @ `2176559`) → [DoD evidence](./plan-b-dod-evidence.md) · [chi tiết](./2026-07-24-plan-b-meta-channels.md) |
 | **C** | Waves E+F — Catalog + AI | **DONE** (merged `main` @ `127624e`) → [DoD evidence](./plan-c-dod-evidence.md) · [playbook](./2026-07-24-plan-c-priority-execution.md) · [chi tiết](./2026-07-24-plan-c-catalog-ai.md) |
-| **D** | Waves G+H+I — Orders + Web + Hardening | **NEXT — D0→D10** → [playbook ưu tiên](./2026-07-24-plan-d-priority-execution.md) · [chi tiết task](./2026-07-24-plan-d-orders-web-hardening.md) |
-| **E** | Gate M3 — Commercial ops | Queued → [outline](./2026-07-24-plan-e-m3-commercial-ops.md) |
+| **D** | Waves G+H+I — Orders + Web + Hardening | **DONE** (`feat/plan-d-orders-web-hardening` @ `b8dcbfb`) → [DoD evidence](./plan-d-dod-evidence.md) · [playbook](./2026-07-24-plan-d-priority-execution.md) · [chi tiết](./2026-07-24-plan-d-orders-web-hardening.md) |
+| **E** | Gate M3 — Commercial ops | **NEXT** when customer imminent → [outline](./2026-07-24-plan-e-m3-commercial-ops.md) |
 | **F** | Phase 2 Operations (2A–2H) | After E / pilot |
 | **G** | Phase 3 Intelligence (3A–3F) | After F |
 | **H** | Phase 4 ERP-lite (4A–4F) → **CPC** | After G |
@@ -41,8 +41,8 @@
 ```
 P0  Plan B  Meta          ← DONE (DoD evidence recorded)
 P1  Plan C  Catalog + AI  ← DONE (DoD evidence recorded)
-P2  Plan D  Orders + Web VI + Hardening / App Review   ← ĐANG TỚI → Pilot Phase 1
-P3  Plan E  M3 (Pro DB, always-on, billing, DR)        → khi có / sắp có khách
+P2  Plan D  Orders + Web VI + Hardening / App Review   ← DONE → Pilot Phase 1 READY
+P3  Plan E  M3 (Pro DB, always-on, billing, DR)        ← NEXT khi có / sắp có khách
 P4a Plan F  Phase 2 Operations
 P4b Plan G  Phase 3 Intelligence
 P4c Plan H  Phase 4 ERP-lite                           → CPC
@@ -63,11 +63,11 @@ P6  Epoch 5 (optional)
 ## 3. Checklist hoàn thiện ngắn
 
 ### Sau Plan D = Pilot sẵn sàng
-- [ ] Page+IG connect + inbox DB  
-- [ ] AI grounded + draft order tools  
-- [ ] Confirm + export  
-- [ ] Web VI đủ dùng  
-- [ ] Terms/Privacy + PDPA path + App Review package  
+- [x] Page+IG connect + inbox DB  
+- [x] AI grounded + draft order tools  
+- [x] Confirm + export  
+- [x] Web VI đủ dùng  
+- [x] Terms/Privacy + PDPA path + App Review package  
 
 ### Sau Plan E = bán pilot an toàn
 - [ ] Supabase Pro + PITR + restore drill  
@@ -104,7 +104,7 @@ P6  Epoch 5 (optional)
 
 1. ~~Execute Plan B~~ — **DONE** ([DoD evidence](./plan-b-dod-evidence.md))  
 2. ~~Execute Plan C~~ — **DONE** (merged `main` @ `127624e`) ([DoD evidence](./plan-c-dod-evidence.md))  
-3. Đọc [playbook Plan D](./2026-07-24-plan-d-priority-execution.md) + [chi tiết task](./2026-07-24-plan-d-orders-web-hardening.md)  
-4. Execute Plan D D0→D10 (Subagent-Driven khuyến nghị) → **Pilot Phase 1**  
+3. ~~Execute Plan D D0→D10~~ — **DONE** ([DoD evidence](./plan-d-dod-evidence.md)) → **Pilot Phase 1 ready**  
+4. Plan E (M3) khi sắp có / có khách trả tiền — [outline Plan E](./2026-07-24-plan-e-m3-commercial-ops.md)  
 
-**Không** code Phase 2 / Plan E critical path trong lúc làm D (trừ docs M3 chuẩn bị).
+**Không** nhảy Phase 2 trước pilot staging walkthrough + Meta submit khi host sẵn sàng.

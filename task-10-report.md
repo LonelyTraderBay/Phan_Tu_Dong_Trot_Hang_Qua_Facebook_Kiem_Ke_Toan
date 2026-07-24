@@ -1,7 +1,5 @@
-Task 10 complete.
+# Task 10 Report — D9 Meta App Review + staging checklist
 
-- Wrote `docs/superpowers/plans/plan-c-dod-evidence.md` — DoD table all GREEN except Live Gemini/Page DM **AMBER NOT RUN**.
-- Updated `2026-07-24-priority-execution-roadmap.md`: Plan C DONE, Plan D NEXT.
-- Gates: api test 92/92 PASS, typecheck PASS, isolation 6/6 PASS, eval golden=6 adversarial=10 PASS, ai pytest 18/18 PASS.
-- Branch `feat/plan-c-catalog-ai` @ `7ee2c54`; not merged to `main`.
-- Commit: `docs: record plan C DoD evidence`.
+- Added `docs/meta-app-review-checklist.md`: Phase 1 permissions (5 OAuth scopes), privacy/terms URLs, webhook/OAuth config, test assets, screencast script, staging pilot gate.
+- Updated `docs/runbooks/README.md` (PDPA link + pilot section), `meta-down.md` (App Review cross-link), `README.md` (pilot/Meta section).
+- Commit: `docs: meta app review and pilot checklist` on `feat/plan-d-orders-web-hardening`.

@@ -19,4 +19,12 @@ describe("HealthController", () => {
     const controller = moduleRef.get(HealthController);
     expect(controller.ready()).toEqual({ status: "ready" });
   });
+
+  it("returns SSO availability placeholder", async () => {
+    const moduleRef = await Test.createTestingModule({
+      controllers: [HealthController],
+    }).compile();
+    const controller = moduleRef.get(HealthController);
+    expect(controller.ssoStatus()).toEqual({ available: false, etaDays: 90 });
+  });
 });

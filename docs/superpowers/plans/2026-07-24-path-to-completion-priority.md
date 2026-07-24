@@ -14,7 +14,7 @@
 |---|------|---------|-----------|--------|
 | 1 | Pilot có kiểm soát | **Pilot Phase 1** | Plans B→D | **DONE** |
 | 2 | Sản phẩm thương mại hoàn thiện | **CPC** | Pilot + **E (M3)** + **F+G+H** | Chưa |
-| 3 | Enterprise 100/100 | **E100** | CPC path + **I (M4)** | Chưa |
+| 3 | Enterprise 100/100 | **E100** | CPC path + **I (M4)** | **BLOCKED** — Plan I IN PROGRESS; I1–I8 live/compliance chưa xanh |
 
 ```
 DONE  A→D  Pilot
@@ -23,11 +23,11 @@ AMBER P3  E    M3 code+docs GREEN · paid drills AMBER  → [plan-e-dod-evidence
 DONE  P4a F    Phase 2 Operations
 DONE  P4b G    Phase 3 Intelligence
 DONE  P4c H    Phase 4 ERP-lite → CPC engineering READY (live ops AMBER)
-▶ P5  I    M4                   → E100
+▶ P5  I    M4                   → IN PROGRESS; E100 blocked on I1–I8
   P6  Epoch 5 (optional)
 ```
 
-**Quy tắc:** Một plan critical path mở tại một thời điểm · DoD trước đỏ không start sau · Free-first đến khi activate E · Không claim CPC trước H · Không claim E100 trước I.
+**Quy tắc:** Một plan critical path mở tại một thời điểm · DoD trước đỏ không start sau · Free-first đến khi activate E · CPC engineering đã sẵn sàng sau H nhưng live AMBER còn cần owner evidence · Không claim E100 trước khi I1–I8 xanh.
 
 ---
 
@@ -126,20 +126,24 @@ Evidence E: [plan-e-dod-evidence](./plan-e-dod-evidence.md). Paid drills AMBER k
 
 ---
 
-## P5 — Plan I · M4 → **E100** (overlap từ cuối F)
+## P5 — Plan I · M4 → **E100** — **IN PROGRESS / E100 BLOCKED**
+
+**Playbook:** [plan-i-priority-execution](./2026-07-24-plan-i-priority-execution.md) · [plan](./2026-07-24-plan-i-m4-enterprise.md) · [evidence](./plan-i-dod-evidence.md)
+
+E100 chỉ khi I1–I8 có bằng chứng live/compliance xanh. Scaffolding hiện tại không đủ để claim E100.
 
 | Ưu tiên | Bước | DoD |
 |--------:|------|-----|
-| **I1** | M4.1 SSO/SAML path hoặc cam kết ≤90 ngày Enterprise | Onboard SSO / calendar |
-| **I2** | M4.2 SOC 2 Type I in progress / evidence pack | Controls mapped |
-| **I3** | M4.3 Pen-test + fix critical | Report đóng |
-| **I4** | M4.4 Status page + incident comms | Trang public |
-| **I5** | M4.5 Subprocessors **công khai** | URL published |
-| **I6** | M4.6 SLA hợp đồng + support tier | Trong contract |
-| **I7** | M4.7 SBOM mỗi release | Artifact CI |
-| **I8** | M4.8 Access review `platform_admins` | Checklist quý |
+| **I1** | M4.1 SSO/SAML path hoặc cam kết <=90 ngày Enterprise | GREEN/AMBER: path + status stub; real SSO/customer calendar AMBER |
+| **I2** | M4.2 SOC 2 Type I in progress / evidence pack | AMBER: outline only; vendor/auditor evidence pending |
+| **I3** | M4.3 Pen-test + fix critical | AMBER: checklist only; report/remediation pending |
+| **I4** | M4.4 Status page + incident comms | GREEN/AMBER: static page; live provider/history AMBER |
+| **I5** | M4.5 Subprocessors **công khai** | GREEN/AMBER: public URL; notification process AMBER |
+| **I6** | M4.6 SLA hợp đồng + support tier | AMBER: template only; legal approval pending |
+| **I7** | M4.7 SBOM mỗi release | GREEN/AMBER: workflow stub; release enforcement AMBER |
+| **I8** | M4.8 Access review `platform_admins` | AMBER: checklist; first quarterly evidence pending |
 
-**E100** chỉ khi I1–I8 DoD xanh.
+**E100** chỉ khi I1–I8 DoD xanh với live/compliance evidence.
 
 ---
 
@@ -169,7 +173,8 @@ DONE P0 docs + P3 Plan E code/docs (paid/live AMBER = owner parallel)
 DONE Plan F 2A→2H
 DONE Plan G 3A→3F
 DONE Plan H 4A→4F → CPC engineering READY (live ops AMBER)
-▶ NEXT eng: Execute Plan I → E100
+▶ NOW eng: Plan I M4 scaffolding IN PROGRESS
+BLOCKED: E100 until I1–I8 live/compliance evidence is GREEN
 OWNER parallel: §12.1 · Meta Review submit · Pro+PITR drill · always-on
 ```
 

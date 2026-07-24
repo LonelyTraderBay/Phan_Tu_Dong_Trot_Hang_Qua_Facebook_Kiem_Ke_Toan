@@ -18,6 +18,26 @@ paths:
                   status:
                     type: string
                     example: ok
+  /v1/auth/sso/status:
+    get:
+      summary: Enterprise SSO availability placeholder
+      responses:
+        '200':
+          description: SSO status
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - available
+                  - etaDays
+                properties:
+                  available:
+                    type: boolean
+                    example: false
+                  etaDays:
+                    type: integer
+                    example: 90
   /v1/orgs:
     get:
       summary: List orgs for current user

@@ -97,6 +97,20 @@ describe("OrgGuard", () => {
     ).resolves.toBe(true);
   });
 
+  it("skips the public SSO status endpoint", async () => {
+    const guard = new OrgGuard(mockMemberships());
+
+    await expect(
+      guard.canActivate(
+        mockContext({
+          headers: {},
+          method: "GET",
+          originalUrl: "/v1/auth/sso/status",
+        }),
+      ),
+    ).resolves.toBe(true);
+  });
+
   it("rejects missing X-Org-Id", async () => {
     const guard = new OrgGuard(mockMemberships());
 

@@ -1,7 +1,7 @@
 # Priority Execution Roadmap — tới CPC / E100
 
 **Date:** 2026-07-25  
-**Status:** Active backlog — Plans A–D DONE; **Pilot Phase 1 ready**; Plan E **code+docs DONE** (`plan-e-dod-evidence.md`, paid AMBER); Plan F **DONE**; Plan G **DONE**; **Plan H IN PROGRESS**
+**Status:** Active backlog — Plans A–D DONE; **Pilot Phase 1 ready**; Plan E **code+docs DONE** (`plan-e-dod-evidence.md`, paid AMBER); Plan F **DONE**; Plan G **DONE**; Plan H **DONE**; **Plan I IN PROGRESS** (E100 blocked)
 
 **Authority:** [CANONICAL](../specs/2026-07-24-CANONICAL-LOCKED-DECISIONS.md) · [master roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) · [WBS](../specs/2026-07-24-implementation-work-breakdown.md)  
 **Kế hoạch chi tiết từng bước (SoT ưu tiên còn lại):** [path-to-completion-priority](./2026-07-24-path-to-completion-priority.md)
@@ -17,7 +17,7 @@
 | 3 | **E100** (Enterprise 100/100) | + Plan **I (M4)** |
 | — | Epoch 5 Platform | Optional sau CPC |
 
-Paid/live Plan E drills có thể AMBER song song với code Plan F; **không** claim CPC trước khi clear AMBER + xong H.
+Plan H đã xong CPC engineering path; paid/live AMBERs vẫn cần owner evidence. **Không** claim E100 trước khi Plan I I1–I8 xanh.
 
 ---
 
@@ -32,8 +32,8 @@ Paid/live Plan E drills có thể AMBER song song với code Plan F; **không** 
 | **E** | Gate M3 — Commercial ops | **CODE+DOCS DONE** (paid AMBER) → [DoD](./plan-e-dod-evidence.md) · [playbook](./2026-07-24-plan-e-priority-execution.md) |
 | **F** | Phase 2 Operations (2A–2H) | **DONE** → [DoD](./plan-f-dod-evidence.md) · [playbook](./2026-07-24-plan-f-priority-execution.md) |
 | **G** | Phase 3 Intelligence (3A–3F) | **DONE** → [DoD](./plan-g-dod-evidence.md) |
-| **H** | Phase 4 ERP-lite (4A–4F) → **CPC** | **IN PROGRESS** → [DoD](./plan-h-dod-evidence.md) |
-| **I** | M4 Procurement → **E100** | Overlap from late F |
+| **H** | Phase 4 ERP-lite (4A–4F) → **CPC engineering** | **DONE** → [DoD](./plan-h-dod-evidence.md) |
+| **I** | M4 Procurement → **E100** | **IN PROGRESS** → [DoD](./plan-i-dod-evidence.md); E100 blocked on I1–I8 live/compliance |
 
 ---
 
@@ -46,8 +46,8 @@ DONE  Plan D  Orders + Web + Hardening     → Pilot Phase 1 READY
 AMBER Plan E  M3 code+docs GREEN · paid drills AMBER
 DONE  Plan F  Phase 2 Operations
 DONE  Plan G  Phase 3 Intelligence
-P4c   Plan H  Phase 4 ERP-lite                   → CPC ← IN PROGRESS
-P5    Plan I  M4                                  → E100
+DONE  Plan H  Phase 4 ERP-lite                   → CPC engineering READY
+P5    Plan I  M4                                  → IN PROGRESS; E100 blocked
 P6    Epoch 5 (optional)
 ```
 
@@ -77,13 +77,13 @@ P6    Epoch 5 (optional)
 - [ ] Supabase Pro + PITR + restore drill (**owner / paid**)  
 - [ ] Always-on hosts + live uptime (**owner / paid**)  
 
-### Sau Plan H = **CPC**
+### Sau Plan H = **CPC engineering** — DONE
 - [x] Carrier + COD + returns + P&L
 - [x] Ads/attribution/advisor/calendar/public API
-- [ ] Multi-warehouse + PO + e-invoice + mobile  
+- [x] Multi-warehouse + PO + e-invoice + mobile
 
-### Sau Plan I = **E100**
-- [ ] SSO path · SOC2/evidence · pen-test · SLA · status page · SBOM  
+### Sau Plan I = **E100** — BLOCKED
+- [ ] SSO path · SOC2/evidence · pen-test · SLA · status page · SBOM · access review live/compliance evidence
 
 ---
 
@@ -105,8 +105,8 @@ P6    Epoch 5 (optional)
 2. ~~P0 docs + Plan E code/docs~~ — [DoD E](./plan-e-dod-evidence.md) (paid AMBER)  
 3. ~~Plan F 2A→2H~~ — **DONE** → [DoD F](./plan-f-dod-evidence.md)
 4. ~~Plan G 3A→3F~~ — **DONE** → [DoD G](./plan-g-dod-evidence.md)
-5. **NOW:** Execute Plan H 4A→4F → [playbook](./2026-07-24-plan-h-priority-execution.md)
+5. ~~Plan H 4A→4F~~ — **DONE** → [DoD H](./plan-h-dod-evidence.md)
 6. Owner parallel: live §12.1 · Meta Review · Pro+PITR · always-on
-7. Sau H: **CPC**; rồi I → **E100**
+7. **NOW:** Plan I M4 scaffolding → [playbook](./2026-07-24-plan-i-priority-execution.md); **E100 blocked** until I1–I8 live/compliance GREEN
 
 **Không** claim CPC/E100.

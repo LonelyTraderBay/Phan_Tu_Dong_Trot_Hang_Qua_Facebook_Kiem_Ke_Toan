@@ -11,4 +11,9 @@ export class HealthController {
   ready() {
     return { status: "ready" };
   }
+
+  @Get("v1/auth/sso/status")
+  ssoStatus() {
+    return { available: false, etaDays: 90 };
+  }
 }

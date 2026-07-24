@@ -37,6 +37,7 @@ function isPublicPath(path: string) {
   return (
     path === "/health" ||
     path === "/ready" ||
+    path === "/v1/auth/sso/status" ||
     path === "/api/inngest" ||
     path === "/v1/webhooks/meta" ||
     path === "/v1/channels/zalo/webhook" ||

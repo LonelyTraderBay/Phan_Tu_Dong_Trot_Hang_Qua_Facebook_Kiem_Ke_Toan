@@ -2,7 +2,7 @@
 
 **Cập nhật:** 2026-07-25  
 **Phạm vi:** pilot Omni Commerce AI SaaS  
-**Công khai:** chưa publish URL (Plan E / M4.5) — dùng nội bộ + đính kèm DPA.
+**Công khai:** `/legal/subprocessors` (Plan I / M4.5) — dùng nội bộ + đính kèm DPA.
 
 | Nhà cung cấp | Mục đích | Dữ liệu liên quan | Vùng (điển hình) |
 |--------------|----------|-------------------|------------------|
@@ -24,4 +24,5 @@
 
 - [DPA mẫu](./dpa-template.md)  
 - [Privacy (app)](../../apps/web/src/app/legal/privacy/page.tsx)  
+- [Subprocessors public page](../../apps/web/src/app/legal/subprocessors/page.tsx)
 - [PDPA delete runbook](../runbooks/pdpa-delete.md)

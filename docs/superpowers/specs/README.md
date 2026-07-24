@@ -17,7 +17,11 @@
 | 3c | [2026-07-24-enterprise-upgrade-opportunities.md](./2026-07-24-enterprise-upgrade-opportunities.md) | What else to upgrade |
 | 3d | [2026-07-24-implementation-work-breakdown.md](./2026-07-24-implementation-work-breakdown.md) | Phases / Waves Phase 1 trước plan |
 | 3e | [2026-07-24-master-roadmap-commercial-complete.md](./2026-07-24-master-roadmap-commercial-complete.md) | Full path → CPC + E100 |
-| — | [plans/2026-07-24-plan-a-platform-foundation.md](../plans/2026-07-24-plan-a-platform-foundation.md) | **Plan A — Waves A+B+C (execute next)** |
+| — | [plans/2026-07-24-priority-execution-roadmap.md](../plans/2026-07-24-priority-execution-roadmap.md) | **Thứ tự ưu tiên tới CPC/E100** |
+| — | [plans/2026-07-24-plan-a-platform-foundation.md](../plans/2026-07-24-plan-a-platform-foundation.md) | Plan A — DONE |
+| — | [plans/2026-07-24-plan-b-meta-channels.md](../plans/2026-07-24-plan-b-meta-channels.md) | **Plan B — Meta (execute next)** |
+| — | [plans/2026-07-24-plan-c-catalog-ai.md](../plans/2026-07-24-plan-c-catalog-ai.md) | Plan C — Catalog + AI |
+| — | [plans/2026-07-24-plan-d-orders-web-hardening.md](../plans/2026-07-24-plan-d-orders-web-hardening.md) | Plan D — Orders + Web + Hardening |
 | 4 | [2026-07-24-enterprise-grade-commercialization-analysis.md](./2026-07-24-enterprise-grade-commercialization-analysis.md) | Multi-year GTM |
 | 5 | [2026-07-24-backend-python-vs-typescript-analysis.md](./2026-07-24-backend-python-vs-typescript-analysis.md) | ADR Option C (historical A/B) |
 | — | [2026-07-24-spec-audit-pre-plan.md](./2026-07-24-spec-audit-pre-plan.md) | Audit record (findings fixed) |

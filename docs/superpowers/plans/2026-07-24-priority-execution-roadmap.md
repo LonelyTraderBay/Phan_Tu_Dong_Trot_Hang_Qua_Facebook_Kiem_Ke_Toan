@@ -24,8 +24,8 @@
 | Plan | Scope | Status |
 |------|-------|--------|
 | **A** | Waves A+B+C — Platform | **DONE** (merged + pushed `main`) |
-| **B** | Wave D — Meta channels | **NEXT — B0→B9** → [playbook ưu tiên](./2026-07-24-plan-b-priority-execution.md) · [chi tiết task](./2026-07-24-plan-b-meta-channels.md) |
-| **C** | Waves E+F — Catalog + AI | Queued → [plan file](./2026-07-24-plan-c-catalog-ai.md) |
+| **B** | Wave D — Meta channels | **DONE** (`feat/plan-b-meta-channels`) → [DoD evidence](./plan-b-dod-evidence.md) · [chi tiết task](./2026-07-24-plan-b-meta-channels.md) |
+| **C** | Waves E+F — Catalog + AI | **NEXT** → [plan file](./2026-07-24-plan-c-catalog-ai.md) |
 | **D** | Waves G+H+I — Orders + Web + Hardening | Queued → [plan file](./2026-07-24-plan-d-orders-web-hardening.md) |
 | **E** | Gate M3 — Commercial ops | Queued → [outline](./2026-07-24-plan-e-m3-commercial-ops.md) |
 | **F** | Phase 2 Operations (2A–2H) | After E / pilot |
@@ -38,8 +38,8 @@
 ## 2. Thứ tự ưu tiên bắt buộc (P0 → P4)
 
 ```
-P0  Plan B  Meta          ← ĐANG TỚI
-P1  Plan C  Catalog + AI
+P0  Plan B  Meta          ← DONE (DoD evidence recorded)
+P1  Plan C  Catalog + AI  ← ĐANG TỚI
 P2  Plan D  Orders + Web VI + Hardening / App Review   → Pilot Phase 1
 P3  Plan E  M3 (Pro DB, always-on, billing, DR)        → khi có / sắp có khách
 P4a Plan F  Phase 2 Operations
@@ -101,8 +101,8 @@ P6  Epoch 5 (optional)
 
 ## 5. Hành động ngay
 
-1. Đọc + duyệt [Plan B](./2026-07-24-plan-b-meta-channels.md)  
-2. Execute Plan B (Subagent-Driven khuyến nghị)  
-3. Sau DoD B → mở Plan C  
+1. ~~Execute Plan B~~ — **DONE** ([DoD evidence](./plan-b-dod-evidence.md))  
+2. Đọc + duyệt [Plan C](./2026-07-24-plan-c-catalog-ai.md)  
+3. Execute Plan C (Subagent-Driven khuyến nghị)  
 
-**Không** viết/code Phase 2 trong lúc làm B.
+**Không** viết/code Phase 2 trong lúc làm C.

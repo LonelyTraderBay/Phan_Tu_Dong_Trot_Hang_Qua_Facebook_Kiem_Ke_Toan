@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const DEFAULT_AI_DRAFT_MAX_AMOUNT_VND = 5_000_000;
+
 export const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(3001),

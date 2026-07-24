@@ -84,7 +84,7 @@ uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 Health checks:
 
 - Web: `http://127.0.0.1:3000`
-- API: `http://127.0.0.1:3001`
+- API: `http://127.0.0.1:3001/health` and `http://127.0.0.1:3001/ready`
 - AI: `http://127.0.0.1:8000/health`
 
 ## Quality checks
@@ -93,5 +93,26 @@ Health checks:
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:isolation
+cd apps/ai
+uv run pytest -q
+cd ../..
 python tests/eval/run_stub.py
 ```
+
+## Manual smoke
+
+Requires Docker, Supabase, API, AI, web, and Inngest dev services:
+
+```powershell
+supabase start
+supabase db reset
+pnpm --dir apps/api dev
+Push-Location apps/ai
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+Pop-Location
+pnpm --dir apps/web dev
+npx inngest-cli@latest dev -u http://localhost:3001/api/inngest
+```
+
+Then probe API `/health` and `/ready`, AI `/health`, web shell, `GET /internal/v1/ai/health` with `X-Service-Key`, and insert a `platform.noop` outbox row to confirm Inngest receives it.

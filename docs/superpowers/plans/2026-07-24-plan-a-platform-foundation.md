@@ -25,16 +25,16 @@
 
 ## Plan A Definition of Done (must all pass)
 
-- [ ] Structure tree matches structure doc §1–4 (empty business modules OK as folders)
-- [ ] Identity migration + RLS + `platform_admins` + `outbox_events` + global kill-switches seeded
-- [ ] Nest `/health` + `/ready`; FastAPI `/health`; Next VI authenticated shell placeholder
-- [ ] CI workflows for web/api/ai + isolation + migrate-check; Dependabot; gitleaks
-- [ ] `.env.example` + README run-all-three (VI engineer onboarding)
-- [ ] M2 hooks: outbox path, redacting logger, `traceparent` stub, `Idempotency-Key` middleware stub, security headers, `kill_ai_*` flags, `docs/runbooks/`, `docs/adr/`, `CODEOWNERS`
-- [ ] Eval folder with ≥10 adversarial prompt files (no need to execute LLM yet)
-- [ ] Isolation tests prove cross-tenant denial
-- [ ] Sample outbox → Inngest no-op job E2E locally
-- [ ] Api can HTTP-GET ai `/health` with service key + echo `traceparent`
+- [x] Structure tree matches structure doc §1–4 (empty business modules OK as folders)
+- [x] Identity migration + RLS + `platform_admins` + `outbox_events` + global kill-switches seeded
+- [x] Nest `/health` + `/ready`; FastAPI `/health`; Next VI authenticated shell placeholder
+- [x] CI workflows for web/api/ai + isolation + migrate-check; Dependabot; gitleaks
+- [x] `.env.example` + README run-all-three (VI engineer onboarding)
+- [x] M2 hooks: outbox path, redacting logger, `traceparent` stub, `Idempotency-Key` middleware stub, security headers, `kill_ai_*` flags, `docs/runbooks/`, `docs/adr/`, `CODEOWNERS`
+- [x] Eval folder with ≥10 adversarial prompt files (no need to execute LLM yet)
+- [x] Isolation tests prove cross-tenant denial
+- [ ] Sample outbox → Inngest no-op job E2E locally — NOT RUN in Task 20 local gate (no Docker/Supabase/Inngest services); see `plan-a-dod-evidence.md`
+- [ ] Api can HTTP-GET ai `/health` with service key + echo `traceparent` — unit/pytest evidence green; live two-service smoke NOT RUN (no Docker/Supabase/dev services); see `plan-a-dod-evidence.md`
 
 ## File map (create in this plan)
 
@@ -981,7 +981,7 @@ git commit -m "chore: reserve business module folders and sentry stubs"
 - Modify: `docs/superpowers/plans/2026-07-24-plan-a-platform-foundation.md` (check DoD boxes)
 - Create: `docs/superpowers/plans/plan-a-dod-evidence.md` (commands + results pasted by implementer)
 
-- [ ] **Step 1: Run full local gate**
+- [x] **Step 1: Run full local gate**
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test
@@ -992,7 +992,7 @@ cd apps/ai && uv run python ../../tests/eval/run_stub.py
 
 Expected: all green
 
-- [ ] **Step 2: Manual smoke**
+- [ ] **Step 2: Manual smoke** — NOT RUN in Task 20 local gate (no Docker/Supabase/Inngest services); automated gates green.
 
 1. `supabase start` + migrate  
 2. `pnpm --filter @omni/api dev` → `/health` `/ready`  
@@ -1001,7 +1001,7 @@ Expected: all green
 5. Insert outbox noop → Inngest receives  
 6. `GET /internal/v1/ai/health` with service key → ok  
 
-- [ ] **Step 3: Confirm M2 hook checklist**
+- [x] **Step 3: Confirm M2 hook checklist**
 
 | M2 item | Evidence |
 |---------|----------|
@@ -1017,7 +1017,7 @@ Expected: all green
 | ≥10 adversarial eval files | stub runner |
 | AI draft max amount policy | documented in `settings_json` shape + constant `DEFAULT_AI_DRAFT_MAX_AMOUNT_VND=5000000` in api config |
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
 
 ```bash
 git commit -m "docs: record plan A DoD evidence — platform foundation complete"

@@ -16,6 +16,7 @@ orchestrator = ProcessMessageOrchestrator(
     embedding_provider=GeminiEmbeddingProvider(),
     retriever=CoreKnowledgeClient(),
     llm_provider=GeminiLlmProvider(),
+    quota_client=CoreKnowledgeClient(),
 )
 
 

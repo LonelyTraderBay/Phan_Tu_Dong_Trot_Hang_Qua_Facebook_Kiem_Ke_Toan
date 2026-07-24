@@ -43,6 +43,21 @@ class KnowledgeRetriever(Protocol):
         ...
 
 
+class AiTokenQuotaClient(Protocol):
+    def check_ai_token_quota(self, *, org_id: str) -> dict:
+        ...
+
+    def record_ai_token_usage(
+        self,
+        *,
+        org_id: str,
+        quantity: int,
+        ref_type: str | None = None,
+        ref_id: str | None = None,
+    ) -> None:
+        ...
+
+
 @dataclass(frozen=True)
 class PromptTemplate:
     version: str
@@ -65,6 +80,7 @@ class ProcessMessageOrchestrator:
         llm_provider: LlmProvider,
         prompt: PromptTemplate | None = None,
         min_relevance_similarity: float | None = None,
+        quota_client: AiTokenQuotaClient | None = None,
     ):
         self.embedding_provider = embedding_provider
         self.retriever = retriever
@@ -75,6 +91,7 @@ class ProcessMessageOrchestrator:
             if min_relevance_similarity is None
             else min_relevance_similarity
         )
+        self.quota_client = quota_client
 
     def process_message(
         self,
@@ -100,6 +117,14 @@ class ProcessMessageOrchestrator:
                 tokens={"prompt": 0, "completion": 0, "total": 0},
             )
 
+        if self.quota_client is not None:
+            quota = self.quota_client.check_ai_token_quota(org_id=org_id)
+            if quota.get("exceeded") is True:
+                return self._escalation_response(
+                    model=selected_model,
+                    tokens={"prompt": 0, "completion": 0, "total": 0},
+                )
+
         messages = [
             {
                 "role": "user",
@@ -112,6 +137,11 @@ class ProcessMessageOrchestrator:
             "completion": completion.completion_tokens,
             "total": completion.total_tokens,
         }
+        if self.quota_client is not None and completion.total_tokens > 0:
+            self.quota_client.record_ai_token_usage(
+                org_id=org_id,
+                quantity=completion.total_tokens,
+            )
         decision = _parse_llm_decision(completion.text)
         if decision is None:
             return self._escalation_response(model=completion.model, tokens=tokens)

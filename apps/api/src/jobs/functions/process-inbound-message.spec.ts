@@ -11,6 +11,16 @@ const MESSAGE_ID = "33333333-3333-3333-3333-333333333333";
 const CONNECTION_ID = "44444444-4444-4444-4444-444444444444";
 const CONTACT_ID = "55555555-5555-5555-5555-555555555555";
 
+const allowedQuota = {
+  getQuotaStatus: async () => ({
+    allowed: true,
+    exceeded: false,
+    used: 0,
+    limit: 1_000_000,
+    periodStart: "2026-07-01T00:00:00.000Z",
+  }),
+};
+
 type Row = Record<string, unknown>;
 type TableName = "messages" | "conversations" | "outbox_events";
 
@@ -116,6 +126,7 @@ describe("ProcessInboundMessageJobService", () => {
     const writeRun = vi.fn();
     const service = new ProcessInboundMessageJobService({
       aiRuns: { writeRun },
+      aiTokenUsage: allowedQuota,
       env: {
         AI_BASE_URL: "https://ai.example.test",
         SERVICE_M2M_KEY: "service-key",
@@ -165,6 +176,7 @@ describe("ProcessInboundMessageJobService", () => {
     });
     const service = new ProcessInboundMessageJobService({
       aiRuns: { writeRun },
+      aiTokenUsage: allowedQuota,
       env: {
         AI_BASE_URL: "https://ai.example.test",
         SERVICE_M2M_KEY: "service-key",
@@ -190,5 +202,57 @@ describe("ProcessInboundMessageJobService", () => {
 
     expect(writeRun).toHaveBeenCalledOnce();
     expect(state.outbox_events).toEqual([]);
+  });
+
+  it("escalates without calling AI when monthly token quota is exceeded", async () => {
+    const state = createState();
+    const { client } = mockSupabase(state);
+    const fetchFn = vi.fn();
+    const writeRun = vi.fn(async () => ({ aiRun: { id: "run-quota" } }));
+    const service = new ProcessInboundMessageJobService({
+      aiRuns: { writeRun },
+      aiTokenUsage: {
+        getQuotaStatus: async () => ({
+          allowed: false,
+          exceeded: true,
+          used: 100,
+          limit: 100,
+          periodStart: "2026-07-01T00:00:00.000Z",
+        }),
+      },
+      env: {
+        AI_BASE_URL: "https://ai.example.test",
+        SERVICE_M2M_KEY: "service-key",
+      },
+      featureFlags: {
+        isEnabled: async () => false,
+      },
+      fetchFn,
+      supabase: client,
+    });
+
+    await expect(
+      service.process({
+        orgId: ORG_ID,
+        conversationId: CONVERSATION_ID,
+        messageId: MESSAGE_ID,
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      action: "processed",
+      outbound: "enqueued",
+    });
+
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(writeRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "quota_exceeded",
+        promptVersion: "quota_gate_v1",
+      }),
+    );
+    expect(state.outbox_events).toHaveLength(1);
+    expect(state.outbox_events[0].payload_json).toMatchObject({
+      replyText: expect.stringContaining("Minh se chuyen cho doi ngu ho tro"),
+    });
   });
 });

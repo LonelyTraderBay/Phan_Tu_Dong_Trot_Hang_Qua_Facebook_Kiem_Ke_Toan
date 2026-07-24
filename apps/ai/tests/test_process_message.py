@@ -52,7 +52,26 @@ class FakeLlm:
         )
 
 
-def make_orchestrator(chunks: list[dict], *, llm_text: str = DEFAULT_LLM_JSON):
+class FakeQuotaClient:
+    def __init__(self, *, exceeded: bool = False):
+        self.exceeded = exceeded
+        self.check_calls: list[dict] = []
+        self.record_calls: list[dict] = []
+
+    def check_ai_token_quota(self, *, org_id: str) -> dict:
+        self.check_calls.append({"org_id": org_id})
+        return {"exceeded": self.exceeded, "used": 100, "limit": 100}
+
+    def record_ai_token_usage(self, **kwargs) -> None:
+        self.record_calls.append(kwargs)
+
+
+def make_orchestrator(
+    chunks: list[dict],
+    *,
+    llm_text: str = DEFAULT_LLM_JSON,
+    quota_client: FakeQuotaClient | None = None,
+):
     embeddings = FakeEmbeddings()
     retriever = FakeRetriever(chunks)
     llm = FakeLlm(llm_text)
@@ -61,6 +80,7 @@ def make_orchestrator(chunks: list[dict], *, llm_text: str = DEFAULT_LLM_JSON):
         retriever=retriever,
         llm_provider=llm,
         prompt=PromptTemplate(version="test_prompt_v1", text="Only use context."),
+        quota_client=quota_client,
     )
     return orchestrator, embeddings, retriever, llm
 
@@ -81,6 +101,58 @@ def test_process_message_escalates_without_context_and_skips_llm():
     assert result["toolsUsed"] == []
     assert result["tokens"] == {"prompt": 0, "completion": 0, "total": 0}
     assert result["escalate"] is True
+
+
+def test_process_message_escalates_when_monthly_token_quota_is_exceeded():
+    quota = FakeQuotaClient(exceeded=True)
+    orchestrator, _, _, llm = make_orchestrator(
+        [
+            {
+                "sourceType": "product",
+                "sourceId": "22222222-2222-2222-2222-222222222222",
+                "chunkIndex": 0,
+                "content": "Ao thun co mau den.",
+                "score": 0.92,
+            }
+        ],
+        quota_client=quota,
+    )
+
+    result = orchestrator.process_message(
+        org_id=ORG_ID,
+        message="Ao nay co mau den khong?",
+        model="gemini-2.0-flash",
+    )
+
+    assert quota.check_calls == [{"org_id": ORG_ID}]
+    assert llm.calls == []
+    assert quota.record_calls == []
+    assert result["escalate"] is True
+    assert result["tokens"] == {"prompt": 0, "completion": 0, "total": 0}
+
+
+def test_process_message_records_token_usage_after_successful_llm():
+    quota = FakeQuotaClient()
+    orchestrator, _, _, _ = make_orchestrator(
+        [
+            {
+                "sourceType": "product",
+                "sourceId": "22222222-2222-2222-2222-222222222222",
+                "chunkIndex": 0,
+                "content": "Ao thun co mau den.",
+                "score": 0.92,
+            }
+        ],
+        quota_client=quota,
+    )
+
+    orchestrator.process_message(
+        org_id=ORG_ID,
+        message="Ao nay co mau den khong?",
+        model="gemini-2.0-flash",
+    )
+
+    assert quota.record_calls == [{"org_id": ORG_ID, "quantity": 17}]
 
 
 def test_process_message_escalates_low_relevance_chunks_and_skips_llm():

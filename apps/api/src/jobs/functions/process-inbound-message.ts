@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { loadEnv, type Env } from "../../config/env";
 import { AiRunsService, type WriteAiRunInput } from "../../modules/audit/ai-runs.service";
+import { AiTokenUsageService } from "../../modules/billing/ai-token-usage.service";
 import { FeatureFlagsService } from "../../modules/feature-flags/feature-flags.service";
 import { inngest } from "../inngest.client";
 import { enqueueOutbox } from "../outbox.publisher";
@@ -27,8 +28,19 @@ type AiRunWriter = {
   writeRun(input: WriteAiRunInput): Promise<unknown>;
 };
 
+type AiTokenQuotaReader = {
+  getQuotaStatus(orgId: string): Promise<{
+    allowed: boolean;
+    exceeded: boolean;
+    used: number;
+    limit: number;
+    periodStart: string;
+  }>;
+};
+
 type ProcessInboundJobOptions = {
   aiRuns?: AiRunWriter;
+  aiTokenUsage?: AiTokenQuotaReader;
   env?: ServiceEnv;
   featureFlags?: FeatureFlagReader;
   fetchFn?: FetchLike;
@@ -74,8 +86,15 @@ const MESSAGE_SELECT =
 const CONVERSATION_SELECT =
   "id, org_id, channel, channel_connection_id, contact_id, bot_paused, bot_epoch";
 
+const QUOTA_ESCALATE_REPLY =
+  "Minh chua co du thong tin trong du lieu hien co de tra loi chinh xac. " +
+  "Minh se chuyen cho doi ngu ho tro kiem tra them.";
+const QUOTA_GATE_PROMPT_VERSION = "quota_gate_v1";
+const QUOTA_GATE_MODEL = "gemini-2.0-flash";
+
 export class ProcessInboundMessageJobService {
   private readonly aiRuns: AiRunWriter;
+  private readonly aiTokenUsage: AiTokenQuotaReader;
   private readonly env: ServiceEnv;
   private readonly featureFlags: FeatureFlagReader;
   private readonly fetchFn: FetchLike;
@@ -88,6 +107,8 @@ export class ProcessInboundMessageJobService {
     this.featureFlags =
       options.featureFlags ?? new FeatureFlagsService(this.supabase);
     this.aiRuns = options.aiRuns ?? new AiRunsService(this.supabase);
+    this.aiTokenUsage =
+      options.aiTokenUsage ?? new AiTokenUsageService(this.supabase);
   }
 
   async process(input: ProcessInboundInput) {
@@ -121,7 +142,11 @@ export class ProcessInboundMessageJobService {
       return { ok: true, action: "dropped", reason: "empty_message" };
     }
 
-    const aiResponse = await this.callAiProcessMessage(event.orgId, inboundText);
+    const quota = await this.aiTokenUsage.getQuotaStatus(event.orgId);
+    const aiResponse = quota.exceeded
+      ? buildQuotaExceededResponse()
+      : await this.callAiProcessMessage(event.orgId, inboundText);
+
     await this.aiRuns.writeRun({
       orgId: event.orgId,
       conversationId: conversation.id,
@@ -131,7 +156,11 @@ export class ProcessInboundMessageJobService {
       tokens: aiResponse.tokens,
       tools: aiResponse.toolsUsed,
       citations: aiResponse.citations,
-      status: aiResponse.escalate ? "escalated" : "succeeded",
+      status: quota.exceeded
+        ? "quota_exceeded"
+        : aiResponse.escalate
+          ? "escalated"
+          : "succeeded",
     });
 
     const replyText = aiResponse.replyText?.trim();
@@ -234,6 +263,18 @@ export const processInboundMessage = inngest.createFunction(
     return service.process((event.data ?? {}) as ProcessInboundInput);
   },
 );
+
+function buildQuotaExceededResponse(): AiProcessResponse {
+  return {
+    replyText: QUOTA_ESCALATE_REPLY,
+    citations: [],
+    toolsUsed: [],
+    promptVersion: QUOTA_GATE_PROMPT_VERSION,
+    model: QUOTA_GATE_MODEL,
+    tokens: { prompt: 0, completion: 0, total: 0 },
+    escalate: true,
+  };
+}
 
 function parseProcessInboundEvent(input: ProcessInboundInput) {
   return {

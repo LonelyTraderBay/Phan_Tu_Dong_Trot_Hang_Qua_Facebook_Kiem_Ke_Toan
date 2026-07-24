@@ -8,3 +8,5 @@ Task 6 complete.
 - Updated OpenAPI stubs for tools and ai_runs.
 - Tests: draft max rejection and ai_runs write/model allowlist.
 - Verified: focused Vitest, API typecheck, full API tests, OpenAPI Prettier check.
+
+Spec review (e712106..b326a02): **Approved** — see `.superpowers/sdd/task-6-brief.md`.

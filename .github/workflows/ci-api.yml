@@ -1,4 +1,4 @@
-name: Isolation Tests
+name: CI API
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
       - 'feat/**'
 
 jobs:
-  isolation:
+  api:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,4 +20,4 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:isolation
+      - run: pnpm turbo run lint typecheck test --filter=@omni/api...

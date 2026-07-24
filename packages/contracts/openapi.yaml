@@ -1,0 +1,43 @@
+openapi: 3.1.0
+info:
+  title: Omni Commerce API
+  version: 0.0.0
+  description: Contract stub — full schema and codegen in a later task.
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /v1/orgs:
+    get:
+      summary: List orgs for current user
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create org
+      responses:
+        '201':
+          description: Created
+  /ops/v1/orgs:
+    get:
+      summary: List orgs (platform admin)
+      responses:
+        '200':
+          description: OK
+  /internal/v1/ai/health:
+    get:
+      summary: Proxy AI health (service key)
+      responses:
+        '200':
+          description: OK

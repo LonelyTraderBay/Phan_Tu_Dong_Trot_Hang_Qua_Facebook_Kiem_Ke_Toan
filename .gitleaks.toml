@@ -1,0 +1,14 @@
+title = "omni-commerce gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "expected non-secret paths"
+paths = [
+  '''\.env\.example$''',
+  '''pnpm-lock\.yaml$''',
+  '''apps/ai/uv\.lock$''',
+  '''docs/''',
+  '''\.superpowers/''',
+]

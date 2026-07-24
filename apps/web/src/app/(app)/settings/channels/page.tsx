@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 
 import {
   ApiClientError,
@@ -28,10 +29,13 @@ function formatStatus(status: string) {
   return STATUS_LABELS[status] ?? status;
 }
 
-export default function ChannelsSettingsPage() {
+function ChannelsSettingsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [channels, setChannels] = useState<ChannelConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
 
   const loadChannels = useCallback(async () => {
@@ -56,6 +60,24 @@ export default function ChannelsSettingsPage() {
   useEffect(() => {
     void loadChannels();
   }, [loadChannels]);
+
+  useEffect(() => {
+    const oauthError = searchParams.get('oauth_error');
+    const oauthSuccess = searchParams.get('oauth_success');
+
+    if (oauthError) {
+      setError(oauthError);
+      setSuccess(null);
+    } else if (oauthSuccess) {
+      setSuccess('Đã kết nối kênh Meta thành công.');
+      setError(null);
+      void loadChannels();
+    } else {
+      return;
+    }
+
+    router.replace('/settings/channels');
+  }, [loadChannels, router, searchParams]);
 
   async function handleConnect() {
     setConnecting(true);
@@ -103,6 +125,19 @@ export default function ChannelsSettingsPage() {
           {connecting ? 'Đang chuyển hướng…' : 'Kết nối Facebook / Instagram'}
         </button>
       </div>
+
+      {success ? (
+        <p
+          role="status"
+          style={{
+            color: '#15803d',
+            fontSize: 16,
+            marginTop: 20,
+          }}
+        >
+          {success}
+        </p>
+      ) : null}
 
       {error ? (
         <p
@@ -178,3 +213,17 @@ const tableCellStyle = {
   fontSize: 15,
   padding: '12px 16px',
 };
+
+export default function ChannelsSettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main>
+          <p style={{ color: '#64748b' }}>Đang tải…</p>
+        </main>
+      }
+    >
+      <ChannelsSettingsContent />
+    </Suspense>
+  );
+}

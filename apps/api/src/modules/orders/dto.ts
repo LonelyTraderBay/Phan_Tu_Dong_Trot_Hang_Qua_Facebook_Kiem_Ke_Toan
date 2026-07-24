@@ -45,7 +45,15 @@ export const ExportOrdersQuerySchema = z.object({
   createdTo: z.string().datetime().optional(),
 });
 
+export const ReturnOrderBodySchema = z
+  .object({
+    reason: z.string().trim().max(2_000).nullable().optional(),
+    restock: z.boolean().default(true),
+  })
+  .default({});
+
 export type CreateDraftOrderBody = z.output<typeof CreateDraftOrderBodySchema>;
 export type ListOrdersQuery = z.output<typeof ListOrdersQuerySchema>;
 export type ExportOrdersQuery = z.output<typeof ExportOrdersQuerySchema>;
+export type ReturnOrderBody = z.output<typeof ReturnOrderBodySchema>;
 export type OrderStatus = z.output<typeof OrderStatusSchema>;

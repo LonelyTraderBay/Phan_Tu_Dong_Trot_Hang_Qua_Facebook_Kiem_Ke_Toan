@@ -13,7 +13,7 @@ import { loadEnv } from '../../config/env';
 import { AuditService, type WriteAuditInput } from '../audit/audit.service';
 import { EntitlementsService } from '../billing/entitlements.service';
 import { CodService } from '../cod/cod.service';
-import type { CreateDraftOrderBody, OrderStatus } from './dto';
+import type { CreateDraftOrderBody, OrderStatus, ReturnOrderBody } from './dto';
 import {
   buildOrdersExport,
   type ExportFile,
@@ -119,7 +119,11 @@ type AutoConfirmOrderPayload = OrderPayload & {
   _idempotencyReplayed?: boolean;
 };
 
-type LifecycleRpcName = 'confirm_order' | 'cancel_order' | 'ship_order';
+type LifecycleRpcName =
+  | 'confirm_order'
+  | 'cancel_order'
+  | 'ship_order'
+  | 'return_order';
 
 const ORDER_SELECT =
   'id, org_id, conversation_id, contact_id, status, payment_method, customer_name, phone_e164, address_text, address_json, currency, subtotal_vnd, shipping_fee_vnd, total_vnd, idempotency_key, confirmed_at, shipped_at, cancelled_at, done_at, created_at, updated_at';
@@ -136,7 +140,10 @@ export class OrdersService {
   private readonly supabase: SupabaseLike;
   private readonly audit: AuditWriter;
   private readonly entitlements?: EntitlementsReader;
-  private readonly cod?: Pick<CodService, 'ensureExpectationForOrder'>;
+  private readonly cod?: Pick<
+    CodService,
+    'ensureExpectationForOrder' | 'handleReturnedOrder'
+  >;
 
   constructor(
     @Optional()
@@ -149,7 +156,7 @@ export class OrdersService {
     entitlements?: EntitlementsReader,
     @Optional()
     @Inject(CodService)
-    cod?: Pick<CodService, 'ensureExpectationForOrder'>,
+    cod?: Pick<CodService, 'ensureExpectationForOrder' | 'handleReturnedOrder'>,
   ) {
     this.supabase = supabase ?? createSupabaseServiceClient();
     this.audit = audit;
@@ -384,6 +391,48 @@ export class OrdersService {
       entityType: 'order',
       entityId: input.orderId,
       meta: {},
+    });
+
+    return payload;
+  }
+
+  async returnOrder(input: {
+    orgId: string;
+    orderId: string;
+    actorUserId: string;
+    body?: ReturnOrderBody;
+    now?: Date;
+  }) {
+    const restock = input.body?.restock ?? true;
+    const reason = input.body?.reason ?? null;
+    const payload = await this.callLifecycleRpc('return_order', {
+      p_org_id: input.orgId,
+      p_order_id: input.orderId,
+      p_reason: reason,
+      p_restock: restock,
+      p_at: (input.now ?? new Date()).toISOString(),
+      p_actor_user_id: input.actorUserId,
+    });
+
+    await this.cod?.handleReturnedOrder({
+      orgId: input.orgId,
+      orderId: input.orderId,
+      actorUserId: input.actorUserId,
+      order: payload.order,
+      reason,
+    });
+
+    await this.audit.writeAudit({
+      orgId: input.orgId,
+      actorUserId: input.actorUserId,
+      actorType: 'user',
+      action: 'order.returned',
+      entityType: 'order',
+      entityId: input.orderId,
+      meta: {
+        restock,
+        reason,
+      },
     });
 
     return payload;

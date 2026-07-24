@@ -574,6 +574,24 @@ export async function shipOrder(orderId: string): Promise<Order> {
   return order;
 }
 
+export async function returnOrder(
+  orderId: string,
+  input: { reason?: string; restock?: boolean } = {},
+): Promise<Order> {
+  const { order } = await apiFetch<{ order: Order }>(
+    `/v1/orders/${encodeURIComponent(orderId)}/return`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        restock: input.restock ?? true,
+        ...(input.reason ? { reason: input.reason } : {}),
+      }),
+    },
+  );
+
+  return order;
+}
+
 export async function createShipment(input: {
   orderId: string;
   provider?: ShippingProvider;

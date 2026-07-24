@@ -101,10 +101,10 @@
 
 ## Wave 2D — Returns (F3)
 
-- [ ] Order status / return flow; restock via ledger (`inbound`/`adjust`)
-- [ ] COD impact rules
-- [ ] UI return 1 đơn
-- [ ] Commit: `feat: returns restock`
+- [x] Order status / return flow; restock via ledger (`return_restock`)
+- [x] COD impact rules
+- [x] UI return 1 đơn
+- [x] Commit: `feat: plan F wave 2D returns restock`
 
 **DoD 2D:** Hoàn 1 đơn → stock/COD đúng.
 

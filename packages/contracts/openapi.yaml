@@ -468,6 +468,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
+  /v1/orders/{orderId}/return:
+    post:
+      summary: Mark a shipped or done order as returned and optionally restock items
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnOrderRequest'
+      responses:
+        '200':
+          description: Returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: Invalid order status
   /v1/orders/export:
     get:
       summary: Export orders for current org as xlsx, csv, or pdf
@@ -1071,6 +1091,17 @@ components:
           maxItems: 50
           items:
             $ref: '#/components/schemas/OrderItemWrite'
+    ReturnOrderRequest:
+      type: object
+      properties:
+        reason:
+          type:
+            - string
+            - 'null'
+          maxLength: 2000
+        restock:
+          type: boolean
+          default: true
     OrderItem:
       type: object
       required:

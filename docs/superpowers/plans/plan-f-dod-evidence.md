@@ -9,7 +9,7 @@
 | **2A Inventory depth** | **GREEN (code)** | `stock_movements` + adjust RPC; confirm/cancel write ledger; API `/v1/inventory/*`; Web `/inventory`; catalog `stockQty` via ledger |
 | **2B Carrier** | **GREEN (code)** | Shipping provider interface; encrypted per-org connections; manual + GHN sandbox/mock providers; shipment API + VI order action; export fallback runbook |
 | **2C COD** | **GREEN (code)** | COD expectations/collections/discrepancies; report + reconcile APIs; VI `/cod`; bigint-string VND only |
-| 2D Returns | Pending | |
+| **2D Returns** | **GREEN (code)** | `return_order` RPC; `order_returns`; `return_restock` ledger movement; COD open write-off/discrepancy note; API + VI order action |
 | 2E P&L | Pending | |
 | 2F Channel #2 | Pending | |
 | 2G Billing packaging | Pending | |
@@ -53,4 +53,16 @@
 | Audit money events | GREEN | COD expectation upsert, collection record, and reconcile write audit logs |
 | API unit tests | GREEN | `apps/api/src/modules/cod/cod.service.spec.ts` plus shipping expectation hook spec |
 
-**Next:** Wave 2D Returns.
+## 2D evidence
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Returns schema + RLS | GREEN | `supabase/migrations/20260727120000_order_returns.sql` |
+| Returned status RPC | GREEN | `return_order` allows `shipped`/`done`, records one return per order, and is idempotent once status is `returned` |
+| Return restock ledger | GREEN | `private.apply_order_stock_change(..., 'return_restock', ...)` restores item qty and writes `stock_movements` |
+| COD returned handling | GREEN | RPC writes off `open` COD expectations; leaves `matched`; leaves `discrepancy` open with a return note; API calls `CodService.handleReturnedOrder` |
+| API endpoint | GREEN | `POST /v1/orders/:orderId/return` (`orders.write`) with `{ reason?, restock?: true }`; OpenAPI updated |
+| Web VI | GREEN | Orders page shows `Hoàn hàng` for `shipped`/`done` orders |
+| API unit tests | GREEN | `OrdersService` return/restock RPC mock test included in `pnpm --filter api test` |
+
+**Next:** Wave 2E Simple P&L.

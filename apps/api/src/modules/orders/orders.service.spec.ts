@@ -261,6 +261,67 @@ describe('OrdersService lifecycle stock handling', () => {
       }),
     );
   });
+
+  it('uses the return RPC to restock shipped orders and clear COD state', async () => {
+    let stockQty = 0;
+    const client = {
+      rpc: vi.fn(async (fn: string, args: Record<string, unknown>) => {
+        expect(fn).toBe('return_order');
+        expect(args).toMatchObject({
+          p_org_id: ORG_ID,
+          p_order_id: ORDER_ID,
+          p_reason: 'customer refused delivery',
+          p_restock: true,
+          p_at: expect.any(String),
+          p_actor_user_id: USER_ID,
+        });
+        stockQty += 1;
+        return {
+          data: orderPayload(ORDER_ID, 'returned'),
+          error: null,
+        };
+      }),
+      from() {
+        throw new Error('from() should not be called');
+      },
+    } as unknown as SupabaseLike;
+    const audit = auditMock();
+    const cod = {
+      ensureExpectationForOrder: vi.fn(),
+      handleReturnedOrder: vi.fn(async () => null),
+    };
+    const service = new OrdersService(client, audit, undefined, cod);
+
+    const result = await service.returnOrder({
+      orgId: ORG_ID,
+      orderId: ORDER_ID,
+      actorUserId: USER_ID,
+      body: {
+        reason: 'customer refused delivery',
+        restock: true,
+      },
+    });
+
+    expect(result.order.status).toBe('returned');
+    expect(stockQty).toBe(1);
+    expect(cod.handleReturnedOrder).toHaveBeenCalledWith({
+      orgId: ORG_ID,
+      orderId: ORDER_ID,
+      actorUserId: USER_ID,
+      order: result.order,
+      reason: 'customer refused delivery',
+    });
+    expect(audit.writeAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'order.returned',
+        entityId: ORDER_ID,
+        meta: {
+          reason: 'customer refused delivery',
+          restock: true,
+        },
+      }),
+    );
+  });
 });
 
 describe('OrdersService auto-confirm create', () => {

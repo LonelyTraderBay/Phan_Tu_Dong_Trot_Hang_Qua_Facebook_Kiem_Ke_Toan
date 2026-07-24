@@ -161,6 +161,55 @@ export class CodService {
     return { expectation };
   }
 
+  async handleReturnedOrder(input: {
+    orgId: string;
+    orderId: string;
+    actorUserId?: string;
+    order?: OrderSnapshot;
+    reason?: string | null;
+  }) {
+    const order = await this.resolveOrderSnapshot(input);
+    if (order.paymentMethod !== 'cod' || order.status !== 'returned') {
+      return null;
+    }
+
+    const expectation = await this.maybeExpectation(input.orgId, input.orderId);
+    if (!expectation || expectation.status === 'matched') {
+      return null;
+    }
+
+    if (expectation.status === 'open') {
+      const updated = await this.updateExpectationStatus(
+        input.orgId,
+        input.orderId,
+        'written_off',
+      );
+      await this.audit?.writeAudit({
+        orgId: input.orgId,
+        actorUserId: input.actorUserId,
+        actorType: input.actorUserId ? 'user' : 'system',
+        action: 'cod.expectation_written_off',
+        entityType: 'order',
+        entityId: input.orderId,
+        meta: {
+          reason: normalizeNote(input.reason ?? undefined),
+          source: 'order_returned',
+        },
+      });
+      return { expectation: updated };
+    }
+
+    if (expectation.status === 'discrepancy') {
+      await this.appendReturnDiscrepancyNote(
+        input.orgId,
+        input.orderId,
+        returnDiscrepancyNote(input.reason ?? undefined),
+      );
+    }
+
+    return { expectation: mapExpectation(expectation) };
+  }
+
   async recordCollection(input: {
     orgId: string;
     actorUserId: string;
@@ -378,6 +427,18 @@ export class CodService {
   }
 
   private async requireExpectation(orgId: string, orderId: string) {
+    const data = await this.maybeExpectation(orgId, orderId);
+    if (!data) {
+      throw new NotFoundException({
+        code: 'cod_expectation_not_found',
+        message: 'COD expectation was not found for this order',
+      });
+    }
+
+    return data;
+  }
+
+  private async maybeExpectation(orgId: string, orderId: string) {
     const { data, error } = await this.supabase
       .from('cod_expectations')
       .select(EXPECTATION_SELECT)
@@ -388,14 +449,8 @@ export class CodService {
     if (error) {
       throwCodError(error, 'Could not read COD expectation');
     }
-    if (!data) {
-      throw new NotFoundException({
-        code: 'cod_expectation_not_found',
-        message: 'COD expectation was not found for this order',
-      });
-    }
 
-    return data as CodExpectationRow;
+    return (data as CodExpectationRow | null) ?? null;
   }
 
   private async sumCollections(orgId: string, orderId: string) {
@@ -449,6 +504,50 @@ export class CodService {
     if (error) {
       throwCodError(error, 'Could not resolve COD discrepancy');
     }
+  }
+
+  private async appendReturnDiscrepancyNote(
+    orgId: string,
+    orderId: string,
+    note: string,
+  ) {
+    const { data, error } = await this.supabase
+      .from('cod_discrepancies')
+      .select(DISCREPANCY_SELECT)
+      .eq('org_id', orgId)
+      .eq('order_id', orderId)
+      .eq('status', 'open')
+      .maybeSingle();
+
+    if (error) {
+      throwCodError(error, 'Could not read COD discrepancy');
+    }
+    if (!data) {
+      return null;
+    }
+
+    const row = data as CodDiscrepancyRow;
+    const existing = row.note ?? '';
+    if (existing.includes(note)) {
+      return mapDiscrepancy(row);
+    }
+
+    const { data: updated, error: updateError } = await this.supabase
+      .from('cod_discrepancies')
+      .update({
+        note: [existing, note].filter(Boolean).join('\n'),
+      })
+      .eq('org_id', orgId)
+      .eq('order_id', orderId)
+      .eq('status', 'open')
+      .select(DISCREPANCY_SELECT)
+      .single();
+
+    if (updateError) {
+      throwCodError(updateError, 'Could not update COD discrepancy');
+    }
+
+    return mapDiscrepancy(updated as CodDiscrepancyRow);
   }
 
   private async upsertDiscrepancy(input: {
@@ -685,6 +784,13 @@ function mapExpectationForReconcile(
 function normalizeNote(note: string | undefined) {
   const trimmed = note?.trim();
   return trimmed ? trimmed : null;
+}
+
+function returnDiscrepancyNote(reason: string | undefined) {
+  const normalized = normalizeNote(reason);
+  return normalized
+    ? `Order returned; COD discrepancy left open: ${normalized}`
+    : 'Order returned; COD discrepancy left open';
 }
 
 function toBigintVnd(value: string | number | unknown) {

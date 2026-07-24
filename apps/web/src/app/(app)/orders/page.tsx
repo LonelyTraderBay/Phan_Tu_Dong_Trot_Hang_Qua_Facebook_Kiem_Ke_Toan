@@ -16,6 +16,7 @@ import {
   createShipment,
   downloadOrdersExport,
   listOrders,
+  returnOrder,
   type Order,
   type OrdersExportFormat,
   type OrderStatus,
@@ -74,7 +75,7 @@ function OrdersContent() {
 
   async function runOrderAction(
     order: Order,
-    action: 'confirm' | 'cancel' | 'shipment',
+    action: 'confirm' | 'cancel' | 'shipment' | 'return',
   ) {
     setBusyOrderId(order.id);
     setError(null);
@@ -90,7 +91,9 @@ function OrdersContent() {
           ? await confirmOrder(order.id)
           : action === 'cancel'
             ? await cancelOrder(order.id)
-            : shipmentResult?.order;
+            : action === 'return'
+              ? await returnOrder(order.id, { restock: true })
+              : shipmentResult?.order;
       setOrders((current) =>
         updated
           ? current.map((item) => (item.id === updated.id ? updated : item))
@@ -101,6 +104,8 @@ function OrdersContent() {
           ? `Đã tạo vận đơn ${shipmentResult?.shipment.trackingCode ?? ''} cho đơn ${shortId(
               order.id,
             )}.`
+          : action === 'return'
+            ? `Đã hoàn hàng và nhập lại kho cho đơn ${shortId(order.id)}.`
           : `Đã cập nhật đơn ${shortId(order.id)}.`,
       );
     } catch (err) {
@@ -259,6 +264,16 @@ function OrdersContent() {
                             style={{ ...linkButtonStyle, color: '#b91c1c' }}
                           >
                             Huỷ
+                          </button>
+                        ) : null}
+                        {order.status === 'shipped' || order.status === 'done' ? (
+                          <button
+                            type="button"
+                            onClick={() => void runOrderAction(order, 'return')}
+                            disabled={busyOrderId === order.id}
+                            style={{ ...linkButtonStyle, color: '#b45309' }}
+                          >
+                            Hoàn hàng
                           </button>
                         ) : null}
                       </div>

@@ -26,6 +26,7 @@ import {
   CreateDraftOrderBodySchema,
   ExportOrdersQuerySchema,
   ListOrdersQuerySchema,
+  ReturnOrderBodySchema,
 } from './dto';
 import { OrdersService } from './orders.service';
 
@@ -149,6 +150,23 @@ export class OrdersController {
       orgId: requireOrgId(orgId),
       orderId,
       actorUserId: requireUser(user).id,
+    });
+  }
+
+  @Post(':orderId/return')
+  @HttpCode(200)
+  @RequirePermission('orders.write')
+  returnOrder(
+    @OrgId() orgId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser | undefined,
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @Body() body: unknown,
+  ) {
+    return this.orders.returnOrder({
+      orgId: requireOrgId(orgId),
+      orderId,
+      actorUserId: requireUser(user).id,
+      body: parseBody(ReturnOrderBodySchema, body),
     });
   }
 }

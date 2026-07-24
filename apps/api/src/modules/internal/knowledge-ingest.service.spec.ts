@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   KnowledgeIngestService,
   parseReplaceKnowledgeChunksBody,
+  parseRetrieveKnowledgeChunksBody,
   type SupabaseLike,
 } from "./knowledge-ingest.service";
 
@@ -68,6 +69,33 @@ function mockSupabaseForFaq() {
       calls.push({ op: "rpc", fn, args });
       return {
         data: { ok: true, deletedOld: true, inserted: 0 },
+        error: null,
+      };
+    },
+  } as unknown as SupabaseLike;
+
+  return { calls, client };
+}
+
+function mockSupabaseForRetrieve() {
+  const calls: SupabaseCall[] = [];
+  const client = {
+    from(table: string) {
+      calls.push({ op: "unexpected_from", table });
+      return {};
+    },
+    rpc(fn: string, args: unknown) {
+      calls.push({ op: "rpc", fn, args });
+      return {
+        data: [
+          {
+            source_type: "product",
+            source_id: SOURCE_ID,
+            chunk_index: 0,
+            content: "Title: T-shirt",
+            similarity: 0.91,
+          },
+        ],
         error: null,
       };
     },
@@ -245,6 +273,42 @@ describe("KnowledgeIngestService", () => {
     ]);
   });
 
+  it("retrieves chunks by org and query embedding via RPC", async () => {
+    const { calls, client } = mockSupabaseForRetrieve();
+    const service = new KnowledgeIngestService(client);
+    const embedding = Array.from({ length: 768 }, () => 0.02);
+
+    await expect(
+      service.retrieveChunks({
+        orgId: ORG_ID,
+        embedding,
+        topK: 3,
+      }),
+    ).resolves.toEqual({
+      chunks: [
+        {
+          sourceType: "product",
+          sourceId: SOURCE_ID,
+          chunkIndex: 0,
+          content: "Title: T-shirt",
+          score: 0.91,
+        },
+      ],
+    });
+
+    expect(calls).toEqual([
+      {
+        op: "rpc",
+        fn: "retrieve_knowledge_chunks",
+        args: {
+          p_org_id: ORG_ID,
+          p_embedding: `[${embedding.join(",")}]`,
+          p_match_count: 3,
+        },
+      },
+    ]);
+  });
+
   it("rejects embeddings with the wrong dimension", () => {
     expect(() =>
       parseReplaceKnowledgeChunksBody({
@@ -259,6 +323,16 @@ describe("KnowledgeIngestService", () => {
             embedding: [0.1],
           },
         ],
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it("rejects retrieval embeddings with the wrong dimension", () => {
+    expect(() =>
+      parseRetrieveKnowledgeChunksBody({
+        orgId: ORG_ID,
+        embedding: [0.1],
+        topK: 5,
       }),
     ).toThrow(BadRequestException);
   });

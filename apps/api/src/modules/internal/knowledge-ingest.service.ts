@@ -37,9 +37,29 @@ export type ReplaceKnowledgeChunksInput = z.output<
   typeof ReplaceKnowledgeChunksSchema
 >;
 
+export const RetrieveKnowledgeChunksSchema = z.object({
+  orgId: z.string().uuid(),
+  embedding: z
+    .array(z.number().finite())
+    .length(EMBEDDING_DIMENSIONS, "Embedding must have 768 dimensions"),
+  topK: z.number().int().min(1).max(20).default(5),
+});
+
+export type RetrieveKnowledgeChunksInput = z.output<
+  typeof RetrieveKnowledgeChunksSchema
+>;
+
 type SupabaseError = {
   code?: string;
   message?: string;
+};
+
+type RetrievedKnowledgeChunk = {
+  source_type: string;
+  source_id: string;
+  chunk_index: number;
+  content: string;
+  similarity: number;
 };
 
 @Injectable()
@@ -81,6 +101,28 @@ export class KnowledgeIngestService {
     return data ?? { ok: true, deletedOld: true, inserted: chunks.length };
   }
 
+  async retrieveChunks(input: RetrieveKnowledgeChunksInput) {
+    const { data, error } = await this.supabase.rpc("retrieve_knowledge_chunks", {
+      p_org_id: input.orgId,
+      p_embedding: toPgVector(input.embedding),
+      p_match_count: input.topK,
+    });
+
+    if (error) {
+      throwKnowledgeError(error, "Could not retrieve knowledge chunks");
+    }
+
+    const chunks = ((data ?? []) as RetrievedKnowledgeChunk[]).map((chunk) => ({
+      sourceType: chunk.source_type,
+      sourceId: chunk.source_id,
+      chunkIndex: chunk.chunk_index,
+      content: chunk.content,
+      score: chunk.similarity,
+    }));
+
+    return { chunks };
+  }
+
   private async verifySourceOwnership(input: ReplaceKnowledgeChunksInput) {
     if (input.sourceType !== "product") {
       return;
@@ -109,6 +151,22 @@ export class KnowledgeIngestService {
 
 export function parseReplaceKnowledgeChunksBody(body: unknown) {
   const parsed = ReplaceKnowledgeChunksSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new BadRequestException({
+      code: "invalid_request",
+      message: "Request body is invalid",
+      issues: parsed.error.issues.map((issue) => ({
+        path: issue.path.join("."),
+        message: issue.message,
+      })),
+    });
+  }
+
+  return parsed.data;
+}
+
+export function parseRetrieveKnowledgeChunksBody(body: unknown) {
+  const parsed = RetrieveKnowledgeChunksSchema.safeParse(body);
   if (!parsed.success) {
     throw new BadRequestException({
       code: "invalid_request",

@@ -1,3 +1,19 @@
+### Task 5: C4 Orchestrator process-message
+
+- Added `POST /internal/v1/ai/process-message` with service-key auth.
+- Added grounded orchestrator with prompt `v1_grounded_process_message`.
+- AI embeds the message, retrieves org-scoped top-k chunks from Core, and answers only with retrieved context.
+- Empty retrieval returns `escalate=true`, no citations, no tool calls, and skips the LLM.
+- Response shape: `replyText`, `citations`, `toolsUsed`, `promptVersion`, `model`, `tokens`, `escalate`.
+- Added Core `POST /internal/v1/knowledge/retrieve` and `retrieve_knowledge_chunks` RPC for service-role-only vector search.
+- Added mocked pytest coverage for grounded answer, no-context escalation, route auth.
+- Added API service tests for retrieval RPC payload and embedding validation.
+
+Verification:
+- `apps/ai/.venv/Scripts/python.exe -m pytest` -> 13 passed
+- `pnpm --dir apps/api typecheck` -> passed
+- `pnpm --dir apps/api test` -> 77 passed
+- `git diff --check` -> passed
 # Task 5 Report — B4 Webhook verify + ingest
 
 ## Status

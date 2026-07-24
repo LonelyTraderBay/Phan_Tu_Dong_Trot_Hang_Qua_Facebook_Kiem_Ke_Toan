@@ -46,3 +46,39 @@ class CoreKnowledgeClient:
         except error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"Core knowledge ingest failed: {exc.code} {detail}") from exc
+
+    def retrieve_chunks(
+        self,
+        *,
+        org_id: str,
+        embedding: list[float],
+        top_k: int,
+    ) -> list[dict]:
+        req = request.Request(
+            f"{self.base_url}/internal/v1/knowledge/retrieve",
+            data=json.dumps(
+                {
+                    "orgId": org_id,
+                    "embedding": embedding,
+                    "topK": top_k,
+                }
+            ).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "X-Service-Key": self.service_key,
+            },
+            method="POST",
+        )
+
+        try:
+            with self.opener(req, timeout=30) as response:
+                body = json.loads(response.read().decode("utf-8"))
+        except error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Core knowledge retrieve failed: {exc.code} {detail}") from exc
+
+        chunks = body.get("chunks")
+        if not isinstance(chunks, list):
+            raise RuntimeError("Core knowledge retrieve returned invalid chunks")
+
+        return chunks

@@ -11,9 +11,16 @@ import { AdminOpsModule } from "./modules/admin-ops/admin-ops.module";
 import { FeatureFlagsModule } from "./modules/feature-flags/feature-flags.module";
 import { HealthModule } from "./modules/health/health.module";
 import { IdentityModule } from "./modules/identity/identity.module";
+import { InternalModule } from "./modules/internal/internal.module";
 
 @Module({
-  imports: [HealthModule, IdentityModule, AdminOpsModule, FeatureFlagsModule],
+  imports: [
+    HealthModule,
+    IdentityModule,
+    AdminOpsModule,
+    FeatureFlagsModule,
+    InternalModule,
+  ],
   providers: [
     {
       provide: MEMBERSHIPS_REPOSITORY,

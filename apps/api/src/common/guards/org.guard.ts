@@ -80,6 +80,7 @@ function isSkippedPath(path: string, method = "GET") {
   return (
     path === "/health" ||
     path === "/ready" ||
+    path === "/api/inngest" ||
     path === "/ops" ||
     path.startsWith("/ops/") ||
     path === "/internal" ||

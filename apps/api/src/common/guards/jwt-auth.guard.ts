@@ -34,7 +34,7 @@ function getPath(request: Pick<RequestWithAuth, "originalUrl" | "url">) {
 }
 
 function isPublicPath(path: string) {
-  return path === "/health" || path === "/ready";
+  return path === "/health" || path === "/ready" || path === "/api/inngest";
 }
 
 function getBearerToken(headers: IncomingHttpHeaders) {

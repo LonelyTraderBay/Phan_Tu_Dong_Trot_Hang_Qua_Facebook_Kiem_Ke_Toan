@@ -55,6 +55,20 @@ describe("OrgGuard", () => {
     ).resolves.toBe(true);
   });
 
+  it("skips the Inngest serve endpoint", async () => {
+    const guard = new OrgGuard(mockMemberships());
+
+    await expect(
+      guard.canActivate(
+        mockContext({
+          headers: {},
+          method: "POST",
+          originalUrl: "/api/inngest",
+        }),
+      ),
+    ).resolves.toBe(true);
+  });
+
   it("rejects missing X-Org-Id", async () => {
     const guard = new OrgGuard(mockMemberships());
 

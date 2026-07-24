@@ -261,6 +261,10 @@ function mapOutboxRow(row: OutboxRow) {
 }
 
 function toInngestEventName(eventName: string) {
+  if (eventName === "meta.inbound") {
+    return "meta/persist_inbound";
+  }
+
   return eventName.replaceAll(".", "/");
 }
 

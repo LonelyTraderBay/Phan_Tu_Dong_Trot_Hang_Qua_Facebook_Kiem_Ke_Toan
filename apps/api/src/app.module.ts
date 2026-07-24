@@ -12,6 +12,7 @@ import { ChannelsModule } from "./modules/channels/channels.module";
 import { FeatureFlagsModule } from "./modules/feature-flags/feature-flags.module";
 import { HealthModule } from "./modules/health/health.module";
 import { IdentityModule } from "./modules/identity/identity.module";
+import { InboxModule } from "./modules/inbox/inbox.module";
 import { InternalModule } from "./modules/internal/internal.module";
 
 @Module({
@@ -20,6 +21,7 @@ import { InternalModule } from "./modules/internal/internal.module";
     IdentityModule,
     AdminOpsModule,
     ChannelsModule,
+    InboxModule,
     FeatureFlagsModule,
     InternalModule,
   ],

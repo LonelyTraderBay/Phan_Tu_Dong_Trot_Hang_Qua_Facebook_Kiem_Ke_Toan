@@ -191,6 +191,43 @@ describe("outbox publisher", () => {
     });
   });
 
+  it("maps meta.inbound to the persist inbound Inngest event", async () => {
+    const { client } = mockSupabase({
+      selectResults: [
+        {
+          data: [
+            outboxRow({
+              event_name: "meta.inbound",
+              payload_json: { object: "page", entry: [] },
+            }),
+          ],
+          error: null,
+        },
+      ],
+    });
+    const sentEvents: unknown[] = [];
+    const publisher = new OutboxPublisher(client, {
+      send: async (event) => {
+        sentEvents.push(event);
+        return { ids: ["evt_1"] };
+      },
+    });
+
+    await publisher.publishPending(10);
+
+    expect(sentEvents).toEqual([
+      {
+        name: "meta/persist_inbound",
+        data: {
+          object: "page",
+          entry: [],
+          orgId: ORG_ID,
+          outboxEventId: OUTBOX_ID,
+        },
+      },
+    ]);
+  });
+
   it("increments attempts and dead-letters exhausted events", async () => {
     const { calls, client } = mockSupabase({
       selectResults: [{ data: [outboxRow()], error: null }],

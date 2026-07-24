@@ -44,6 +44,7 @@ type OrderRow = {
   address_json: JsonObject;
   currency: 'VND';
   subtotal_vnd: number | string;
+  shipping_fee_vnd: number | string;
   total_vnd: number | string;
   idempotency_key: string | null;
   confirmed_at: string | null;
@@ -120,7 +121,7 @@ type AutoConfirmOrderPayload = OrderPayload & {
 type LifecycleRpcName = 'confirm_order' | 'cancel_order' | 'ship_order';
 
 const ORDER_SELECT =
-  'id, org_id, conversation_id, contact_id, status, payment_method, customer_name, phone_e164, address_text, address_json, currency, subtotal_vnd, total_vnd, idempotency_key, confirmed_at, shipped_at, cancelled_at, done_at, created_at, updated_at';
+  'id, org_id, conversation_id, contact_id, status, payment_method, customer_name, phone_e164, address_text, address_json, currency, subtotal_vnd, shipping_fee_vnd, total_vnd, idempotency_key, confirmed_at, shipped_at, cancelled_at, done_at, created_at, updated_at';
 const ITEM_SELECT =
   'id, product_id, variant_id, title_snapshot, sku_snapshot, qty, unit_price_vnd, line_total_vnd';
 const ORDER_WITH_ITEMS_SELECT = `${ORDER_SELECT}, items:order_items(${ITEM_SELECT})`;
@@ -825,6 +826,7 @@ function mapOrder(
     addressJson: row.address_json,
     currency: row.currency,
     subtotalVnd: row.subtotal_vnd.toString(),
+    shippingFeeVnd: row.shipping_fee_vnd?.toString() ?? '0',
     totalVnd: row.total_vnd.toString(),
     idempotencyKey: row.idempotency_key,
     confirmedAt: row.confirmed_at,

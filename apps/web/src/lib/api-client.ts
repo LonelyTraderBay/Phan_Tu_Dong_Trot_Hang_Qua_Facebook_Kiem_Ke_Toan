@@ -110,6 +110,7 @@ export type Order = {
   addressJson: Record<string, unknown>;
   currency: 'VND' | string;
   subtotalVnd: string;
+  shippingFeeVnd?: string;
   totalVnd: string;
   idempotencyKey: string | null;
   confirmedAt: string | null;
@@ -119,6 +120,35 @@ export type Order = {
   createdAt: string;
   updatedAt: string;
   items?: OrderItem[];
+};
+
+export type ShippingProvider = 'manual' | 'ghn';
+
+export type CarrierConnection = {
+  id: string;
+  provider: ShippingProvider;
+  displayName: string;
+  config: Record<string, unknown>;
+  enabled: boolean;
+  hasCredentials: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Shipment = {
+  id: string;
+  orgId: string;
+  orderId: string;
+  carrierConnectionId: string | null;
+  provider: ShippingProvider;
+  externalShipmentId: string | null;
+  trackingCode: string | null;
+  status: string;
+  feeVnd: string;
+  labelUrl: string | null;
+  raw: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type OrderItem = {
@@ -485,6 +515,28 @@ export async function shipOrder(orderId: string): Promise<Order> {
   );
 
   return order;
+}
+
+export async function createShipment(input: {
+  orderId: string;
+  provider?: ShippingProvider;
+  carrierConnectionId?: string;
+}): Promise<{ shipment: Shipment; order?: Order; items?: OrderItem[] }> {
+  return apiFetch<{ shipment: Shipment; order?: Order; items?: OrderItem[] }>(
+    '/v1/shipping/shipments',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export async function listShipments(orderId: string): Promise<Shipment[]> {
+  const { shipments } = await apiFetch<{ shipments: Shipment[] }>(
+    `/v1/shipping/shipments?orderId=${encodeURIComponent(orderId)}`,
+  );
+
+  return shipments;
 }
 
 export async function downloadOrdersExport(input: {

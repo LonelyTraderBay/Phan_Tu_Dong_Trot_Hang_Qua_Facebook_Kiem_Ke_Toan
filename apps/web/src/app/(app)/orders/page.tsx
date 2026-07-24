@@ -13,9 +13,9 @@ import {
   ApiClientError,
   cancelOrder,
   confirmOrder,
+  createShipment,
   downloadOrdersExport,
   listOrders,
-  shipOrder,
   type Order,
   type OrdersExportFormat,
   type OrderStatus,
@@ -74,23 +74,35 @@ function OrdersContent() {
 
   async function runOrderAction(
     order: Order,
-    action: 'confirm' | 'cancel' | 'ship',
+    action: 'confirm' | 'cancel' | 'shipment',
   ) {
     setBusyOrderId(order.id);
     setError(null);
     setMessage(null);
 
     try {
+      const shipmentResult =
+        action === 'shipment'
+          ? await createShipment({ orderId: order.id, provider: 'manual' })
+          : null;
       const updated =
         action === 'confirm'
           ? await confirmOrder(order.id)
           : action === 'cancel'
             ? await cancelOrder(order.id)
-            : await shipOrder(order.id);
+            : shipmentResult?.order;
       setOrders((current) =>
-        current.map((item) => (item.id === updated.id ? updated : item)),
+        updated
+          ? current.map((item) => (item.id === updated.id ? updated : item))
+          : current,
       );
-      setMessage(`Đã cập nhật đơn ${shortId(order.id)}.`);
+      setMessage(
+        action === 'shipment'
+          ? `Đã tạo vận đơn ${shipmentResult?.shipment.trackingCode ?? ''} cho đơn ${shortId(
+              order.id,
+            )}.`
+          : `Đã cập nhật đơn ${shortId(order.id)}.`,
+      );
     } catch (err) {
       setError(getApiErrorMessage(err, 'Không thể cập nhật đơn hàng.'));
     } finally {
@@ -232,11 +244,11 @@ function OrdersContent() {
                         {order.status === 'confirmed' ? (
                           <button
                             type="button"
-                            onClick={() => void runOrderAction(order, 'ship')}
+                            onClick={() => void runOrderAction(order, 'shipment')}
                             disabled={busyOrderId === order.id}
                             style={linkButtonStyle}
                           >
-                            Giao hàng
+                            Tạo vận đơn
                           </button>
                         ) : null}
                         {order.status === 'draft' || order.status === 'confirmed' ? (

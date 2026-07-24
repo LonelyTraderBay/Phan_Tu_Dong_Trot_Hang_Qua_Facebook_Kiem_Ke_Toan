@@ -74,14 +74,15 @@
 
 ## Wave 2B — Carrier API (F1)
 
-### Task F1.1–F1.5 (outline — expand before coding)
+### Task F1.1–F1.5
 
-- [ ] `ShippingProvider` interface + 1 adapter (GHN/GHTK/VTP — pick one)
-- [ ] Encrypted carrier secrets per org
-- [ ] Create shipment from confirmed order; store tracking
-- [ ] Fee BIGINT on order/shipment
-- [ ] Staging E2E + export fallback when carrier fails
-- [ ] Commit(s): `feat(api): shipping provider …`
+- [x] `ShippingProvider` interface + manual provider + GHN sandbox/mock provider
+- [x] Encrypted carrier secrets per org via `TOKEN_ENCRYPTION_KEY`
+- [x] Create shipment from confirmed order; store tracking
+- [x] Fee BIGINT on shipment and `orders.shipping_fee_vnd`
+- [x] VI order action `Tạo vận đơn`
+- [x] Export fallback runbook when carrier fails
+- [x] Commit(s): `feat: plan F wave 2B shipping provider and shipments`
 
 **DoD 2B:** 1 carrier E2E staging; export vẫn dùng được.
 

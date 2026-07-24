@@ -108,6 +108,65 @@ paths:
       responses:
         '201':
           description: Revoked
+  /v1/shipping/connections:
+    get:
+      summary: List carrier connections for current org
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCarrierConnectionsResponse'
+    post:
+      summary: Upsert one carrier connection for current org
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertCarrierConnectionRequest'
+      responses:
+        '201':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionEnvelope'
+  /v1/shipping/shipments:
+    get:
+      summary: List shipments for an order
+      parameters:
+        - name: orderId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListShipmentsResponse'
+    post:
+      summary: Create a shipment for a confirmed or shipped order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShipmentRequest'
+      responses:
+        '201':
+          description: Shipment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateShipmentResponse'
+        '400':
+          description: Carrier not configured, disabled, or invalid order status
   /v1/inventory/movements:
     get:
       summary: List stock movements for current org
@@ -994,6 +1053,7 @@ components:
         - paymentMethod
         - currency
         - subtotalVnd
+        - shippingFeeVnd
         - totalVnd
         - createdAt
         - updatedAt
@@ -1043,6 +1103,10 @@ components:
           type: string
           pattern: '^[0-9]+$'
           description: Whole VND amount as a bigint string.
+        shippingFeeVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Whole VND shipping fee as a bigint string.
         totalVnd:
           type: string
           pattern: '^[0-9]+$'
@@ -1109,6 +1173,176 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Order'
+    ShippingProvider:
+      type: string
+      enum:
+        - manual
+        - ghn
+    CarrierConnection:
+      type: object
+      required:
+        - id
+        - provider
+        - displayName
+        - config
+        - enabled
+        - hasCredentials
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          $ref: '#/components/schemas/ShippingProvider'
+        displayName:
+          type: string
+        config:
+          type: object
+          additionalProperties: true
+        enabled:
+          type: boolean
+        hasCredentials:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UpsertCarrierConnectionRequest:
+      type: object
+      required:
+        - provider
+      properties:
+        provider:
+          $ref: '#/components/schemas/ShippingProvider'
+        displayName:
+          type: string
+        credentials:
+          type: object
+          additionalProperties: true
+          writeOnly: true
+        config:
+          type: object
+          additionalProperties: true
+        enabled:
+          type: boolean
+          default: true
+    CarrierConnectionEnvelope:
+      type: object
+      required:
+        - connection
+      properties:
+        connection:
+          $ref: '#/components/schemas/CarrierConnection'
+    ListCarrierConnectionsResponse:
+      type: object
+      required:
+        - connections
+      properties:
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarrierConnection'
+    Shipment:
+      type: object
+      required:
+        - id
+        - orgId
+        - orderId
+        - provider
+        - status
+        - feeVnd
+        - raw
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        carrierConnectionId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        provider:
+          $ref: '#/components/schemas/ShippingProvider'
+        externalShipmentId:
+          type:
+            - string
+            - 'null'
+        trackingCode:
+          type:
+            - string
+            - 'null'
+        status:
+          type: string
+          enum:
+            - created
+            - picking
+            - delivering
+            - delivered
+            - cancelled
+            - failed
+        feeVnd:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Whole VND amount as a bigint string.
+        labelUrl:
+          type:
+            - string
+            - 'null'
+        raw:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateShipmentRequest:
+      type: object
+      required:
+        - orderId
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        provider:
+          $ref: '#/components/schemas/ShippingProvider'
+        carrierConnectionId:
+          type: string
+          format: uuid
+    CreateShipmentResponse:
+      type: object
+      required:
+        - shipment
+      properties:
+        shipment:
+          $ref: '#/components/schemas/Shipment'
+        order:
+          $ref: '#/components/schemas/Order'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+    ListShipmentsResponse:
+      type: object
+      required:
+        - shipments
+      properties:
+        shipments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Shipment'
     AiProduct:
       type: object
       required:

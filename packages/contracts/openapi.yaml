@@ -218,7 +218,7 @@ paths:
     post:
       summary: Create a staff draft order
       parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/RequiredIdempotencyKey'
       requestBody:
         required: true
         content:
@@ -569,6 +569,14 @@ components:
       name: Idempotency-Key
       in: header
       required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    RequiredIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
       schema:
         type: string
         minLength: 1

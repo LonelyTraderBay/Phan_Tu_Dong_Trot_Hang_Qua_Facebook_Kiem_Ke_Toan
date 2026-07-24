@@ -1,3 +1,33 @@
+# Plan D Final Fix Report
+
+## Merge blockers fixed
+
+1. `POST /v1/orders` now requires `Idempotency-Key`.
+   - Controller rejects missing keys with `400 missing_idempotency_key`.
+   - Orders service validates missing/blank/too-long keys before create work.
+   - OpenAPI uses `RequiredIdempotencyKey` with `required: true` for create.
+
+2. Auto-confirm create is atomic.
+   - Auto-confirm orgs call `public.create_and_confirm_order(...)`.
+   - The RPC claims/replays idempotency, creates draft rows, decrements stock, confirms the order, and completes the idempotency response in one SQL transaction.
+   - Insufficient stock raises `insufficient_stock`, rolling back the order/items/idempotency insert.
+   - Idempotent replay returns the stored payload with an internal replay marker; the API strips it and does not write a second confirm audit.
+
+## Tests added
+
+- Missing `Idempotency-Key` on create returns 400 and does not call service.
+- Auto-confirm insufficient stock leaves no order row in the atomic create fixture.
+- Auto-confirm replay confirms once and audits once.
+
+## Verification
+
+- `pnpm --dir "apps/api" exec vitest run src/modules/orders/orders.controller.spec.ts src/modules/orders/orders.service.spec.ts`
+- `pnpm --dir "apps/api" run typecheck`
+- `pnpm --dir "apps/api" test`
+
+## Notes
+
+- Supabase CLI is not installed in this environment, so SQL was reviewed and covered through service behavior tests rather than a local DB migration run.
 # Plan C Final Merge Blocker Fix Report
 
 ## Fix 1: Soft-deleted product chunk purge

@@ -111,6 +111,9 @@ type OrderPayload = {
   };
   items: unknown[];
 };
+type AutoConfirmOrderPayload = OrderPayload & {
+  _idempotencyReplayed?: boolean;
+};
 
 type LifecycleRpcName = 'confirm_order' | 'cancel_order' | 'ship_order';
 
@@ -231,40 +234,47 @@ export class OrdersService {
     idempotencyKey?: string;
     path: string;
   }) {
+    const idempotencyKey = requireIdempotencyKey(input.idempotencyKey);
+    const settings = await this.getOrgSettings(input.orgId);
+    const items = await this.resolveOrderItems(input.orgId, input.body.items);
+
+    await this.verifyOptionalOwner(
+      'conversations',
+      input.orgId,
+      input.body.conversationId,
+    );
+    await this.verifyOptionalOwner(
+      'contacts',
+      input.orgId,
+      input.body.contactId,
+    );
+
+    if (autoConfirmEnabled(settings.settings_json)) {
+      const payload = await this.createAndConfirmOrderRpc(
+        { ...input, idempotencyKey },
+        items,
+      );
+      if (!payload.replayed) {
+        await this.writeOrderConfirmedAudit({
+          orgId: input.orgId,
+          orderId: payload.response.order.id,
+          actorUserId: input.actorUserId,
+          autoConfirm: true,
+        });
+      }
+      return payload.response;
+    }
+
     return this.withIdempotency(
       {
         orgId: input.orgId,
-        key: input.idempotencyKey,
+        key: idempotencyKey,
         method: 'POST',
         path: input.path,
         statusCode: 201,
       },
       async () => {
-        const settings = await this.getOrgSettings(input.orgId);
-        const items = await this.resolveOrderItems(input.orgId, input.body.items);
-
-        await this.verifyOptionalOwner(
-          'conversations',
-          input.orgId,
-          input.body.conversationId,
-        );
-        await this.verifyOptionalOwner(
-          'contacts',
-          input.orgId,
-          input.body.contactId,
-        );
-
-        const draft = await this.createDraftOrderRpc(input, items);
-        if (!autoConfirmEnabled(settings.settings_json)) {
-          return draft;
-        }
-
-        return this.confirmOrder({
-          orgId: input.orgId,
-          orderId: draft.order.id,
-          actorUserId: input.actorUserId,
-          autoConfirm: true,
-        });
+        return this.createDraftOrderRpc({ ...input, idempotencyKey }, items);
       },
     );
   }
@@ -293,16 +303,11 @@ export class OrdersService {
           p_confirmed_at: (input.now ?? new Date()).toISOString(),
         });
 
-        await this.audit.writeAudit({
+        await this.writeOrderConfirmedAudit({
           orgId: input.orgId,
+          orderId: input.orderId,
           actorUserId: input.actorUserId,
-          actorType: input.autoConfirm ? 'system' : 'user',
-          action: 'order.confirmed',
-          entityType: 'order',
-          entityId: input.orderId,
-          meta: {
-            autoConfirm: input.autoConfirm === true,
-          },
+          autoConfirm: input.autoConfirm === true,
         });
 
         return payload;
@@ -397,6 +402,51 @@ export class OrdersService {
     }
 
     return data as OrderPayload;
+  }
+
+  private async createAndConfirmOrderRpc(
+    input: {
+      orgId: string;
+      body: CreateDraftOrderBody;
+      idempotencyKey: string;
+      path: string;
+    },
+    items: VariantSnapshot[],
+  ) {
+    const { data, error } = await this.supabase.rpc('create_and_confirm_order', {
+      p_org_id: input.orgId,
+      p_conversation_id: input.body.conversationId ?? null,
+      p_contact_id: input.body.contactId ?? null,
+      p_payment_method: input.body.paymentMethod,
+      p_customer_name: input.body.customerName ?? null,
+      p_phone_e164: input.body.phoneE164 ?? null,
+      p_address_text: input.body.addressText ?? null,
+      p_address_json: input.body.addressJson,
+      p_idempotency_key: input.idempotencyKey,
+      p_items: items.map((item) => ({
+        product_id: item.productId,
+        variant_id: item.variantId,
+        title_snapshot: item.title,
+        sku_snapshot: item.sku,
+        qty: item.qty,
+        unit_price_vnd: item.unitPriceVnd.toString(),
+        line_total_vnd: item.lineTotalVnd.toString(),
+      })),
+      p_method: 'POST',
+      p_path: input.path,
+      p_status_code: 201,
+      p_confirmed_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      throwOrdersError(error, 'Could not create and confirm order');
+    }
+
+    const response = data as AutoConfirmOrderPayload;
+    const replayed = response._idempotencyReplayed === true;
+    delete response._idempotencyReplayed;
+
+    return { response, replayed };
   }
 
   private async callLifecycleRpc(
@@ -580,6 +630,25 @@ export class OrdersService {
         message: `${table.slice(0, -1)} was not found`,
       });
     }
+  }
+
+  private async writeOrderConfirmedAudit(input: {
+    orgId: string;
+    orderId: string;
+    actorUserId: string;
+    autoConfirm: boolean;
+  }) {
+    await this.audit.writeAudit({
+      orgId: input.orgId,
+      actorUserId: input.actorUserId,
+      actorType: input.autoConfirm ? 'system' : 'user',
+      action: 'order.confirmed',
+      entityType: 'order',
+      entityId: input.orderId,
+      meta: {
+        autoConfirm: input.autoConfirm,
+      },
+    });
   }
 
   private async withIdempotency<T extends JsonObject>(
@@ -768,6 +837,24 @@ function autoConfirmEnabled(settings: JsonObject) {
   return settings.auto_confirm === true || settings.autoConfirm === true;
 }
 
+function requireIdempotencyKey(idempotencyKey: string | undefined) {
+  const key = idempotencyKey?.trim();
+  if (!key) {
+    throw new BadRequestException({
+      code: 'missing_idempotency_key',
+      message: 'Idempotency-Key header is required',
+    });
+  }
+  if (key.length > 128) {
+    throw new BadRequestException({
+      code: 'invalid_idempotency_key',
+      message: 'Idempotency-Key must be at most 128 characters',
+    });
+  }
+
+  return key;
+}
+
 function toBigintVnd(value: string | number) {
   if (typeof value === 'number') {
     if (!Number.isSafeInteger(value) || value < 0) {
@@ -811,6 +898,24 @@ function throwOrdersError(error: SupabaseError, message: string): never {
     throw new BadRequestException({
       code: 'invalid_order_status',
       message: error.message ?? message,
+    });
+  }
+  if (error.hint === 'invalid_idempotency_key') {
+    throw new BadRequestException({
+      code: 'invalid_idempotency_key',
+      message: error.message ?? 'Idempotency-Key is invalid',
+    });
+  }
+  if (error.hint === 'idempotency_conflict') {
+    throw new ConflictException({
+      code: 'idempotency_conflict',
+      message: 'Idempotent request is already in progress',
+    });
+  }
+  if (error.hint === 'idempotency_key_reused') {
+    throw new ConflictException({
+      code: 'idempotency_key_reused',
+      message: 'Idempotency-Key was already used for another request',
     });
   }
 

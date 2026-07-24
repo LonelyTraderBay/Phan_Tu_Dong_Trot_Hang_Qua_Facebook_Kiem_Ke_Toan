@@ -93,11 +93,13 @@ export class OrdersController {
     @Req() request: OrdersRequest,
     @Body() body: unknown,
   ) {
+    const idempotencyKey = requireIdempotencyKey(request.idempotencyKey);
+
     return this.orders.createDraftOrder({
       orgId: requireOrgId(orgId),
       actorUserId: requireUser(user).id,
       body: parseBody(CreateDraftOrderBodySchema, body),
-      idempotencyKey: request.idempotencyKey,
+      idempotencyKey,
       path: requestPath(request),
     });
   }
@@ -190,6 +192,17 @@ function requireUser(user: AuthenticatedUser | undefined) {
   }
 
   return user;
+}
+
+function requireIdempotencyKey(idempotencyKey: string | undefined) {
+  if (!idempotencyKey) {
+    throw new BadRequestException({
+      code: 'missing_idempotency_key',
+      message: 'Idempotency-Key header is required',
+    });
+  }
+
+  return idempotencyKey;
 }
 
 function requestPath(request: OrdersRequest) {

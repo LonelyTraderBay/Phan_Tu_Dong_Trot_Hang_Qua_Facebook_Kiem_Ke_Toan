@@ -11,6 +11,13 @@ const ORG_ID = '11111111-1111-1111-1111-111111111111';
 const ORDER_ID = '22222222-2222-2222-2222-222222222222';
 const SECOND_ORDER_ID = '33333333-3333-3333-3333-333333333333';
 const USER_ID = '44444444-4444-4444-4444-444444444444';
+const PRODUCT_ID = '66666666-6666-6666-6666-666666666666';
+const VARIANT_ID = '77777777-7777-7777-7777-777777777777';
+const CREATE_BODY = {
+  paymentMethod: 'cod' as const,
+  addressJson: {},
+  items: [{ variantId: VARIANT_ID, qty: 1 }],
+};
 
 function orderPayload(orderId: string, status: string) {
   return {
@@ -43,6 +50,92 @@ function auditMock() {
   return {
     writeAudit: vi.fn(async () => ({ audit: { id: 'audit-id' } })),
   } satisfies AuditWriter;
+}
+
+function autoConfirmClient(input: { stockQty: number }) {
+  let stockQty = input.stockQty;
+  const orders: Array<Record<string, unknown>> = [];
+  const idempotentResponses = new Map<string, ReturnType<typeof orderPayload>>();
+  const client = {
+    rpc: vi.fn(async (fn: string, args: Record<string, unknown>) => {
+      expect(fn).toBe('create_and_confirm_order');
+      const idempotencyKey = String(args.p_idempotency_key);
+
+      const existing = idempotentResponses.get(idempotencyKey);
+      if (existing) {
+        return {
+          data: { ...existing, _idempotencyReplayed: true },
+          error: null,
+        };
+      }
+
+      if (stockQty < 1) {
+        return {
+          data: null,
+          error: { code: 'P0001', hint: 'insufficient_stock' },
+        };
+      }
+
+      stockQty -= 1;
+      const payload = orderPayload(ORDER_ID, 'confirmed');
+      orders.push(payload.order);
+      idempotentResponses.set(idempotencyKey, payload);
+
+      return {
+        data: { ...payload, _idempotencyReplayed: false },
+        error: null,
+      };
+    }),
+    from(table: string) {
+      const chain = {
+        select() {
+          return chain;
+        },
+        eq() {
+          return chain;
+        },
+        is() {
+          return chain;
+        },
+        maybeSingle: async () => {
+          if (table === 'organizations') {
+            return {
+              data: { id: ORG_ID, settings_json: { auto_confirm: true } },
+              error: null,
+            };
+          }
+          if (table === 'product_variants') {
+            return {
+              data: {
+                id: VARIANT_ID,
+                org_id: ORG_ID,
+                product_id: PRODUCT_ID,
+                sku: 'AT-DEN-L',
+                title: 'Black / L',
+                price_vnd: '1000',
+                stock_qty: stockQty,
+              },
+              error: null,
+            };
+          }
+          if (table === 'products') {
+            return { data: { id: PRODUCT_ID }, error: null };
+          }
+          throw new Error(`unexpected table ${table}`);
+        },
+      };
+
+      return chain;
+    },
+  } as unknown as SupabaseLike;
+
+  return {
+    client,
+    orders,
+    get stockQty() {
+      return stockQty;
+    },
+  };
 }
 
 describe('OrdersService lifecycle stock handling', () => {
@@ -153,6 +246,68 @@ describe('OrdersService lifecycle stock handling', () => {
       expect.objectContaining({
         action: 'order.cancelled',
         entityId: ORDER_ID,
+      }),
+    );
+  });
+});
+
+describe('OrdersService auto-confirm create', () => {
+  it('does not leave an order row when auto-confirm stock is insufficient', async () => {
+    const db = autoConfirmClient({ stockQty: 0 });
+    const audit = auditMock();
+    const service = new OrdersService(db.client, audit);
+
+    await expect(
+      service.createDraftOrder({
+        orgId: ORG_ID,
+        actorUserId: USER_ID,
+        body: CREATE_BODY,
+        idempotencyKey: 'create-no-stock',
+        path: '/v1/orders',
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'insufficient_stock' },
+      status: 400,
+    });
+
+    expect(db.orders).toHaveLength(0);
+    expect(db.client.rpc).toHaveBeenCalledTimes(1);
+    expect(db.client.rpc).toHaveBeenCalledWith(
+      'create_and_confirm_order',
+      expect.objectContaining({
+        p_idempotency_key: 'create-no-stock',
+      }),
+    );
+    expect(audit.writeAudit).not.toHaveBeenCalled();
+  });
+
+  it('confirms once when auto-confirm create is replayed with the same idempotency key', async () => {
+    const db = autoConfirmClient({ stockQty: 1 });
+    const audit = auditMock();
+    const service = new OrdersService(db.client, audit);
+    const input = {
+      orgId: ORG_ID,
+      actorUserId: USER_ID,
+      body: CREATE_BODY,
+      idempotencyKey: 'create-confirm-once',
+      path: '/v1/orders',
+    };
+
+    const first = await service.createDraftOrder(input);
+    const replay = await service.createDraftOrder(input);
+
+    expect(first.order.status).toBe('confirmed');
+    expect(replay.order.status).toBe('confirmed');
+    expect(db.orders).toHaveLength(1);
+    expect(db.stockQty).toBe(0);
+    expect(db.client.rpc).toHaveBeenCalledTimes(2);
+    expect(audit.writeAudit).toHaveBeenCalledTimes(1);
+    expect(audit.writeAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorType: 'system',
+        action: 'order.confirmed',
+        entityId: ORDER_ID,
+        meta: { autoConfirm: true },
       }),
     );
   });

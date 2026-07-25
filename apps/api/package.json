@@ -7,7 +7,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "dev": "tsx watch src/main.ts",
+    "dev": "tsx watch --env-file=../../.env src/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js"
   },
@@ -28,7 +28,7 @@
     "@nestjs/testing": "^11.1.28",
     "@types/node": "^26.1.1",
     "tsx": "^4.23.1",
-    "typescript": "5.8.3",
+    "typescript": "7.0.2",
     "vitest": "^4.1.10"
   }
 }

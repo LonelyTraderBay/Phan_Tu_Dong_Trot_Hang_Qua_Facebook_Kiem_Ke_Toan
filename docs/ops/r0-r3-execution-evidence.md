@@ -10,7 +10,7 @@
 | R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | Ã¢â‚¬â€ |
 | R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` 26 migrations; verified `public.*` tables | Prior staging/prod refs deleted |
 | R0.2 Always-on staging hosts | **AMBER** | Free services LIVE (`a285e5c`); GHA keep-warm 3/3 HTTP 200; external probe OK | Not always-on until starter+payment; some local VN networks TLS-reset to onrender.com |
-| R0.3 Ã‚Â§12.1 walkthrough | **AMBER** | Staging URLs exist; walkthrough after deploys go live | Meta still pending |
+| R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a** (`c2cf68e`): [p0-staging-walkthrough-12-1.md](./p0-staging-walkthrough-12-1.md) — 4 PASS / 1 FAIL (order confirm 500) / 2 BLOCKED (Meta); health 3/3; `pnpm test:isolation` 6 pass · 1 skip | Staging repeat + Meta OAuth/DM + order confirm fix for GREEN |
 | R0.4 Meta App Review submit | **AMBER** | Meta dashboard is owner-only (`META_*` still placeholders) | After public legal URLs + webhook always-on |
 | R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) Ã¢â‚¬â€ isolation + eval success (workflow_dispatch 2026-07-25) | Ã¢â‚¬â€ |
 

@@ -1,37 +1,37 @@
-# R0Ã¢â‚¬â€œR3 execution evidence (live completion path)
+# R0—R3 execution evidence (live completion path)
 
 **Baseline tip:** `main` @ see git  
 **Plan:** [remaining-completion-priority](../superpowers/plans/2026-07-25-remaining-completion-priority.md) · SDD Wave R0: [2026-07-25-sdd-completion-r0.md](../superpowers/plans/2026-07-25-sdd-completion-r0.md)
 
-## R0 Ã¢â‚¬â€ Staging + Meta
+## R0 — Staging + Meta
 
 | Step | Status | Evidence | Blocker |
 |------|--------|----------|---------|
-| R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | Ã¢â‚¬â€ |
+| R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
 | R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` 26 migrations; verified `public.*` tables | Prior staging/prod refs deleted |
 | R0.2 Always-on staging hosts | **AMBER** | Free-tier LIVE; **not** always-on. Probes 2026-07-25: local probes failed — api `curl` TLS reset (exit 35); ai/web PowerShell timeout; GHA [keep-warm run 30143832342](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30143832342) `healthy_count=3/3` HTTP 200 (AMBER reachability only, not GREEN proof); prior external probe in [deploy-staging-render](./deploy-staging-render.md). Owner checklist: [Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner) | **BLOCKED (owner):** Render payment → upgrade `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` Free→Starter; GREEN needs post-upgrade no-cold-start external proof |
 | R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a** ([walkthrough](./p0-staging-walkthrough-12-1.md), SDD [plan](../superpowers/plans/2026-07-25-sdd-completion-r0.md)): 1 PASS · 3 PASS (partial) · 1 FAIL (confirm 500 + reindex) · 2 BLOCKED (Meta); health 3/3; `pnpm test:isolation` 6 pass · 1 skip | Staging repeat + Meta OAuth/DM + order confirm + knowledge reindex for GREEN |
 | R0.4 Meta App Review submit | **AMBER** | Prep pack complete ([p0-meta-app-review-submit](./p0-meta-app-review-submit.md), SDD Task 3 `2026-07-25`): staging Privacy/Terms/webhook/OAuth URLs filled; permissions list from code; `META_*` placeholders only in git (`.env.example`, `render.yaml` sync:false) | **BLOCKED (owner):** replace `META_*` on `omni-api-staging` + submit in Meta dashboard; needs R0.2 always-on for webhook during review |
-| R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) Ã¢â‚¬â€ isolation + eval success (workflow_dispatch 2026-07-25) | Ã¢â‚¬â€ |
+| R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) — isolation + eval success (workflow_dispatch 2026-07-25) | — |
 
-## R1 Ã¢â‚¬â€ Plan E paid/live
-
-| Step | Status | Notes |
-|------|--------|-------|
-| R1.0Ã¢â‚¬â€œR1.6 | **AMBER / BLOCKED** | Requires Supabase Pro billing, always-on paid hosts, real LLM keys, uptime vendor |
-
-## R2 Ã¢â‚¬â€ CPC commercial clear
+## R1 — Plan E paid/live
 
 | Step | Status | Notes |
 |------|--------|-------|
-| R2.1Ã¢â‚¬â€œR2.7 | **AMBER / BLOCKED** | Requires staging/prod with carrier + Meta + walkthrough |
+| R1.0—R1.6 | **AMBER / BLOCKED** | Requires Supabase Pro billing, always-on paid hosts, real LLM keys, uptime vendor |
 
-## R3 Ã¢â‚¬â€ E100
+## R2 — CPC commercial clear
 
 | Step | Status | Notes |
 |------|--------|-------|
-| Scaffolding I1Ã¢â‚¬â€œI8 | **GREEN (docs/code)** | Merged Plan I |
-| Live/compliance I1Ã¢â‚¬â€œI8 | **AMBER** | Vendor SOC2/pen-test, legal SLA, real SSO, quarterly access review |
+| R2.1—R2.7 | **AMBER / BLOCKED** | Requires staging/prod with carrier + Meta + walkthrough |
+
+## R3 — E100
+
+| Step | Status | Notes |
+|------|--------|-------|
+| Scaffolding I1—I8 | **GREEN (docs/code)** | Merged Plan I |
+| Live/compliance I1—I8 | **AMBER** | Vendor SOC2/pen-test, legal SLA, real SSO, quarterly access review |
 
 ## Staging project (linked)
 
@@ -42,7 +42,7 @@
 | Region | `ap-southeast-1` |
 | URL | `https://tjsmpcgkeoglemptuymu.supabase.co` |
 | Dashboard | https://supabase.com/dashboard/project/tjsmpcgkeoglemptuymu |
-| Prod | **none** (old prod ref removed Ã¢â‚¬â€ recreate when needed) |
+| Prod | **none** (old prod ref removed — recreate when needed) |
 
 ## Render staging services
 
@@ -86,3 +86,27 @@ Full checklist: [deploy-staging-render.md § Upgrade to always-on (owner)](./dep
 SUPABASE_ACCESS_TOKEN=
 STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 ```
+
+## Wave R0 SDD gate summary (2026-07-25)
+
+**SDD plan:** [2026-07-25-sdd-completion-r0.md](../superpowers/plans/2026-07-25-sdd-completion-r0.md) · **Parent SoT:** [remaining-completion-priority](../superpowers/plans/2026-07-25-remaining-completion-priority.md)
+
+| Step | Gate | Status | SDD task | Notes |
+|------|------|--------|----------|-------|
+| R0.1 | Migrations | **GREEN** | — (pre-done) | CI + staging `tjsmpcgkeoglemptuymu` |
+| R0.2 | Always-on staging | **AMBER** | Task 2 | Owner: Render payment → Starter on 3 services |
+| R0.3 | §12.1 walkthrough | **AMBER** | Task 1 | Local R0.3a: 1 PASS · 3 partial · 1 FAIL (confirm 500) · 2 BLOCKED (Meta) |
+| R0.4 | Meta App Review | **AMBER** | Task 3 | Prep pack complete; owner: `META_*` + submit |
+| R0.5 | Scheduled QA | **GREEN** | — (pre-done) | Actions run 30139904845 |
+
+**Gate R0 verdict: AMBER (not GREEN).** Engineering prep for Tasks 1–3 is complete; owner blockers remain.
+
+| Blocker | Owner action | Ref |
+|---------|--------------|-----|
+| R0.2 always-on | Payment + Free→Starter on `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` | [R0.2 owner unblock](#r02-owner-unblock-always-on) |
+| R0.4 Meta | Set `META_*` on API + submit App Review | [R0.4 owner unblock](#r04-owner-unblock-meta-app-review) |
+| R0.3 staging | Repeat walkthrough on staging; fix order confirm 500; Meta OAuth/DM after R0.4 | [walkthrough](./p0-staging-walkthrough-12-1.md) |
+
+**Next wave:** **R1 Plan E paid/live** (owner billing: Supabase Pro, prod always-on, LLM keys, uptime) — do not start SDD R1 until owner clears R0 blockers or explicitly requests R1 prep-only docs.
+
+**Not claimed:** CPC commercial GREEN · E100 · full Gate R0 GREEN.

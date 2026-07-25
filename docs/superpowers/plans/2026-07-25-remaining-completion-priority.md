@@ -157,8 +157,8 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 | R0.1 migrate CI + remote staging | **GREEN** | Staging `tjsmpcgkeoglemptuymu` 26 migrations |
 | R0.5 Scheduled QA | **GREEN** | Actions run 30139904845 |
 | R0.2 Always-on staging (Render) | **AMBER** | Free + keep-warm; chưa starter always-on |
-| R0.3 §12.1 walkthrough | **AMBER** | Có thể chạy **trên local** trước, rồi lặp trên staging |
-| R0.4 Meta App Review | **AMBER** | Cần `META_*` thật + URL public + webhook always-on |
+| R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a done** (1 PASS · 3 partial · 1 FAIL confirm 500 · 2 BLOCKED Meta); lặp staging sau R0.2 |
+| R0.4 Meta App Review | **AMBER** | Prep pack xong (SDD Task 3); owner: `META_*` + submit |
 | R1–R2 | **AMBER** | Billing / carrier / COD live |
 | R3 E100 | **BLOCKED** | Sau CPC thương mại |
 
@@ -176,12 +176,15 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md)
 
 ```
-DONE   Local stack + R0.1 + R0.5
-▶ NEXT R0.3 trên local (walkthrough §12.1 không cần Meta webhook)
-THEN   Owner: META_* + Render starter (R0.2) → R0.3 staging → R0.4 App Review
-THEN   R1 paid/live → R2 carrier/COD/returns → CPC checklist
+DONE   Local stack + R0.1 + R0.5 + R0.3a local walkthrough (AMBER)
+DONE   R0.2/R0.4 owner unblock packs (SDD Tasks 2–3; prep only)
+▶ NEXT Owner: Render Starter (R0.2) + META_* + App Review submit (R0.4)
+THEN   R0.3 staging repeat + order confirm fix → Gate R0 (not GREEN yet)
+THEN   R1 Plan E paid/live (owner billing) → R2 carrier/COD/returns → CPC checklist
 THEN   R3 Plan I → E100
 ```
+
+SDD Wave R0 closeout: [2026-07-25-sdd-completion-r0.md](./2026-07-25-sdd-completion-r0.md) · gate summary: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md#wave-r0-sdd-gate-summary-2026-07-25)
 
 ---
 

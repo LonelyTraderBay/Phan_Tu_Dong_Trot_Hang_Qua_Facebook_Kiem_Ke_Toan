@@ -148,17 +148,39 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 
 ---
 
+## Trạng thái cập nhật (2026-07-25 — local-first)
+
+| Hạng mục | Status | Ghi chú |
+|----------|--------|---------|
+| Code A→I scaffolding | **GREEN** | Trên `main` |
+| Local full stack (Docker Supabase + api/web/ai) | **GREEN** | `docs/ops/local-host.md` · `pnpm run dev:local` |
+| R0.1 migrate CI + remote staging | **GREEN** | Staging `tjsmpcgkeoglemptuymu` 26 migrations |
+| R0.5 Scheduled QA | **GREEN** | Actions run 30139904845 |
+| R0.2 Always-on staging (Render) | **AMBER** | Free + keep-warm; chưa starter always-on |
+| R0.3 §12.1 walkthrough | **AMBER** | Có thể chạy **trên local** trước, rồi lặp trên staging |
+| R0.4 Meta App Review | **AMBER** | Cần `META_*` thật + URL public + webhook always-on |
+| R1–R2 | **AMBER** | Billing / carrier / COD live |
+| R3 E100 | **BLOCKED** | Sau CPC thương mại |
+
+**Hai làn chạy song song (khuyến nghị):**
+
+| Làn | Mục đích | Không thay thế |
+|-----|----------|----------------|
+| **Local** | Dev hàng ngày, walkthrough R0.3 một phần, eng R2 prep | Meta webhook public, CPC live proof |
+| **Staging/Prod paid** | R0.2–R0.4, R1, R2 live, claim CPC | — |
+
+---
+
 ## Tóm tắt một trang — làm gì **tiếp theo ngay**
 
 Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md)
 
 ```
-R0.1 CI migrate     GREEN (Migrate Check)
-R0.1 remote staging AMBER — cần SUPABASE_ACCESS_TOKEN + STAGING_PROJECT_REF
-R0.5 Scheduled QA   GREEN (Actions run 30139904845)
-R0.2–R0.4           AMBER — cần host URLs + Meta owner submit
-▶ UNBLOCK: set GitHub secrets → Staging Migrate workflow / scripts/staging-migrate.ps1
-THEN R1 → R2 → CPC → R3 → E100
+DONE   Local stack + R0.1 + R0.5
+▶ NEXT R0.3 trên local (walkthrough §12.1 không cần Meta webhook)
+THEN   Owner: META_* + Render starter (R0.2) → R0.3 staging → R0.4 App Review
+THEN   R1 paid/live → R2 carrier/COD/returns → CPC checklist
+THEN   R3 Plan I → E100
 ```
 
 ---

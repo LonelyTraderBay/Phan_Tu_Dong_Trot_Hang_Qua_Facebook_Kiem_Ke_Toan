@@ -9,7 +9,7 @@
 |------|--------|----------|---------|
 | R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
 | R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` **29** migrations incl. resume `20260727220000` (E2 T2) + e-invoice `20260727230000_einvoice_http_sandbox_provider.sql` (E2 T5, 2026-07-25); `migration list` local=remote **29/29**; verified `public.resume_inbox_conversation` RPC | Prior staging/prod refs deleted |
-| R0.2 Always-on staging hosts | **AMBER** | Free-tier LIVE; **not** always-on. Probes 2026-07-25: local probes failed — api `curl` TLS reset (exit 35); ai/web PowerShell timeout; GHA [keep-warm run 30143832342](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30143832342) `healthy_count=3/3` HTTP 200 (AMBER reachability only, not GREEN proof); prior external probe in [deploy-staging-render](./deploy-staging-render.md). Owner checklist: [Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner) | **BLOCKED (owner):** Render payment → upgrade `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` Free→Starter; GREEN needs post-upgrade no-cold-start external proof |
+| R0.2 Always-on staging hosts | **BLOCKED** | **E3 Task 2 (2026-07-25 Attempt R0.2):** `RENDER_API_KEY` **ABSENT** (env + parent `.env*` + parent `.local-secrets/*` + GH secrets — presence probe only). No API Free→Starter upgrade possible. Local curl TLS reset (exit 35) on api/ai/web. GHA keep-warm [30154127860](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30154127860) `healthy_count=3/3` = **AMBER reachability only** (free-tier sleep + keep-warm ≠ always-on). **Not GREEN.** Owner clicks: [Upgrade to always-on](./deploy-staging-render.md#upgrade-to-always-on-owner) · [E3 Task 2 section](#wave-e3-task-2--r02-render-always-on-attempt-2026-07-25) | **BLOCKED (owner):** Billing payment + Free→Starter ×3; GREEN only with post-upgrade no-cold-start proof |
 | R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3** ([walkthrough](./p0-staging-walkthrough-12-1.md)): 2 PASS · 3 PASS (partial) · 2 BLOCKED (Meta); confirm GREEN after warehouse migration `20260727210000`; health 3/3; `pnpm test:isolation` 6 pass · 1 skip | Staging repeat + Meta OAuth/DM + knowledge reindex for GREEN |
 | R0.4 Meta App Review submit | **AMBER** | Prep pack complete ([p0-meta-app-review-submit](./p0-meta-app-review-submit.md), SDD Task 3 `2026-07-25`): staging Privacy/Terms/webhook/OAuth URLs filled; permissions list from code; `META_*` placeholders only in git (`.env.example`, `render.yaml` sync:false) | **BLOCKED (owner):** replace `META_*` on `omni-api-staging` + submit in Meta dashboard; needs R0.2 always-on for webhook during review |
 | R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) — isolation + eval success (workflow_dispatch 2026-07-25) | — |
@@ -182,3 +182,46 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 | **R3** | SOC2 / pen-test / SSO / SLA vendors |
 
 **Controller STOP.** Resume eng SDD only when owner unblocks or provides keys. Do not invent Meta/Render/Supabase Pro credentials.
+
+## Wave E3 Task 2 — R0.2 Render always-on attempt (2026-07-25)
+
+**SDD plan:** [2026-07-25-sdd-e3-r0-owner-path.md](../superpowers/plans/2026-07-25-sdd-e3-r0-owner-path.md) · **Branch:** `cursor/e3-r0-owner-path` · **Attempt:** R0.2
+
+### Verdict: **BLOCKED** (not GREEN)
+
+Always-on Starter was **not** applied. Keep-warm reachability is **not** R0.2 GREEN.
+
+### Probes (secret values never printed)
+
+| Probe | Result |
+|-------|--------|
+| `env:RENDER_API_KEY` | **ABSENT** |
+| Parent `.env` / `.env.staging.local` / `.env.example` | **ABSENT** (no `RENDER_API_KEY=` line with a real value) |
+| Parent `.local-secrets/*` | **ABSENT** (no `RENDER_API_KEY` / `rnd_` apiKey hit) |
+| GitHub Actions secrets (`gh secret list`) | **ABSENT** (empty secret list / no `RENDER_API_KEY`) |
+| Render API Free→Starter for `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` | **SKIPPED** — no API key; payment UI cannot be invented by agent |
+
+### Health / reachability (free tier)
+
+| Path | Result | Interpretation |
+|------|--------|----------------|
+| Local curl api/ai/web | TLS reset exit **35** (~19s) | Known local network block of `onrender.com` ([deploy-staging-render](./deploy-staging-render.md#troubleshoot-url-kh%C3%B4ng-l%C3%AAn)) |
+| GHA keep-warm [30154127860](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30154127860) | `healthy_count=3/3` HTTP 200 (api `{"status":"ok"}`, ai 200, web 200) | **AMBER** free-tier reachability only |
+| Plan / Instance Type | Still **free** (blueprint `render.yaml` `plan: free`; no Starter upgrade performed) | Cold-start sleep remains on critical path |
+
+### Owner next clicks (exact path)
+
+Do **not** invent payment. Owner must:
+
+| # | Click path |
+|---|------------|
+| 1 | https://dashboard.render.com/u/billing → **Add payment method** |
+| 2 | https://dashboard.render.com/web/srv-d9i2sjbeo5us7394purg (`omni-api-staging`) → **Settings** → **Instance Type** → **Free** → **Starter** → **Save** |
+| 3 | https://dashboard.render.com/web/srv-d9i2skbrjlhs73e95lsg (`omni-ai-staging`) → same Free → Starter → Save |
+| 4 | https://dashboard.render.com/web/srv-d9i2sl3h2c0s73823lqg (`omni-web-staging`) → same Free → Starter → Save |
+| 5 | Optional: `render.yaml` `plan: free` → `plan: starter` for all three; commit |
+| 6 | Post-upgrade external proof: stable HTTP 200 on api `/health`, ai `/health`, web `/` with **no** 30–90s cold-start after idle — then mark R0.2 **GREEN** |
+
+Full checklist: [deploy-staging-render.md § Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner).
+
+**Not claimed:** R0.2 GREEN · always-on · Starter plan on any of the three services.

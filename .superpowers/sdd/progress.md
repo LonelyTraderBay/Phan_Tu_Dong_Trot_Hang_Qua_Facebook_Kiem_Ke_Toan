@@ -9,7 +9,7 @@
 |------|-------|--------|-------|
 | 0 | Write SDD plan | **DONE** | Plan committed this wave |
 | 1 | Merge PR #22 → main + E3 branch | **DONE** | Merged `e45bdc6`; worktree + branch created |
-| 2 | Attempt R0.2 Render Starter ×3 | PENDING | Probe key/payment; else BLOCKED w/ owner clicks |
+| 2 | Attempt R0.2 Render Starter ×3 | **BLOCKED** | `RENDER_API_KEY` ABSENT; no payment invent; keep-warm 3/3 ≠ GREEN; owner: Billing + Starter ×3 |
 | 3 | Attempt R0.4 Meta | PENDING | Probe META_*; legal URLs if warm; else BLOCKED |
 | 4 | R3.7 SBOM enforce on release tags | PENDING | Strengthen `sbom.yml` fail-closed |
 | 5 | E3 gate docs + STOP | PENDING | Honest %; path-to-100 tiếp theo ngay |

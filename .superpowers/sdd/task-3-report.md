@@ -1,50 +1,47 @@
-### Task 3: Knowledge reindex job -> AI embed
+# Task 3 Report — R0.4 Meta App Review prep pack (credentials blocked)
 
-Status: completed.
+**Date:** 2026-07-25  
+**Operator:** sdd-task-3  
+**Branch:** `feat/sdd-r0-completion`  
+**Base:** `8ed5f04`
 
-Implemented:
-- Added explicit outbox mapping `knowledge.reindex` -> `knowledge/reindex`.
-- Added `knowledge-reindex` Inngest function in `apps/api` that validates org/source, builds product knowledge text, and calls AI `POST /internal/v1/reindex` with `X-Service-Key`.
-- Added Core internal ingest endpoint `POST /internal/v1/knowledge/chunks` that service-key protects org-scoped replacement of `knowledge_chunks`.
-- Added AI FastAPI reindex route, Gemini `text-embedding-004` embedding adapter, Core callback client, chunking, content hashing, and 768-dimension enforcement.
+## Status
 
-Verification:
-- `pnpm --dir apps/api exec vitest run src/jobs/outbox.publisher.spec.ts src/jobs/functions/knowledge-reindex.spec.ts src/modules/internal/knowledge-ingest.service.spec.ts`
-- `pnpm --dir apps/api typecheck`
-- `python -m pytest apps/ai/tests`
-- `pnpm --dir apps/api test`
-- `git diff --check`
+**R0.4: AMBER** — prep checklist complete; submission **NOT RUN** (owner must set `META_*` and submit in Meta dashboard).
 
-Concerns:
-- Core replacement is implemented as delete-then-insert via the internal service endpoint as requested; a future RPC can make this fully transactional if needed.
+## What was done
 
----
+1. Read `docs/ops/p0-meta-app-review-submit.md`, `docs/meta-app-review-checklist.md`, staging URLs in evidence + `render.yaml`.
+2. Filled staging URLs: web `omni-web-staging.onrender.com`, api `omni-api-staging-cs2w.onrender.com` — Privacy, Terms, webhook, OAuth redirect.
+3. Documented Phase 1 permissions from `channels.service.ts`; pre-submit verification table with honest BLOCKED/UNVERIFIED rows.
+4. Confirmed `META_*` remain placeholders in committed files only (`.env.example` `replace-with-*`; `render.yaml` `sync: false`; deploy doc `<your meta app>`).
+5. Updated evidence R0.4 + added R0.4 owner unblock table.
 
-### Review fixes - important findings
+## Probe results (2026-07-25)
 
-Status: completed.
+| Target | Local probe | Notes |
+|--------|-------------|-------|
+| `https://omni-web-staging.onrender.com/legal/privacy` | **FAIL** | `curl` exit 35 — TLS connection reset |
+| `https://omni-web-staging.onrender.com/legal/terms` | **FAIL** | same |
+| `https://omni-api-staging-cs2w.onrender.com/health` | **FAIL** | same |
 
-Implemented:
-- Added `replace_knowledge_chunks` SQL RPC for atomic delete+insert by `(org_id, source_type, source_id)`.
-- Added unique constraint on `(org_id, source_type, source_id, chunk_index)`.
-- Updated Nest knowledge ingest to verify product ownership/non-deleted state before replacement and call the RPC.
-- Added `/internal/v1/knowledge/chunks` to `packages/contracts/openapi.yaml`.
-- Switched AI reindex service-key check to `hmac.compare_digest`.
+Did **not** claim legal pages verified from local probe. Cited GHA keep-warm `healthy_count=3/3` as AMBER reachability only (same as R0.2).
 
-Verification:
-- `pnpm --dir apps/api exec vitest run src/modules/internal/knowledge-ingest.service.spec.ts src/jobs/functions/knowledge-reindex.spec.ts` (pass, 6 tests)
-- `python -m pytest tests/test_reindex.py` in `apps/ai` (pass, 3 tests, existing warnings)
-- `pnpm --dir apps/api run typecheck` (pass)
+## Files changed
 
----
+- `docs/ops/p0-meta-app-review-submit.md` — staging URL table, permissions, verification checklist, owner path
+- `docs/ops/r0-r3-execution-evidence.md` — R0.4 row + R0.4 owner unblock table
 
-### Re-review fix - soft-deleted product chunk purge
+## Self-review
 
-Status: completed.
+- [x] R0.4 remains **AMBER** (not Submitted / not Approved)
+- [x] No fake Meta credentials; no secrets committed
+- [x] Staging URLs filled where known; secrets blank
+- [x] Webhook + redirect URIs match `render.yaml` / deploy doc
+- [x] Commit message matches brief
 
-Implemented:
-- Empty-chunk replace (purge) skips `deleted_at IS NULL` on product ownership check so reindex after soft-delete can clear `knowledge_chunks`.
-- Non-empty ingest still requires a live (non-deleted) product.
+## Concerns / follow-up
 
-Verification:
-- `pnpm --dir apps/api exec vitest run src/modules/internal/knowledge-ingest.service.spec.ts` (pass, 5 tests)
+- Legal page reachability unproven from this environment — owner should verify in browser after R0.2 warm-up.
+- Webhook verify + OAuth blocked until real `META_*` on always-on API.
+- After owner submit, update evidence with **Submitted at** date only; GREEN only after Meta approval.

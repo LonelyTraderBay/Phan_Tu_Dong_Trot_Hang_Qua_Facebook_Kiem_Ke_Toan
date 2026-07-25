@@ -11,7 +11,7 @@
 | R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` 26 migrations; verified `public.*` tables | Prior staging/prod refs deleted |
 | R0.2 Always-on staging hosts | **AMBER** | Free-tier LIVE; **not** always-on. Probes 2026-07-25: local probes failed — api `curl` TLS reset (exit 35); ai/web PowerShell timeout; GHA [keep-warm run 30143832342](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30143832342) `healthy_count=3/3` HTTP 200 (AMBER reachability only, not GREEN proof); prior external probe in [deploy-staging-render](./deploy-staging-render.md). Owner checklist: [Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner) | **BLOCKED (owner):** Render payment → upgrade `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` Free→Starter; GREEN needs post-upgrade no-cold-start external proof |
 | R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a** ([walkthrough](./p0-staging-walkthrough-12-1.md), SDD [plan](../superpowers/plans/2026-07-25-sdd-completion-r0.md)): 1 PASS · 3 PASS (partial) · 1 FAIL (confirm 500 + reindex) · 2 BLOCKED (Meta); health 3/3; `pnpm test:isolation` 6 pass · 1 skip | Staging repeat + Meta OAuth/DM + order confirm + knowledge reindex for GREEN |
-| R0.4 Meta App Review submit | **AMBER** | Meta dashboard is owner-only (`META_*` still placeholders) | After public legal URLs + webhook always-on |
+| R0.4 Meta App Review submit | **AMBER** | Prep pack complete ([p0-meta-app-review-submit](./p0-meta-app-review-submit.md), SDD Task 3 `2026-07-25`): staging Privacy/Terms/webhook/OAuth URLs filled; permissions list from code; `META_*` placeholders only in git (`.env.example`, `render.yaml` sync:false) | **BLOCKED (owner):** replace `META_*` on `omni-api-staging` + submit in Meta dashboard; needs R0.2 always-on for webhook during review |
 | R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) Ã¢â‚¬â€ isolation + eval success (workflow_dispatch 2026-07-25) | Ã¢â‚¬â€ |
 
 ## R1 Ã¢â‚¬â€ Plan E paid/live
@@ -65,6 +65,17 @@ Local non-committed secrets: `.local-secrets/` (gitignored).
 | 5 | Verify no cold-start + mark R0.2 GREEN | After all three Starter upgrades: post-upgrade external `curl` proof (no cold-start on api/ai/web critical path). Keep-warm `healthy_count=3/3` = AMBER reachability only, not GREEN |
 
 Full checklist: [deploy-staging-render.md § Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner).
+
+## R0.4 owner unblock (Meta App Review)
+
+| # | Owner action | Link / value |
+|---|--------------|--------------|
+| 1 | R0.2 always-on (`omni-api-staging` minimum) | [Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner) |
+| 2 | Set `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` on API | https://dashboard.render.com/web/srv-d9i2sjbeo5us7394purg |
+| 3 | Meta webhook: `https://omni-api-staging-cs2w.onrender.com/v1/webhooks/meta` + verify token | [prep pack](./p0-meta-app-review-submit.md) |
+| 4 | OAuth redirect: `https://omni-web-staging.onrender.com/settings/channels/callback` | Must match `META_REDIRECT_URI` |
+| 5 | Privacy / Terms in Meta App Settings | `https://omni-web-staging.onrender.com/legal/privacy` · `/legal/terms` |
+| 6 | Screencast + test Page/IG + submit App Review | [meta-app-review-checklist](../meta-app-review-checklist.md) |
 
 ## Still needed to unblock R0.3+
 

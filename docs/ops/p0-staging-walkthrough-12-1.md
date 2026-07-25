@@ -19,7 +19,7 @@
 |---|-----------|---------------|--------|
 | 1 | Sign up + invite CSKH + kho | Signup → invite 2 roles → accept | **PASS (partial)** — Supabase signup + `POST /v1/orgs` + invites `cskh`/`kho` created via API; invite **accept not verified**. `2026-07-25` · `sdd-task-1` |
 | 2 | Connect Page + IG | Settings → Kết nối kênh → OAuth complete | **BLOCKED** — `META_*` placeholders; no test Page/IG; OAuth requires Meta dev app. `2026-07-25` · `sdd-task-1` |
-| 3 | Create products; knowledge updates | Catalog CRUD → wait reindex / check chunks | **PASS (partial)** — `POST /v1/catalog/products` with variant OK; **FAIL** — `knowledge_chunks`=0; reindex/outbox not verified. `2026-07-25` · `sdd-task-1` |
+| 3 | Create products; knowledge updates | Catalog CRUD → wait reindex / check chunks | **PASS (partial)** — `POST /v1/catalog/products` OK; outbox `knowledge.reindex` **published** with Inngest dev (`:8288`); **`knowledge_chunks`=0 BLOCKED** — AI `502 GEMINI_API_KEY is required for embeddings`. `2026-07-25` · `sdd-task-2` |
 | 4 | Test DM; AI grounded | Send DM with known SKU/price; no invented SKUs | **BLOCKED** — requires Meta Page DM + public webhook; localhost not callable by Meta. `2026-07-25` · `sdd-task-1` |
 | 5 | Draft → approve → export | Confirm order; download CSV/XLSX | **FAIL** — draft `POST /v1/orders` OK; `GET /v1/orders/export?format=csv` 200 (285 B); `POST …/confirm` 500 `orders_failed`. `2026-07-25` · `sdd-task-1` |
 | 6 | Takeover pause/resume | Inbox → Chiếm quyền; bot_epoch; reply as staff | **PASS (partial)** — `POST /v1/inbox/conversations/:id/takeover` → `botPaused=true`, `botEpoch=1` (pause only); **resume not verified**. `2026-07-25` · `sdd-task-1` |
@@ -35,4 +35,4 @@
 | Environment | **Local** stack (`docs/ops/local-host.md`); staging §12.1 repeat pending R0.3b |
 | Blockers | Meta OAuth/DM (criteria 2, 4); order confirm 500 (criterion 5); staging always-on + owner `META_*` for full GREEN |
 
-**Overall R0.3:** **AMBER** — local §12.1 partially verified (1 PASS · 3 PASS partial · 1 FAIL · 2 BLOCKED; criterion 3 reindex leg FAIL). Not claiming R0.3 GREEN until staging + Meta owner actions.
+**Overall R0.3:** **AMBER** — local §12.1 partially verified (1 PASS · 3 PASS partial · 1 FAIL · 2 BLOCKED; criterion 3 chunks leg BLOCKED on `GEMINI_API_KEY`). Not claiming R0.3 GREEN until staging + Meta owner actions.

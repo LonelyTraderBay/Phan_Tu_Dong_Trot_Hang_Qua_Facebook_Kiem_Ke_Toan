@@ -12,7 +12,7 @@
 - [ ] I1-I8 complete with live evidence or accepted compliance evidence.
 - [ ] Public enterprise pages are published and reviewed.
 - [ ] SOC2, pen-test, SLA, and access-review evidence have named owners and dates.
-- [ ] SBOM is generated for releases.
+- [x] SBOM is generated for releases (eng gate on `v*` tags; org must still tag each release).
 - [ ] No E100 claim before all AMBER items are cleared.
 
 ## I1 - SSO/SAML path
@@ -54,7 +54,7 @@
 ## I7 - SBOM
 
 - [x] Add `.github/workflows/sbom.yml` stub using Syft.
-- [ ] Make SBOM generation required for release tags.
+- [x] Make SBOM generation required for release tags (fail-closed on empty/missing SPDX; attach when release exists). Org process AMBER until every release uses a `v*` tag.
 
 ## I8 - Access review
 

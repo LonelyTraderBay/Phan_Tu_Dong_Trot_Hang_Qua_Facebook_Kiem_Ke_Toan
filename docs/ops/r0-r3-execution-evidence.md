@@ -9,9 +9,9 @@
 |------|--------|----------|---------|
 | R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
 | R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` **29** migrations incl. resume `20260727220000` (E2 T2) + e-invoice `20260727230000_einvoice_http_sandbox_provider.sql` (E2 T5, 2026-07-25); `migration list` local=remote **29/29**; verified `public.resume_inbox_conversation` RPC | Prior staging/prod refs deleted |
-| R0.2 Always-on staging hosts | **AMBER** | Free-tier LIVE; **not** always-on. Probes 2026-07-25: local probes failed — api `curl` TLS reset (exit 35); ai/web PowerShell timeout; GHA [keep-warm run 30143832342](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30143832342) `healthy_count=3/3` HTTP 200 (AMBER reachability only, not GREEN proof); prior external probe in [deploy-staging-render](./deploy-staging-render.md). Owner checklist: [Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner) | **BLOCKED (owner):** Render payment → upgrade `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` Free→Starter; GREEN needs post-upgrade no-cold-start external proof |
+| R0.2 Always-on staging hosts | **BLOCKED** | **E3 Task 2 (2026-07-25 Attempt R0.2):** `RENDER_API_KEY` **ABSENT** (env + parent `.env*` + parent `.local-secrets/*` + GH secrets — presence probe only). No API Free→Starter upgrade possible. Local curl TLS reset (exit 35) on api/ai/web. GHA keep-warm [30154127860](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30154127860) `healthy_count=3/3` = **AMBER reachability only** (free-tier sleep + keep-warm ≠ always-on). **Not GREEN.** Owner clicks: [Upgrade to always-on](./deploy-staging-render.md#upgrade-to-always-on-owner) · [E3 Task 2 section](#wave-e3-task-2--r02-render-always-on-attempt-2026-07-25) | **BLOCKED (owner):** Billing payment + Free→Starter ×3; GREEN only with post-upgrade no-cold-start proof |
 | R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3** ([walkthrough](./p0-staging-walkthrough-12-1.md)): 2 PASS · 3 PASS (partial) · 2 BLOCKED (Meta); confirm GREEN after warehouse migration `20260727210000`; health 3/3; `pnpm test:isolation` 6 pass · 1 skip | Staging repeat + Meta OAuth/DM + knowledge reindex for GREEN |
-| R0.4 Meta App Review submit | **AMBER** | Prep pack complete ([p0-meta-app-review-submit](./p0-meta-app-review-submit.md), SDD Task 3 `2026-07-25`): staging Privacy/Terms/webhook/OAuth URLs filled; permissions list from code; `META_*` placeholders only in git (`.env.example`, `render.yaml` sync:false) | **BLOCKED (owner):** replace `META_*` on `omni-api-staging` + submit in Meta dashboard; needs R0.2 always-on for webhook during review |
+| R0.4 Meta App Review submit | **BLOCKED** | **E3 Task 3 (2026-07-25 Attempt R0.4):** Prep pack still complete. Parent `.env` / `.env.staging.local` (values never printed): `META_APP_ID` len=7 placeholderish; `META_APP_SECRET` len=7 placeholderish; `META_VERIFY_TOKEN` len=32 placeholderish=false (local only); `META_REDIRECT_URI` = local `127.0.0.1` (not staging). Local legal/API curl **timeout (28)** / prior TLS fail. GHA keep-warm [30154127860](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30154127860) `healthy_count=3/3` = AMBER host reachability only. Webhook GET **SKIPPED** (no local warm API). **No Meta dashboard submit.** R0.2 BLOCKED remains webhook reliability prerequisite. · [E3 Task 3 section](#wave-e3-task-3--r04-meta-app-review-attempt-2026-07-25) · [prep pack](./p0-meta-app-review-submit.md) | **BLOCKED (owner):** real `META_*` on `omni-api-staging` + Meta dashboard submit; needs R0.2 always-on |
 | R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) — isolation + eval success (workflow_dispatch 2026-07-25) | — |
 
 ## R1 — Plan E paid/live
@@ -94,9 +94,9 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 | Step | Gate | Status | SDD task | Notes |
 |------|------|--------|----------|-------|
 | R0.1 | Migrations | **GREEN** | Task 5 / E2 T2+T5 | CI + staging `tjsmpcgkeoglemptuymu` (29 incl. resume `20260727220000` + http_sandbox `20260727230000`) |
-| R0.2 | Always-on staging | **AMBER** | Task 2 | Owner: Render payment → Starter on 3 services |
+| R0.2 | Always-on staging | **BLOCKED** | E3 Task 2 | No `RENDER_API_KEY` / payment; keep-warm ≠ always-on; owner: Starter ×3 |
 | R0.3 | §12.1 walkthrough | **AMBER** | Task 3 (E0.3) | Local: 2 PASS · 3 partial · 2 BLOCKED (Meta); criterion 5 confirm PASS post-warehouse fix |
-| R0.4 | Meta App Review | **AMBER** | Task 3 | Prep pack complete; owner: `META_*` + submit |
+| R0.4 | Meta App Review | **BLOCKED** | E3 Task 3 | Attempt R0.4: placeholders + no Meta login; prep pack refreshed; not Submitted |
 | R0.5 | Scheduled QA | **GREEN** | — (pre-done) | Actions run 30139904845 |
 
 **Gate R0 verdict: AMBER (not GREEN).** Engineering prep for Tasks 1–3 is complete; owner blockers remain.
@@ -131,9 +131,9 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 | Step | Status | Owner action |
 |------|--------|--------------|
 | R0.1 Migrations | **GREEN** | — (29 incl. resume `20260727220000` + http_sandbox `20260727230000` on `tjsmpcgkeoglemptuymu`) |
-| R0.2 Always-on staging | **AMBER** | Render payment → Starter on `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` — keep-warm `healthy_count=3/3` ≠ GREEN ([deploy-staging-render](./deploy-staging-render.md#upgrade-to-always-on-owner)) |
+| R0.2 Always-on staging | **BLOCKED** | E3 Attempt R0.2: no `RENDER_API_KEY` / payment; Free + keep-warm ≠ GREEN — owner: payment → Starter ×3 ([deploy-staging-render](./deploy-staging-render.md#upgrade-to-always-on-owner); [Task 2](#wave-e3-task-2--r02-render-always-on-attempt-2026-07-25)) |
 | R0.3 §12.1 walkthrough | **AMBER** | R0.3a local partial PASS; **R0.3b** staging full repeat after R0.2 + Meta |
-| R0.4 Meta App Review | **AMBER** | Set `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` on API + submit ([prep pack](./p0-meta-app-review-submit.md) URLs verified vs staging) |
+| R0.4 Meta App Review | **BLOCKED** | E3 Attempt R0.4: set real `META_*` on API + submit App Review ([prep pack](./p0-meta-app-review-submit.md); [Task 3 evidence](#wave-e3-task-3--r04-meta-app-review-attempt-2026-07-25)) |
 | R0.5 Scheduled QA | **GREEN** | — |
 
 **Gate R0 verdict: AMBER (not GREEN).** Engineering SDD Tasks 1–6 complete; **controller STOP** — owner must clear R0.2 (payment) and R0.4 (`META_*` + submit) before R0.3b staging walkthrough.
@@ -182,3 +182,134 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 | **R3** | SOC2 / pen-test / SSO / SLA vendors |
 
 **Controller STOP.** Resume eng SDD only when owner unblocks or provides keys. Do not invent Meta/Render/Supabase Pro credentials.
+
+## Wave E3 Task 2 — R0.2 Render always-on attempt (2026-07-25)
+
+**SDD plan:** [2026-07-25-sdd-e3-r0-owner-path.md](../superpowers/plans/2026-07-25-sdd-e3-r0-owner-path.md) · **Branch:** `cursor/e3-r0-owner-path` · **Attempt:** R0.2
+
+### Verdict: **BLOCKED** (not GREEN)
+
+Always-on Starter was **not** applied. Keep-warm reachability is **not** R0.2 GREEN.
+
+### Probes (secret values never printed)
+
+| Probe | Result |
+|-------|--------|
+| `env:RENDER_API_KEY` | **ABSENT** |
+| Parent `.env` / `.env.staging.local` / `.env.example` | **ABSENT** (no `RENDER_API_KEY=` line with a real value) |
+| Parent `.local-secrets/*` | **ABSENT** (no `RENDER_API_KEY` / `rnd_` apiKey hit) |
+| GitHub Actions secrets (`gh secret list`) | **ABSENT** (empty secret list / no `RENDER_API_KEY`) |
+| Render API Free→Starter for `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` | **SKIPPED** — no API key; payment UI cannot be invented by agent |
+
+### Health / reachability (free tier)
+
+| Path | Result | Interpretation |
+|------|--------|----------------|
+| Local curl api/ai/web | TLS reset exit **35** (~19s) | Known local network block of `onrender.com` ([deploy-staging-render](./deploy-staging-render.md#troubleshoot-url-kh%C3%B4ng-l%C3%AAn)) |
+| GHA keep-warm [30154127860](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30154127860) | `healthy_count=3/3` HTTP 200 (api `{"status":"ok"}`, ai 200, web 200) | **AMBER** free-tier reachability only |
+| Plan / Instance Type | Still **free** (blueprint `render.yaml` `plan: free`; no Starter upgrade performed) | Cold-start sleep remains on critical path |
+
+### Owner next clicks (exact path)
+
+Do **not** invent payment. Owner must:
+
+| # | Click path |
+|---|------------|
+| 1 | https://dashboard.render.com/u/billing → **Add payment method** |
+| 2 | https://dashboard.render.com/web/srv-d9i2sjbeo5us7394purg (`omni-api-staging`) → **Settings** → **Instance Type** → **Free** → **Starter** → **Save** |
+| 3 | https://dashboard.render.com/web/srv-d9i2skbrjlhs73e95lsg (`omni-ai-staging`) → same Free → Starter → Save |
+| 4 | https://dashboard.render.com/web/srv-d9i2sl3h2c0s73823lqg (`omni-web-staging`) → same Free → Starter → Save |
+| 5 | Optional: `render.yaml` `plan: free` → `plan: starter` for all three; commit |
+| 6 | Post-upgrade external proof: stable HTTP 200 on api `/health`, ai `/health`, web `/` with **no** 30–90s cold-start after idle — then mark R0.2 **GREEN** |
+
+Full checklist: [deploy-staging-render.md § Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner).
+
+**Not claimed:** R0.2 GREEN · always-on · Starter plan on any of the three services.
+
+## Wave E3 Task 3 — R0.4 Meta App Review attempt (2026-07-25)
+
+**SDD plan:** [2026-07-25-sdd-e3-r0-owner-path.md](../superpowers/plans/2026-07-25-sdd-e3-r0-owner-path.md) · **Branch:** `cursor/e3-r0-owner-path` · **Attempt:** R0.4
+
+### Verdict: **BLOCKED** (not Submitted / not Approved)
+
+Agent cannot log into Meta App Dashboard. Parent `META_APP_ID` / `META_APP_SECRET` remain placeholderish. R0.2 always-on remains a webhook reliability prerequisite.
+
+### Probes (secret values never printed)
+
+| Source | Key | present | len | placeholderish |
+|--------|-----|---------|-----|----------------|
+| Parent `.env` | `META_APP_ID` | yes | 7 | **true** |
+| Parent `.env` | `META_APP_SECRET` | yes | 7 | **true** |
+| Parent `.env` | `META_VERIFY_TOKEN` | yes | 32 | **false** (local only — not proof on Render) |
+| Parent `.env` | `META_REDIRECT_URI` | yes | 48 | local `http://127.0.0.1:3000/settings/channels/callback` (≠ staging) |
+| Parent `.env.staging.local` | same four keys | same lens / same placeholderish flags; `VERIFY_TOKEN` hash-equal to `.env` | | |
+| `.env.example` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | yes | 24 / 28 / 37 | **true** (known placeholders) |
+| `render.yaml` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | `sync: false` | — | dashboard-only |
+| `render.yaml` | `META_REDIRECT_URI` | pinned staging callback | — | correct staging value |
+
+No credentials invented. No secret values printed or committed.
+
+### Public / reachability checks
+
+| Path | Result | Interpretation |
+|------|--------|----------------|
+| Local curl Privacy / Terms | **timeout (28)** ~15s | Known local network block of `onrender.com` |
+| Local curl API `/health` | **timeout (28)** | Cannot warm-verify webhook from this host |
+| Webhook GET challenge | **SKIPPED** | No warm local path to API; do not use token against unreachable host |
+| GHA keep-warm [30154127860](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30154127860) | `healthy_count=3/3` (api/ai/web HTTP 200) | **AMBER** free-tier reachability only — not legal-page proof; not R0.2 GREEN |
+| R0.2 always-on | **BLOCKED** (E3 Task 2) | Webhook may cold-start during App Review |
+
+Prep pack status rows refreshed: [p0-meta-app-review-submit.md](./p0-meta-app-review-submit.md).
+
+### Owner next clicks (exact path from prep pack)
+
+Do **not** invent Meta credentials. Owner must:
+
+| # | Action |
+|---|--------|
+| 1 | Complete [R0.2 always-on](./deploy-staging-render.md#upgrade-to-always-on-owner) — `omni-api-staging` Starter **minimum** (webhook must not cold-start during review) |
+| 2 | Create/select Meta Business app → copy **App ID** + **App Secret** |
+| 3 | Render `omni-api-staging` env: set real `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` (8+ chars) — https://dashboard.render.com/web/srv-d9i2sjbeo5us7394purg |
+| 4 | Meta App → Webhooks: callback `https://omni-api-staging-cs2w.onrender.com/v1/webhooks/meta` + verify token + Page `messages` |
+| 5 | Meta App → Facebook Login: Valid OAuth Redirect URIs = `https://omni-web-staging.onrender.com/settings/channels/callback` |
+| 6 | Meta App → Settings → Basic: Privacy `…/legal/privacy` + Terms `…/legal/terms` |
+| 7 | Test Page + IG Professional + testers ([checklist §6](../meta-app-review-checklist.md#6-test-users--assets)) |
+| 8 | Screencast + use-case text ([checklist §2](../meta-app-review-checklist.md#2-permissions-to-request-phase-1)); permissions: `pages_show_list`, `pages_messaging`, `instagram_basic`, `instagram_manage_messages`, `pages_read_engagement` |
+| 9 | Submit App Review → Permissions and Features (Advanced Access) — **do not** switch app to Live until approved |
+| 10 | Update this evidence R0.4 with **Submitted at** date only (not Approved until Meta approves) |
+
+**Not claimed:** Submitted · Approved · R0.4 GREEN · webhook verify 200 · legal pages 200 from this agent host.
+
+## Wave E3 SDD gate (2026-07-25) — eng CLOSED / owner STOP
+
+**SDD plan:** [2026-07-25-sdd-e3-r0-owner-path.md](../superpowers/plans/2026-07-25-sdd-e3-r0-owner-path.md) · **Branch:** `cursor/e3-r0-owner-path` · **PR:** [#23](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/23) · **Base:** `main` @ `e45bdc6` (PR #22 MERGED)
+
+| Task | Status | Evidence |
+|------|--------|----------|
+| **T1** Merge PR #22 → main + E3 branch | **GREEN** | PR #22 **MERGED** to `main` @ `e45bdc6`; worktree `.worktrees/e3-sdd` on `cursor/e3-r0-owner-path` |
+| **T2** Attempt R0.2 Render Starter ×3 | **BLOCKED** | `RENDER_API_KEY` ABSENT; no payment invent; keep-warm 3/3 = AMBER reachability only ≠ always-on; [Task 2 section](#wave-e3-task-2--r02-render-always-on-attempt-2026-07-25) |
+| **T3** Attempt R0.4 Meta App Review | **BLOCKED** | Placeholderish `META_*` (APP_ID/SECRET len=7); no Meta dashboard submit; R0.2 prereq; [Task 3 section](#wave-e3-task-3--r04-meta-app-review-attempt-2026-07-25) |
+| **T4** R3.7 SBOM enforce (I7 eng) | **GREEN/AMBER** | Fail-closed on empty/missing SBOM for `v*` tag + published release; I7 eng **GREEN**; org must still cut `v*` tags (**AMBER** process) |
+| **T5** Gate + STOP | **GREEN** | This section; path-to-100 / remaining-completion “tiếp theo ngay” = owner-only; **controller STOPS** |
+
+### Honest maturity (do **not** invent 100%)
+
+| Đích | ~% sau E3 eng | Còn thiếu (không phải eng SDD) |
+|------|---------------|--------------------------------|
+| **Eng path** | ~**95%**+ | E0.2 GEMINI local; E0.4 stub decisions; SBOM org tag process AMBER; live R2 polish |
+| **CPC thương mại** | ~**38%** | **NOT 100%** — R0.2/R0.4 → R0.3b → Gate R0 → R1 paid → R2.1–2.3 live → R2.7 |
+| **E100** | ~**22%**+ | **NOT 100%** — R3 SOC2/pen-test/SSO/SLA vendor+legal (I7 eng enforce landed) |
+| **Tổng intended** | ~**55%** | CPC GREEN **và** E100 GREEN — **NOT 100%** |
+
+**Gate E3 verdict: eng CLOSED / STOP.** CPC thương mại and E100 remain **not** 100%. Controller cannot finish 100% without owner payment / Meta / vendors.
+
+| Blocker | Owner / vendor next action |
+|---------|----------------------------|
+| **R0.2** | Render payment → Starter × `omni-api/ai/web-staging` ([owner unblock](#r02-owner-unblock-always-on)) |
+| **R0.4** | Real `META_*` on API + App Review submit ([owner unblock](#r04-owner-unblock-meta-app-review)) |
+| **R0.3b** | Staging full §12.1 after R0.2 + R0.4 → Gate R0 |
+| **R1** | Paid (Pro/PITR/always-on prod / LLM / billing) after Gate R0 |
+| **R2** | Carrier/COD/returns live → CPC checklist |
+| **R3** | SOC2 / pen-test / SSO / SLA → E100 |
+
+**Controller STOP.** Resume eng SDD only when owner unblocks R0.2/R0.4 or provides keys. Do not invent Meta/Render/Supabase Pro credentials. Do not claim CPC / E100 / tổng 100%.

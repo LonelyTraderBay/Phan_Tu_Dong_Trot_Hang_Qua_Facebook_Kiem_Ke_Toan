@@ -154,10 +154,10 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 |----------|--------|---------|
 | Code A→I scaffolding | **GREEN** | Trên `main` |
 | Local full stack (Docker Supabase + api/web/ai) | **GREEN** | `docs/ops/local-host.md` · `pnpm run dev:local` |
-| R0.1 migrate CI + remote staging | **GREEN** | Staging `tjsmpcgkeoglemptuymu` 26 migrations |
+| R0.1 migrate CI + remote staging | **GREEN** | Staging `tjsmpcgkeoglemptuymu` 27 migrations (incl. warehouse `20260727210000`) |
 | R0.5 Scheduled QA | **GREEN** | Actions run 30139904845 |
 | R0.2 Always-on staging (Render) | **AMBER** | Free + keep-warm; chưa starter always-on |
-| R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a done** (1 PASS · 3 partial · 1 FAIL confirm 500 · 2 BLOCKED Meta); lặp staging sau R0.2 |
+| R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3 done** (2 PASS · 3 partial · 2 BLOCKED Meta); E0.1 warehouse fix GREEN — criterion 5 confirm PASS local post-`20260727210000`; lặp staging sau R0.2+R0.4 |
 | R0.4 Meta App Review | **AMBER** | Prep pack xong (SDD Task 3); owner: `META_*` + submit |
 | R1–R2 | **AMBER** | Billing / carrier / COD live |
 | R3 E100 | **BLOCKED** | Sau CPC thương mại |
@@ -176,10 +176,10 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md)
 
 ```
-DONE   Local stack + R0.1 + R0.5 + R0.3a local walkthrough (AMBER)
-DONE   R0.2/R0.4 owner unblock packs (SDD Tasks 2–3; prep only)
-▶ NEXT Owner: Render Starter (R0.2) + META_* + App Review submit (R0.4)
-THEN   R0.3 staging repeat + order confirm fix → Gate R0 (not GREEN yet)
+DONE   Local stack + R0.1 (27 migr.) + R0.5 + E0.1 warehouse fix + R0.3a confirm PASS local (AMBER — Meta blocked)
+DONE   Eng Tasks 1–6 (SDD E0+R0); controller STOP on owner
+▶ STOP Owner: Render Starter ×3 (R0.2) + META_* + App Review submit (R0.4)
+THEN   R0.3b staging full §12.1 (sau R0.2 + R0.4) → Gate R0 (AMBER — not GREEN)
 THEN   R1 Plan E paid/live (owner billing) → R2 carrier/COD/returns → CPC checklist
 THEN   R3 Plan I → E100
 ```

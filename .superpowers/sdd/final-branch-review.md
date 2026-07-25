@@ -1,118 +1,96 @@
-# Final Branch Review - Plan A Platform Foundation
+# Final whole-branch review - SDD Wave E0+R0
 
-Reviewed branch: `feat/plan-a-platform-foundation`  
-Base: `264f8de4330942cc847292bd56ef995a36e6171d`  
-Head inspected: `413b6577a44e50ecb7fd608b10a2e5fd0bd805b0`  
-Worktree: `.worktrees/plan-a-platform`  
-Review mode: read-mostly spot check; no full suite rerun per request. Git status at review time was clean against `origin/feat/plan-a-platform-foundation`.
+Reviewed branch: `feat/sdd-e0-r0-completion`  
+Merge base: `c2cf68e4ac4a1ab2f1a95801d7765f3127d37fac`  
+Head inspected: `bfcf11f3540c2a0df028d0fb4bfe148e1b58b603`  
+Plan: `docs/superpowers/plans/2026-07-25-sdd-e0-r0.md`  
+Diff package: `.superpowers/sdd/final-branch-review-package.md`
 
-## Strengths
+## Ready to merge?
 
-- The branch is coherent and well packaged: commit stack, review package, DoD evidence, progress ledger, ADRs, runbooks, and task reports make the implementation auditable.
-- The monorepo foundation is in place for `web`, `api`, `ai`, `packages/*`, Supabase migrations, CI workflows, Dependabot, and docs. No Meta/catalog/orders product features were introduced.
-- The API guard shape is generally aligned with the platform split: global JWT + org guards, `/ops/v1` guarded by `PlatformAdminGuard`, `/internal/v1/ai/health` guarded by `ServiceKeyGuard`, and explicit `X-Org-Id` validation on org-scoped routes.
-- Cross-tenant API guard coverage is present and useful: `tests/isolation/cross-tenant.org.spec.ts` proves user A cannot use org B context through the Nest guard path before invite writes.
-- M2 hooks are broadly represented: request id, ProblemDetails filter, redacting logger, security headers, traceparent middleware, idempotency-key stub, kill flags, eval stubs, and runbooks.
-- Automated evidence is strong for a foundation branch: root lint/typecheck/test, API tests, isolation test, AI pytest, and eval stub are recorded green, with live Docker/service smoke explicitly marked amber.
+**NO.**
 
-## Critical findings
+The warehouse code fix itself looks coherent and the branch preserves the required R0 owner-stop posture, but two merge-readiness issues remain in committed docs/hygiene:
 
-1. **Any authenticated org member can mutate tenant control-plane tables directly through Supabase RLS.**
+1. the parent SoT still says the local walkthrough has the old confirm-500 failure / 26-migration state; and
+2. `git diff --check` fails on newly added plan docs.
+
+## Critical
+
+None found.
+
+## Important
+
+1. **Parent SoT still contradicts the E0.1/E0.3 warehouse fix evidence.**
    - Evidence:
-     - `supabase/migrations/20260724120000_init_platform.sql:177-182` allows any org member to `UPDATE` `memberships`.
-     - `supabase/migrations/20260724120000_init_platform.sql:203-208` allows any org member to `UPDATE` `entitlements`.
-     - `supabase/migrations/20260724120000_init_platform.sql:216-221` allows any org member to `UPDATE` org feature flags.
-     - `supabase/migrations/20260724120000_init_platform.sql:242-247` allows any org member to `UPDATE` `outbox_events`.
-     - `supabase/migrations/20260724120000_init_platform.sql:268-276` grants `select, update` on these tables to `authenticated`.
-     - `README.md:40-46` and `.env.example` expose/use the Supabase anon key for client-side environments.
-   - Impact: the Nest permission guard is bypassable at the database API layer. A `cskh`/`kho` user with a normal Supabase JWT could call Supabase REST directly and update membership roles, entitlements, feature flags, outbox state, or other tenant rows as long as they are a member of the org. This is privilege escalation and control-plane tampering, not just a missing product permission.
-   - Required fix before merge: make direct authenticated DB access read-only for these foundation tables unless a specific client-write policy is needed and role-scoped. For Plan A, the safest foundation is to revoke authenticated `UPDATE` on memberships, invites, entitlements, feature flags, usage events, and outbox, and keep writes behind Core service-role paths with explicit Nest guards. Add a Supabase/RLS negative test proving non-owner members cannot update memberships/entitlements/flags directly.
+     - `docs/superpowers/plans/2026-07-25-remaining-completion-priority.md:157` still says staging has `26 migrations`, while the branch evidence says staging is 27/27 including `20260727210000_ensure_default_warehouse_on_org.sql`.
+     - `docs/superpowers/plans/2026-07-25-remaining-completion-priority.md:160` still says R0.3 local has `1 FAIL confirm 500`.
+     - `docs/superpowers/plans/2026-07-25-remaining-completion-priority.md:182` still says `R0.3 staging repeat + order confirm fix`, implying the confirm fix is still pending.
+     - `docs/ops/p0-staging-walkthrough-12-1.md:10` also still says local migrations are `26`, even though row 5 now claims the post-warehouse confirm PASS.
+   - Impact: the detailed evidence (`p0-staging-walkthrough-12-1.md`, `r0-r3-execution-evidence.md`, `p0-staging-migrate.md`) correctly records the warehouse migration and confirm PASS, but the parent priority document still carries the pre-fix failure state. That weakens the "warehouse fix code + docs/evidence" expectation and can send the next controller down a stale remediation path.
+   - Required fix: update the parent SoT and walkthrough preflight to reflect 27 migrations, criterion 5 PASS after `20260727210000`, and "staging repeat after R0.2/R0.4" rather than "order confirm fix" as pending.
 
-## Important findings
+2. **Committed branch fails whitespace hygiene (`git diff --check`).**
+   - Evidence: `git diff --check c2cf68e4ac4a1ab2f1a95801d7765f3127d37fac...HEAD` exits non-zero.
+   - Flagged files/lines include:
+     - `docs/superpowers/plans/2026-07-25-path-to-100-percent.md:3,73,90,91,110,130,149-152`
+     - `docs/superpowers/plans/2026-07-25-sdd-e0-r0.md:3,4,143`
+   - Impact: even if CI does not currently enforce `git diff --check`, this branch history already includes a whitespace-trim review fix, and the final package itself lists `git diff --check` as prior validation practice. This should be cleaned before merge.
+   - Required fix: remove trailing spaces in the newly added plan docs.
 
-1. **Outbox events are never published in the running API.**
-   - Evidence:
-     - `apps/api/src/jobs/outbox.publisher.ts:101-144` implements `publishPending()`.
-     - `apps/api/src/modules/internal/internal.module.ts:8-11` registers `OutboxPublisher` as a provider only.
-     - `rg` found `publishPending` only in `outbox.publisher.ts` and `outbox.publisher.spec.ts`; there is no scheduler, interval, cron, dev trigger, or controller path that invokes it.
-   - Impact: `enqueueOutbox()` can insert rows, and the Inngest serve endpoint exists, but queued rows will sit unpublished forever in the actual app. The deferred Docker/Inngest smoke would fail unless the publisher is invoked manually from code.
-   - Recommended fix: wire a minimal runtime trigger appropriate for Plan A, e.g. `OnModuleInit` dev interval gated by env, a scheduler job, or a guarded internal/dev-only publish endpoint documented in README. Keep it idempotent and safe for multi-instance later.
+## Minor
 
-2. **Organization bootstrap is not atomic.**
-   - Evidence: `apps/api/src/modules/identity/identity.service.ts:99-135` performs organization insert, membership insert, and entitlements insert as three independent service-role calls.
-   - Impact: if membership or entitlements creation fails after the org insert succeeds, the system can leave an orphan organization or an org without entitlements. That is painful to clean up and undermines the identity/tenancy foundation.
-   - Recommended fix: move bootstrap into a Postgres RPC/transaction or another atomic server-side path. If that is deferred, record a compensating cleanup strategy and add failure-path tests.
+1. **Review environment could not independently rerun the targeted OrdersService test.**
+   - Attempted: `pnpm --dir apps/api exec vitest run src/modules/orders/orders.service.spec.ts`.
+   - Result: Vitest startup failed with `TypeError [ERR_PACKAGE_IMPORT_NOT_DEFINED]: Package import specifier "#module-evaluator" is not defined`.
+   - This appears consistent with the already documented worktree Vitest startup issue in `docs/ops/p0-staging-walkthrough-12-1.md:26`; I did not treat it as a code regression, but it means this final review relies on recorded task evidence for the passing orders test.
 
-3. **The AI m2m health path sends a service key but the AI service does not validate it.**
-   - Evidence:
-     - Core sends `X-Service-Key` in `apps/api/src/modules/internal/ai-proxy.service.ts:9-13`.
-     - AI config defines `service_m2m_key` in `apps/ai/app/config.py:4-5`.
-     - AI `/health` only reads/echoes `traceparent` in `apps/ai/app/api/health.py:6-11`; it does not read or validate `X-Service-Key`.
-   - Impact: the current tests prove outbound header propagation, not m2m authorization on the AI side. If `/health` is intentionally public, the branch should not describe this as authenticated m2m health; if it is meant to be the m2m stub, AI should reject missing/bad service keys and have pytest coverage.
+2. **Worktree had pre-existing dirty SDD report files during review.**
+   - `git status --short --branch` initially showed modifications under `.superpowers/sdd/task-2-report.md`, `task-4-report.md`, and `task-5-report.md`.
+   - I did not review those as part of the committed branch diff and did not modify them.
 
-4. **Isolation coverage proves the Nest guard path, not the actual Supabase RLS boundary.**
-   - Evidence: `tests/isolation/cross-tenant.org.spec.ts:49-59` uses an in-memory membership map, and `tests/isolation/cross-tenant.org.spec.ts:119-128` wires a mocked repository into a Nest test module.
-   - Impact: the test is valuable, but it would not catch the critical RLS update issue above. For a branch whose foundation includes RLS, add at least one DB-backed policy test in the migrate/isolation gate for direct Supabase access.
+## Positive checks
 
-## Minor findings / known rollup
+- Warehouse migration `supabase/migrations/20260727210000_ensure_default_warehouse_on_org.sql` is on branch and matches the intended fix shape:
+  - creates/uses `private.ensure_default_warehouse`;
+  - adds an organization insert trigger for default warehouse creation;
+  - replaces `private.ensure_variant_stock_main`;
+  - backfills missing default warehouses and variant stocks;
+  - replaces `private.apply_order_stock_change` so confirm/cancel/return auto-heal the missing default warehouse path.
+- API error mapping for `warehouse_not_found` is covered in `apps/api/src/modules/orders/orders.service.spec.ts` and returns a 400 problem instead of a generic 500 path.
+- R0 owner-stop posture is preserved in the main evidence:
+  - R0.2 remains **AMBER**; keep-warm is explicitly not GREEN.
+  - R0.4 remains **AMBER**; `META_*` and Meta dashboard submit remain owner actions.
+  - Gate R0 remains **AMBER (not GREEN)** in `docs/ops/r0-r3-execution-evidence.md`.
+- No real secrets were found in the branch review scan; secret-like names are placeholders/instructions (`META_*`, `GEMINI_API_KEY`, `SUPABASE_ACCESS_TOKEN`) rather than committed values.
+- No current CPC commercial GREEN / E100 completion claim was found. The path-to-100 document discusses future gates and repeats claim rules; it does not mark current CPC/E100 as complete.
 
-- ProblemDetails vs structure §6.2 remains a documented minor mismatch. `apps/api/src/common/filters/problem-details.filter.ts` emits a useful shape, but the OpenAPI stub at `packages/contracts/openapi.yaml` does not yet define shared error schemas.
-- Docker/Supabase/Inngest live smoke remains deferred and correctly marked amber in `docs/superpowers/plans/plan-a-dod-evidence.md:99-109`.
-- `.gitleaks.toml` exists, but the CI workflow step is still missing from the workflow set.
-- `EntitlementsService` exists but Nest module registration is deferred.
-- `PLATFORM_ADMIN_EMAILS` is declared, but boot/dev sync is deferred in favor of manual seed SQL. This is acceptable for Plan A if documented, but it should be resolved before operator onboarding.
-- `AiProxyService.checkAiHealth()` does not check upstream HTTP status before returning `res.json()`. For health-only Plan A this is not a blocker, but it should map non-2xx AI responses to a clear API error before production use.
+## Verification performed
 
-## Merge readiness - Plan A platform only
+- Read the SDD E0+R0 plan and final diff package.
+- Reviewed the warehouse migration, OrdersService error mapping, and targeted spec addition.
+- Cross-checked R0/E0 status docs:
+  - `docs/ops/r0-r3-execution-evidence.md`
+  - `docs/ops/p0-staging-walkthrough-12-1.md`
+  - `docs/ops/p0-staging-migrate.md`
+  - `docs/ops/local-host.md`
+  - `docs/ops/deploy-staging-render.md`
+  - `docs/ops/p0-meta-app-review-submit.md`
+  - `docs/superpowers/plans/2026-07-25-path-to-100-percent.md`
+  - `docs/superpowers/plans/2026-07-25-remaining-completion-priority.md`
+  - `docs/superpowers/plans/cpc-checklist.md`
+- Ran `git diff --name-status` and `git diff --check` for merge-base to HEAD.
+- Ran a broad placeholder/secret scan for common sensitive env names and token-like strings.
+- Attempted the targeted OrdersService Vitest run; blocked by local Vitest startup issue noted above.
 
-**Recommendation: Request changes before merging Plan A.**
+---
 
-The branch is strong as a scaffold and the documented green gates are credible, but the RLS `UPDATE` grants are a platform-foundation security blocker. The outbox publisher not being wired also means one of the headline Plan A platform spines is implemented only as a unit-tested library, not as runtime behavior.
+## Fix round (2026-07-25)
 
-Minimum before merge:
+Addressed Important findings #1–#2 in commit `docs(ops): sync SoT with E0 warehouse fix; trim whitespace`:
 
-1. Tighten Supabase RLS/grants so authenticated users cannot directly mutate memberships, entitlements, feature flags, usage/outbox state, or other control-plane rows without role-specific policies.
-2. Add DB-backed negative RLS coverage for direct Supabase access.
-3. Wire or explicitly re-scope the outbox publisher runtime trigger.
-4. Make org bootstrap atomic or add a deliberate accepted-debt record with cleanup/test coverage.
-5. Clarify/fix whether AI `/health` is public liveness or service-key-protected m2m health.
+1. **SoT sync** — `2026-07-25-remaining-completion-priority.md`: staging **27** migrations (warehouse `20260727210000`); R0.3/E0.3 confirm PASS local (no open confirm-500 blocker); "tiếp theo ngay" aligned with path-to-100 owner STOP (R0.2/R0.4).
+2. **Whitespace** — trimmed trailing spaces in `2026-07-25-path-to-100-percent.md` and `2026-07-25-sdd-e0-r0.md` (`git diff --check` clean post-commit).
 
-After those are addressed, the remaining known rollups are minor/deferred foundation debt rather than merge blockers for the platform-only scope.
+Gate R0 remains **AMBER (not GREEN)**; no CPC/E100 claim.
 
-## Re-review after fixes
-
-Re-reviewed head: `8d07d3e2d35536cffdd73eb626e3742ac0860279`  
-Prior inspected head: `413b6577a44e50ecb7fd608b10a2e5fd0bd805b0`  
-Scope: spot-check of the fix delta only; no full suite rerun in this pass.
-
-### Merge readiness - Plan A platform only
-
-**Recommendation: Merge ready YES for Plan A platform.**
-
-No new blocking findings were found in the fix delta. The prior critical RLS mutation blocker and the important runtime/atomicity/key-behavior issues are addressed sufficiently for the platform-foundation scope.
-
-### Fix spot-checks
-
-1. **RLS hardening: resolved.**
-   - `supabase/migrations/20260724193000_harden_control_plane_and_org_bootstrap.sql` drops the broad authenticated `UPDATE` policies from the initial migration and revokes `insert`, `update`, and `delete` on the foundation control-plane tables from `anon` and `authenticated`.
-   - The final grant state leaves authenticated clients with `select` only on the listed tenant tables, while privileged writes remain behind `service_role`.
-   - Residual risk: the DB-backed Supabase RLS E2E remains a skipped placeholder (`tests/isolation/cross-tenant.org.spec.ts`) and is documented as required before Plan B Meta work.
-
-2. **Outbox runtime wiring: resolved for Plan A.**
-   - `OutboxPublisher` now implements `OnModuleInit`/`OnModuleDestroy`, starts a 2s publish interval outside `NODE_ENV=test`, clears it on shutdown, and prevents same-instance overlapping publish runs.
-   - `InternalModule` provides `OutboxPublisher`, and `AppModule` imports `InternalModule`, so the publisher is instantiated in the running API.
-   - Residual risk: no live Docker/Supabase/Inngest smoke was rerun in this pass, and multi-instance locking/deduplication remains future hardening.
-
-3. **Organization bootstrap atomicity: resolved.**
-   - `IdentityService.createOrganization()` now calls `create_organization_with_owner`.
-   - The new PL/pgSQL RPC inserts the organization, owner membership, and default entitlements in one database function call, and execute permission is granted only to `service_role`.
-
-4. **AI health service-key behavior: acceptable for Plan A.**
-   - Core still sends `X-Service-Key` when proxying AI health.
-   - AI `/health` now rejects a present wrong service key, accepts the configured key, and keeps no-key `/health` public as liveness. That is acceptable for a non-sensitive health endpoint, but it should not be described as a fully protected AI authorization boundary.
-
-### Remaining non-blocking follow-ups
-
-- Replace the skipped RLS placeholder with real Docker-backed Supabase RLS E2E before Plan B Meta.
-- Run the deferred live smoke: local Supabase migrate, API/AI health through both services, and outbox-to-Inngest noop.
-- Consider outbox row claiming/locking before multi-instance production deployment.

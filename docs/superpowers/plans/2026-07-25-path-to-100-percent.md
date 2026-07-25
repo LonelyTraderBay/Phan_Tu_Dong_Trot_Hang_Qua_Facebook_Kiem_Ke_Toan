@@ -1,6 +1,6 @@
 # Kế hoạch chi tiết — từng bước tới **100%** hoàn thiện
 
-**Date:** 2026-07-25  
+**Date:** 2026-07-25
 **SoT song song:** [remaining-completion-priority](./2026-07-25-remaining-completion-priority.md) · [cpc-checklist](./cpc-checklist.md)
 
 ## Định nghĩa 100%
@@ -70,7 +70,7 @@ NOW ~55% tổng
 | **R0.3b** | Walkthrough staging | Lặp trên URL public sau R0.2 | AMBER | Full §12.1 (sau Meta) |
 | **R0.4** | Meta App Review | `META_*` thật; Terms/Privacy; webhook; submit | AMBER | **Submitted** (hoặc Approved) |
 
-**Gate R0:** R0.1 + R0.3 (staging đủ) + R0.4 submitted + R0.5.  
+**Gate R0:** R0.1 + R0.3 (staging đủ) + R0.4 submitted + R0.5.
 **Playbook:** `docs/ops/p0-staging-walkthrough-12-1.md` · `docs/ops/p0-meta-app-review-submit.md` · `docs/ops/deploy-staging-render.md`
 
 ---
@@ -87,8 +87,8 @@ NOW ~55% tổng
 | **R1.5** | Billing gates | `max_pages` / `auto_confirm` | Shop bị chặn đúng |
 | **R1.6** | Evidence E | `plan-e-dod-evidence.md` paid → GREEN | PR docs |
 
-**Cấm:** Charge khách / domain prod trước R1.0–R1.1.  
-**Gate R1:** R1.0–R1.6 xanh.  
+**Cấm:** Charge khách / domain prod trước R1.0–R1.1.
+**Gate R1:** R1.0–R1.6 xanh.
 **Song song:** Kick-off vendor SOC2/pen-test (**R3.0**) ngay sau R1.0 để lead time không chặn E100 sau này.
 
 ---
@@ -107,7 +107,7 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 | **R2.6** | Advisor LLM | Bật LLM thật + eval tối thiểu | Tuỳ E0.4 | GREEN hoặc AMBER ghi chú |
 | **R2.7** | CPC checklist | Điền `cpc-checklist.md` | **Có** | Verdict **CPC thương mại GREEN** |
 
-**Gate CPC 100%:** Gate R0 + Gate R1 + R2.1 + R2.2 + R2.3 + R2.7.  
+**Gate CPC 100%:** Gate R0 + Gate R1 + R2.1 + R2.2 + R2.3 + R2.7.
 → Metric “Commercial CPC” = **100%**. Eng path ≈ **95–100%** tùy E0.4.
 
 ---
@@ -127,7 +127,7 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 | **R3.8** | I8 Access review | Review `platform_admins` quý 1 | 1 ngày | Biên bản |
 | **R3.9** | Đóng E100 | `plan-i-dod-evidence.md` I1–I8 GREEN | — | **E100 claimed** |
 
-**Gate E100 100%:** I1–I8 GREEN.  
+**Gate E100 100%:** I1–I8 GREEN.
 → Metric tổng intended scope = **100%**.
 
 ---
@@ -146,10 +146,10 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 ## Checklist vận hành mỗi bước
 
-1. Đọc runbook / playbook liên quan  
-2. Làm → ghi evidence (screenshot, log, PR)  
-3. Cập nhật `r0-r3-execution-evidence.md` + `plan-*-dod-evidence.md` / `cpc-checklist.md`  
-4. Chỉ sang bước sau khi gate sóng đạt (trừ bước đã đánh dấu song song)  
+1. Đọc runbook / playbook liên quan
+2. Làm → ghi evidence (screenshot, log, PR)
+3. Cập nhật `r0-r3-execution-evidence.md` + `plan-*-dod-evidence.md` / `cpc-checklist.md`
+4. Chỉ sang bước sau khi gate sóng đạt (trừ bước đã đánh dấu song song)
 5. Không claim % đích khi còn AMBER bắt buộc
 
 ---

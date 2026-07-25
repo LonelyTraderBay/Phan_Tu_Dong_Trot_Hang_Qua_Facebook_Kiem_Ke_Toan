@@ -16,3 +16,5 @@ supabase/.temp/
 
 .env.staging.local
 .env.staging
+
+.local-secrets/

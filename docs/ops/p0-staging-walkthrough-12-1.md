@@ -1,4 +1,4 @@
-﻿# P0.1 — Staging walkthrough Design §12.1
+# P0.1 — Staging walkthrough Design §12.1
 
 **Purpose:** Manual product checklist before paid M3 / Meta submit.
 **Status template:** mark each row `PASS` / `FAIL` / `BLOCKED` with date + operator.

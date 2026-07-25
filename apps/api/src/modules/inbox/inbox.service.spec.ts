@@ -186,12 +186,8 @@ describe('InboxService', () => {
 
   it('resume unpauses the bot, increments epoch, and writes audit', async () => {
     const fixedNow = new Date('2026-07-24T12:05:00.000Z');
-    const resumed = {
-      ...conversationRow(),
-      bot_paused: false,
-      bot_epoch: 6,
-    };
-    const { calls, client } = mockSupabase(resumed);
+    const paused = conversationRow({ bot_paused: true, bot_epoch: 5 });
+    const { calls, client } = mockSupabase(paused);
     const auditCalls: unknown[] = [];
     const service = new InboxService(client, {
       writeAudit: async (input) => {

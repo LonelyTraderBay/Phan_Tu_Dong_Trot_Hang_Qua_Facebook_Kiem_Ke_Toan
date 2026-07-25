@@ -47,6 +47,23 @@ pnpm run dev:local:stop
 | Studio | http://127.0.0.1:54323 |
 | Mailpit | http://127.0.0.1:54324 |
 
+## Knowledge reindex (`knowledge_chunks`)
+
+Product create enqueues `knowledge.reindex` via outbox → Inngest. Without a local Inngest
+dev server (or valid `INNGEST_EVENT_KEY`), chunks stay empty even though the product exists.
+
+```powershell
+# separate terminal while API is running
+npx inngest-cli@latest dev -u http://127.0.0.1:3001/api/inngest
+```
+
 ## Meta webhooks
 
 Meta cannot call localhost. Use Cloudflare Tunnel / ngrok when testing webhooks.
+
+## Known fix: order confirm after multi-warehouse
+
+Orgs created without a default warehouse caused `POST /v1/orders/:id/confirm` → `500 orders_failed`.
+Migration `20260727210000_ensure_default_warehouse_on_org.sql` creates `Kho chính` / `MAIN` on
+org insert and backfills existing orgs. Apply locally with `npx supabase db reset` or
+`npx supabase migration up --local`.

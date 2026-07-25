@@ -227,6 +227,30 @@ describe('OrdersService lifecycle stock handling', () => {
     });
   });
 
+  it('maps missing default warehouse from the confirm RPC to a 400 problem', async () => {
+    const client = {
+      rpc: vi.fn(async () => ({
+        data: null,
+        error: { code: 'P0001', hint: 'warehouse_not_found' },
+      })),
+      from() {
+        throw new Error('from() should not be called');
+      },
+    } as unknown as SupabaseLike;
+    const service = new OrdersService(client, auditMock());
+
+    await expect(
+      service.confirmOrder({
+        orgId: ORG_ID,
+        orderId: ORDER_ID,
+        actorUserId: USER_ID,
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'warehouse_not_found' },
+      status: 400,
+    });
+  });
+
   it('uses the cancel RPC that restores confirmed unshipped stock', async () => {
     let stockQty = 0;
     const client = {

@@ -18,3 +18,6 @@ supabase/.temp/
 .env.staging
 
 .local-secrets/
+
+# local supabase CLI branch marker
+supabase/.branches/

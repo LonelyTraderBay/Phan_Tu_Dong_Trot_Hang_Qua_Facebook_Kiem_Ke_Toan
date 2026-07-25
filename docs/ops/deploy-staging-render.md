@@ -77,3 +77,27 @@ curl -sS -o /dev/null -w "%{http_code}\n" https://<web>/
 | https://omni-api-staging-cs2w.onrender.com/health | `{"status":"ok"}` |
 | https://omni-ai-staging.onrender.com/health | `{"status":"ok"}` (sau wake) |
 | https://omni-web-staging.onrender.com/ | landing Omni Commerce (sau wake) |
+
+## Upgrade to always-on (owner)
+
+**Prerequisite:** Owner billing only — agent must not add payment methods.
+
+| # | Action | Detail |
+|---|--------|--------|
+| 1 | Add payment method | https://dashboard.render.com/u/billing → **Add payment method** |
+| 2 | Upgrade `omni-api-staging` | https://dashboard.render.com/web/srv-d9i2sjbeo5us7394purg → **Settings** → **Instance Type** → **Free** → **Starter** → **Save** |
+| 3 | Upgrade `omni-ai-staging` | https://dashboard.render.com/web/srv-d9i2skbrjlhs73e95lsg → same (Free → Starter) |
+| 4 | Upgrade `omni-web-staging` | https://dashboard.render.com/web/srv-d9i2sl3h2c0s73823lqg → same (Free → Starter) |
+| 5 | (Optional) Sync blueprint | In `render.yaml`, change `plan: free` → `plan: starter` for all three services; commit so future Blueprint deploys match |
+| 6 | Verify always-on (post-upgrade) | From **external** network **after** steps 2–4: `curl` all three URLs (see **Verify** above) — stable HTTP 200 with no 30–90s cold-start page on critical path (api `/health`, ai `/health`, web `/`). Re-probe after 15–30 min idle if possible |
+| 7 | Update evidence | **GREEN** only when steps 2–4 complete **and** step 6 post-upgrade no-cold-start proof is recorded. Keep-warm `healthy_count=3/3` supports **AMBER** reachability on free tier only — **not** sufficient for GREEN |
+
+**Live URLs (unchanged after upgrade):**
+
+| Service | URL |
+|---------|-----|
+| `omni-api-staging` | https://omni-api-staging-cs2w.onrender.com |
+| `omni-ai-staging` | https://omni-ai-staging.onrender.com |
+| `omni-web-staging` | https://omni-web-staging.onrender.com |
+
+Keep-warm workflow (`.github/workflows/staging-keep-warm.yml`) can stay enabled to support **AMBER** reachability on free tier but is **not** a substitute for Starter always-on and **cannot** alone justify R0.2 GREEN.

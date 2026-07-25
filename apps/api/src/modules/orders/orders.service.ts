@@ -998,6 +998,12 @@ function throwOrdersError(error: SupabaseError, message: string): never {
       message: 'Insufficient stock to confirm order',
     });
   }
+  if (error.hint === 'warehouse_not_found') {
+    throw new BadRequestException({
+      code: 'warehouse_not_found',
+      message: 'Default warehouse is missing for this organization',
+    });
+  }
   if (error.hint === 'invalid_order_status') {
     throw new BadRequestException({
       code: 'invalid_order_status',

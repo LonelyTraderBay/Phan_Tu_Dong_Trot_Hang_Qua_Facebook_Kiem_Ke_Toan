@@ -28,6 +28,19 @@
 - Public incident/status/SLA and security procurement work remain Plan I, not CPC
   engineering.
 
+## Stub decisions (owner)
+
+R2.4–R2.6 may be **REQUIRED** (must go GREEN) or **AMBER_OK** (defer with explicit
+owner acceptance). Fill **Owner date** when decided.
+
+| Item | Decision | Owner date | Notes |
+|------|----------|------------|-------|
+| R2.4 Zalo OA | undecided | | OAuth/token + inbound worker vs Meta-only |
+| R2.5 E-invoice | undecided | | Real provider sandbox vs invoicing outside system |
+| R2.6 Advisor | undecided | | Live LLM/eval vs stub acceptable |
+
+Allowed values: `REQUIRED` · `AMBER_OK` · `undecided`
+
 ## Verdict
 
 Plan H closes the **CPC engineering path**. Commercial launch should remain

@@ -26,9 +26,9 @@
 
 | Field | Value |
 |-------|-------|
-| Date | |
-| Operator | |
-| Staging commit SHA | |
-| Blockers | |
+| Date | 2026-07-25 |
+| Operator | agent (blocked) |
+| Staging commit SHA | `main` tip — live walkthrough not executed |
+| Blockers | No staging URLs / Meta test credentials / always-on hosts in agent env |
 
-**Code readiness (repo):** Web/API surfaces for 1–7 exist on `main` @ Plan D. Live staging remains operator-owned.
+**Code readiness (repo):** Surfaces for 1–7 exist through Plans D–H. Live §12.1 remains **AMBER** until owner runs checklist on staging.

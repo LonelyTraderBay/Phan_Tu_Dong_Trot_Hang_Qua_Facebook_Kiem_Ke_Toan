@@ -32,4 +32,6 @@ select tablename from pg_tables where schemaname = 'public'
 
 | Date | Operator | Command | Result |
 |------|----------|---------|--------|
-| | | | **PENDING** — no staging project credentials in agent env |
+| 2026-07-25 | agent | GitHub **Migrate Check** (`supabase start` + `db reset` on CI) | **GREEN** — SQL migrations apply cleanly in CI |
+| 2026-07-25 | agent | Remote staging `db push` | **AMBER / BLOCKED** — no `SUPABASE_ACCESS_TOKEN` + `STAGING_PROJECT_REF` |
+| | | When secrets ready | `pwsh scripts/staging-migrate.ps1` or workflow **Staging Migrate** |

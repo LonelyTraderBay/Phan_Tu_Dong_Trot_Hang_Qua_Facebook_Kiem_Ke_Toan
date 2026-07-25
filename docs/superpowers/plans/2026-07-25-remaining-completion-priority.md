@@ -150,19 +150,15 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 
 ## Tóm tắt một trang — làm gì **tiếp theo ngay**
 
+Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md)
+
 ```
-▶ R0.1  Apply migrations staging
-  R0.2  Always-on staging (webhook không sleep)
-  R0.3  §12.1 walkthrough
-  R0.4  Meta App Review submit
-  R0.5  Scheduled QA xanh trên main
-        ↓
-  R1    Pro + PITR + restore drill → always-on prod → uptime → LLM cap prove
-        ↓
-  R2    Carrier E2E → COD → Returns → (Zalo/e-invoice tuỳ) → CPC checklist
-        ↓ CPC thương mại
-  R3    Kick-off SOC2/pen-test → SSO → status live → SLA → SBOM enforce
-        → access review → đóng I1–I8 → E100
+R0.1 CI migrate     GREEN (Migrate Check)
+R0.1 remote staging AMBER — cần SUPABASE_ACCESS_TOKEN + STAGING_PROJECT_REF
+R0.5 Scheduled QA   GREEN (Actions run 30139904845)
+R0.2–R0.4           AMBER — cần host URLs + Meta owner submit
+▶ UNBLOCK: set GitHub secrets → Staging Migrate workflow / scripts/staging-migrate.ps1
+THEN R1 → R2 → CPC → R3 → E100
 ```
 
 ---

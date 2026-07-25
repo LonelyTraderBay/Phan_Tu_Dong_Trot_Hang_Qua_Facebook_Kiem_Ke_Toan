@@ -31,6 +31,6 @@
 
 | Field | Value |
 |-------|-------|
-| Submitted at | **NOT RUN** until URLs + always-on ready |
+| Submitted at | **NOT RUN** — blocked on public staging/prod URLs + always-on webhook (R0.2) |
 | Review status | |
-| Notes | Free-tier cold start may block review — prefer Plan E1 always-on or paid staging temporarily |
+| Notes | Agent cannot submit in Meta dashboard. Owner fills App ID / screencast then submits. |

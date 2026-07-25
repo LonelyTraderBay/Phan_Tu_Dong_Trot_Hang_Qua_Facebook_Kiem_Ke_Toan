@@ -1,7 +1,7 @@
 # SDD Execution — Wave R0 (completion path)
 
-**Date:** 2026-07-25  
-**Parent SoT:** [2026-07-25-remaining-completion-priority.md](./2026-07-25-remaining-completion-priority.md)  
+**Date:** 2026-07-25
+**Parent SoT:** [2026-07-25-remaining-completion-priority.md](./2026-07-25-remaining-completion-priority.md)
 **Method:** Subagent-Driven Development (fresh subagent per task + review between tasks)
 
 ## Global Constraints
@@ -117,5 +117,5 @@
 
 ## After Wave R0 (controller stops for owner)
 
-Owner must clear: Render always-on payment, Meta credentials + App Review submit, then full staging §12.1.  
+Owner must clear: Render always-on payment, Meta credentials + App Review submit, then full staging §12.1.
 Next SDD wave: **R1 Plan E paid/live** (new plan file) — do not start until owner unblocks or explicitly asks to prep-only R1 docs.

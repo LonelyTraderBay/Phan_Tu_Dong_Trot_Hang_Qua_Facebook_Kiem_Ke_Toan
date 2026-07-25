@@ -1,6 +1,6 @@
 # P0.2 — Meta App Review submit pack
 
-**Checklist chi tiết:** [docs/meta-app-review-checklist.md](../meta-app-review-checklist.md)  
+**Checklist chi tiết:** [docs/meta-app-review-checklist.md](../meta-app-review-checklist.md)
 **Staging hosts:** [r0-r3-execution-evidence.md](./r0-r3-execution-evidence.md#render-staging-services) · SDD Task 3 prep `2026-07-25`
 
 ## Staging URLs (fill Meta dashboard from this table)

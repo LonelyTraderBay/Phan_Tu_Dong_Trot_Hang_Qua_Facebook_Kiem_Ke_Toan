@@ -1,7 +1,7 @@
 # P0.1 — Staging walkthrough Design §12.1
 
-**Purpose:** Manual product checklist before paid M3 / Meta submit.  
-**Status template:** mark each row `PASS` / `FAIL` / `BLOCKED` with date + operator.  
+**Purpose:** Manual product checklist before paid M3 / Meta submit.
+**Status template:** mark each row `PASS` / `FAIL` / `BLOCKED` with date + operator.
 **SDD plan:** Wave R0 execution steps live in [2026-07-25-sdd-completion-r0.md](../superpowers/plans/2026-07-25-sdd-completion-r0.md).
 
 ## Preflight

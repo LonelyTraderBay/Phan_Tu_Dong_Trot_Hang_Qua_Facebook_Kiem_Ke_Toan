@@ -53,6 +53,21 @@ export class InboxController {
       conversationId,
     });
   }
+
+  @Post('conversations/:id/resume')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('inbox.takeover')
+  resumeConversation(
+    @OrgId() orgId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser | undefined,
+    @Param('id', ParseUUIDPipe) conversationId: string,
+  ) {
+    return this.inbox.resumeConversation({
+      orgId: requireOrgId(orgId),
+      actorUserId: requireUserId(user),
+      conversationId,
+    });
+  }
 }
 
 function requireOrgId(orgId: string | undefined) {

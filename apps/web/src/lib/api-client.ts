@@ -1228,6 +1228,17 @@ export async function takeoverInboxConversation(
   return conversation;
 }
 
+export async function resumeInboxConversation(
+  conversationId: string,
+): Promise<InboxConversation> {
+  const { conversation } = await apiFetch<{ conversation: InboxConversation }>(
+    `/v1/inbox/conversations/${encodeURIComponent(conversationId)}/resume`,
+    { method: 'POST' },
+  );
+
+  return conversation;
+}
+
 export async function listOrganizations(
   accessToken?: string,
 ): Promise<OrganizationMembership[]> {

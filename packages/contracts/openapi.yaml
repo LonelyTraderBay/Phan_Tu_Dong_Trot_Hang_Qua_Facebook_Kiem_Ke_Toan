@@ -1036,6 +1036,19 @@ paths:
       responses:
         '201':
           description: Taken over
+  /v1/inbox/conversations/{id}/resume:
+    post:
+      summary: Resume bot after human takeover
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Bot resumed
   /v1/webhooks/meta:
     get:
       summary: Verify Meta webhook subscription

@@ -169,6 +169,50 @@ export class InboxService {
     return { conversation: mapConversation(conversation) };
   }
 
+  async resumeConversation(input: {
+    orgId: string;
+    conversationId: string;
+    actorUserId: string;
+    now?: Date;
+  }) {
+    const { data, error } = await this.supabase
+      .rpc('resume_inbox_conversation', {
+        p_org_id: input.orgId,
+        p_conversation_id: input.conversationId,
+        p_updated_at: (input.now ?? new Date()).toISOString(),
+      })
+      .maybeSingle();
+
+    if (error) {
+      throwInboxError(error, 'Could not resume inbox conversation');
+    }
+    if (!data) {
+      throw new NotFoundException({
+        code: 'conversation_not_found',
+        message: 'Conversation was not found',
+      });
+    }
+
+    const conversation = data as ConversationRow;
+    const nextEpoch = conversation.bot_epoch;
+    const previousEpoch = nextEpoch - 1;
+
+    await this.audit.writeAudit({
+      orgId: input.orgId,
+      actorUserId: input.actorUserId,
+      actorType: 'user',
+      action: 'inbox.resume',
+      entityType: 'conversation',
+      entityId: input.conversationId,
+      meta: {
+        previousBotEpoch: previousEpoch,
+        nextBotEpoch: nextEpoch,
+      },
+    });
+
+    return { conversation: mapConversation(conversation) };
+  }
+
   private async requireConversation(orgId: string, conversationId: string) {
     const { data, error } = await this.supabase
       .from('conversations')

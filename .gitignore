@@ -11,3 +11,8 @@ __pycache__/
 .pytest_cache/
 coverage/
 supabase/.temp/
+.env.staging
+.env.staging.local
+
+.env.staging.local
+.env.staging

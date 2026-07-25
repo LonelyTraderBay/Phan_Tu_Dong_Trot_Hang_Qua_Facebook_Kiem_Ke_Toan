@@ -9,7 +9,7 @@
 |------|--------|----------|---------|
 | R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
 | R0.1 Migrations on remote staging | **GREEN** | Linked `lrcsbrmqlyvkxxspbezi` (`Phan_mem_ban_hang_online-staging`); repaired orphan history; `supabase db push` 26 migrations; verified core `public.*` tables | Legacy `app.*` schema remains from prior product |
-| R0.2 Always-on staging hosts | **AMBER** | No Docker/hosting credentials in env | Owner deploy Railway/Fly/Render |
+| R0.2 Always-on staging hosts | **AMBER** | `render.yaml` Blueprint ready (starter plan, SG); no `RENDER_API_KEY` / `render login` in agent | Owner: Dashboard Blueprint deploy OR `render login` + paste env |
 | R0.3 §12.1 walkthrough | **AMBER** | Needs live staging URLs | After R0.1–R0.2 |
 | R0.4 Meta App Review submit | **AMBER** | Meta dashboard is owner-only | After public legal URLs + webhook always-on |
 | R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) — isolation + eval success (workflow_dispatch 2026-07-25) | — |

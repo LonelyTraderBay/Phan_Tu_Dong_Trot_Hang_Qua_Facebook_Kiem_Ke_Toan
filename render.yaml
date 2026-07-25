@@ -1,0 +1,99 @@
+# Staging Blueprint — ADR 0001 (Render)
+# Dashboard → New → Blueprint → this repo / main / render.yaml
+# Service hostnames assume names below (adjust if Render suffixes them).
+
+version: "1"
+
+services:
+  - type: web
+    name: omni-api-staging
+    runtime: node
+    plan: starter
+    region: singapore
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @omni/api... build
+    startCommand: pnpm --filter @omni/api start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: TOKEN_ENCRYPTION_KEY
+        generateValue: true
+      - key: SERVICE_M2M_KEY
+        generateValue: true
+      - key: AI_BASE_URL
+        value: https://omni-ai-staging.onrender.com
+      - key: META_APP_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_VERIFY_TOKEN
+        sync: false
+      - key: META_REDIRECT_URI
+        value: https://omni-web-staging.onrender.com/settings/channels/callback
+      - key: META_GRAPH_VERSION
+        value: v21.0
+      - key: AI_MODEL_ALLOWLIST
+        value: gemini-2.0-flash,advisor-stub
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+
+  - type: web
+    name: omni-ai-staging
+    runtime: python
+    plan: starter
+    region: singapore
+    rootDir: apps/ai
+    buildCommand: pip install uv && uv sync --frozen
+    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: SERVICE_M2M_KEY
+        fromService:
+          name: omni-api-staging
+          type: web
+          envVarKey: SERVICE_M2M_KEY
+      - key: CORE_BASE_URL
+        value: https://omni-api-staging.onrender.com
+      - key: AI_MODEL_ALLOWLIST
+        value: gemini-2.0-flash,advisor-stub
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LLM_DAILY_SPEND_CAP_USD
+        value: "5"
+      - key: LLM_MONTHLY_SPEND_CAP_USD
+        value: "50"
+
+  - type: web
+    name: omni-web-staging
+    runtime: node
+    plan: starter
+    region: singapore
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @omni/web... build
+    startCommand: pnpm --filter @omni/web start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: https://omni-api-staging.onrender.com

@@ -8,7 +8,7 @@
 | Step | Status | Evidence | Blocker |
 |------|--------|----------|---------|
 | R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
-| R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` 27 migrations incl. `20260727210000_ensure_default_warehouse_on_org.sql` (SDD Task 5, 2026-07-25); verified `public.*` tables | Prior staging/prod refs deleted |
+| R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` 28 migrations incl. `20260727220000_inbox_resume_rpc.sql` (SDD E2 Task 2, 2026-07-25); `migration list` local=remote 28/28; verified `public.resume_inbox_conversation` RPC | Prior staging/prod refs deleted |
 | R0.2 Always-on staging hosts | **AMBER** | Free-tier LIVE; **not** always-on. Probes 2026-07-25: local probes failed — api `curl` TLS reset (exit 35); ai/web PowerShell timeout; GHA [keep-warm run 30143832342](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30143832342) `healthy_count=3/3` HTTP 200 (AMBER reachability only, not GREEN proof); prior external probe in [deploy-staging-render](./deploy-staging-render.md). Owner checklist: [Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner) | **BLOCKED (owner):** Render payment → upgrade `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` Free→Starter; GREEN needs post-upgrade no-cold-start external proof |
 | R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3** ([walkthrough](./p0-staging-walkthrough-12-1.md)): 2 PASS · 3 PASS (partial) · 2 BLOCKED (Meta); confirm GREEN after warehouse migration `20260727210000`; health 3/3; `pnpm test:isolation` 6 pass · 1 skip | Staging repeat + Meta OAuth/DM + knowledge reindex for GREEN |
 | R0.4 Meta App Review submit | **AMBER** | Prep pack complete ([p0-meta-app-review-submit](./p0-meta-app-review-submit.md), SDD Task 3 `2026-07-25`): staging Privacy/Terms/webhook/OAuth URLs filled; permissions list from code; `META_*` placeholders only in git (`.env.example`, `render.yaml` sync:false) | **BLOCKED (owner):** replace `META_*` on `omni-api-staging` + submit in Meta dashboard; needs R0.2 always-on for webhook during review |
@@ -93,7 +93,7 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 
 | Step | Gate | Status | SDD task | Notes |
 |------|------|--------|----------|-------|
-| R0.1 | Migrations | **GREEN** | Task 5 | CI + staging `tjsmpcgkeoglemptuymu` (27 incl. warehouse `20260727210000`) |
+| R0.1 | Migrations | **GREEN** | Task 5 / E2 T2 | CI + staging `tjsmpcgkeoglemptuymu` (28 incl. resume RPC `20260727220000`) |
 | R0.2 | Always-on staging | **AMBER** | Task 2 | Owner: Render payment → Starter on 3 services |
 | R0.3 | §12.1 walkthrough | **AMBER** | Task 3 (E0.3) | Local: 2 PASS · 3 partial · 2 BLOCKED (Meta); criterion 5 confirm PASS post-warehouse fix |
 | R0.4 | Meta App Review | **AMBER** | Task 3 | Prep pack complete; owner: `META_*` + submit |
@@ -119,7 +119,7 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 
 | Step | Status | Evidence | Blocker |
 |------|--------|----------|---------|
-| E0.1 Warehouse fix | **GREEN** | Migration `20260727210000_ensure_default_warehouse_on_org.sql` on branch + staging 27/27 (Task 5) | — |
+| E0.1 Warehouse fix | **GREEN** | Migration `20260727210000_ensure_default_warehouse_on_org.sql` on branch + staging 28/28 (Task 5 + E2 T2) | — |
 | E0.2 Knowledge reindex local | **BLOCKED** | Outbox `knowledge.reindex` publishes; `knowledge_chunks` count `0` — AI `502 GEMINI_API_KEY is required` ([local-host](./local-host.md), Task 2) | **Owner/eng:** set `GEMINI_API_KEY` in `.env` + `apps/ai/.env`; rerun with Inngest dev |
 | E0.3 §12.1 confirm local | **PASS** | Criterion 5 confirm GREEN post-warehouse fix; overall walkthrough **AMBER** (Meta rows blocked) ([walkthrough](./p0-staging-walkthrough-12-1.md), Task 3) | Staging repeat + Meta for full R0.3 GREEN |
 | E0.4 CPC stub decisions | **AMBER** | `cpc-checklist.md` stub table present; Zalo / e-invoice / advisor all **undecided** (Task 4) | **Owner:** fill REQUIRED \| AMBER_OK per R2.4–R2.6 |
@@ -130,7 +130,7 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 
 | Step | Status | Owner action |
 |------|--------|--------------|
-| R0.1 Migrations | **GREEN** | — (27 incl. warehouse on `tjsmpcgkeoglemptuymu`) |
+| R0.1 Migrations | **GREEN** | — (28 incl. resume RPC `20260727220000` on `tjsmpcgkeoglemptuymu`) |
 | R0.2 Always-on staging | **AMBER** | Render payment → Starter on `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` — keep-warm `healthy_count=3/3` ≠ GREEN ([deploy-staging-render](./deploy-staging-render.md#upgrade-to-always-on-owner)) |
 | R0.3 §12.1 walkthrough | **AMBER** | R0.3a local partial PASS; **R0.3b** staging full repeat after R0.2 + Meta |
 | R0.4 Meta App Review | **AMBER** | Set `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` on API + submit ([prep pack](./p0-meta-app-review-submit.md) URLs verified vs staging) |

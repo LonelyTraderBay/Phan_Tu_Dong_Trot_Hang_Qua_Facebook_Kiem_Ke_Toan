@@ -1,85 +1,22 @@
-# Task 2 Report — C1 Catalog module CRUD
+# Task 2 report — Staging resume migration `20260727220000`
 
-## Status
+**BASE:** `57084b6f8e8de21c56d1f5544381267b8c7bb08a`  
+**Branch:** `cursor/e2-completion`  
+**Date:** 2026-07-25  
+**Status:** **GREEN**
 
-Completed.
+## Actions
 
-## Commits
+1. Loaded secrets from parent `.local-secrets/supabase-staging.json` (ref `tjsmpcgkeoglemptuymu`, not committed).
+2. `npx supabase db push --db-url postgresql://postgres.<ref>:<password>@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres --yes` — applied `20260727220000_inbox_resume_rpc.sql`.
+3. `npx supabase migration list --db-url <pooler>` — local=remote **28/28** (incl. `20260727220000`).
+4. `npx supabase db query --db-url <pooler>` — `public.resume_inbox_conversation` exists.
 
-| SHA | Message |
-|-----|---------|
-| `25d75b2` | `feat(api): catalog crud with reindex outbox` |
-| `d6ead53` | `fix(catalog): atomic create RPC with outbox and propagate enqueue failures` |
+## Docs
 
-Base: `5ba4a9f` · Head: `d6ead53`
+- `docs/ops/r0-r3-execution-evidence.md` — R0.1 updated to 28 migrations + resume RPC.
+- `docs/ops/p0-staging-migrate.md` — status log row added.
 
-## Implementation
+## Commit
 
-- Added Nest catalog module under `apps/api/src/modules/catalog`.
-- Implemented `/v1/catalog/products` list/get/create/update/soft-delete routes.
-- Implemented nested product variant create/update/delete routes.
-- Added service-role Supabase writes scoped by `org_id`.
-- Normalized `priceVnd` to PostgreSQL bigint-compatible string values; floats are rejected.
-- Wired `CatalogModule` into `AppModule`.
-- Updated `packages/contracts/openapi.yaml` stubs for catalog paths.
-
-### Review fix — atomic create (Important)
-
-- Added migration `20260725150000_catalog_create_product_atomic.sql` with `create_product_with_variants_and_reindex` RPC (`security definer`, `set search_path = ''`, `service_role` only).
-- RPC inserts product, variants, and `knowledge.reindex` outbox row in one Postgres transaction.
-- `CatalogService.createProduct` calls the RPC; no separate variant insert or post-commit enqueue.
-- Outbox payload matches spec: `{ orgId, sourceType: 'product', sourceId }`.
-- Test asserts RPC path and that `enqueueOutbox` is not called on create.
-
-### Update/delete/variant writes
-
-- Still enqueue outbox after commit via `enqueueOutbox` (throws on failure → API 500; write may already be committed).
-- Test covers outbox failure propagation on product update.
-
-## Verification
-
-| Check | Result |
-|-------|--------|
-| `pnpm --dir apps/api exec vitest run src/modules/catalog/catalog.service.spec.ts` | Pass (2 tests) |
-| `pnpm --dir apps/api test` | Pass (20 files / 67 tests) |
-| `pnpm --dir apps/api typecheck` | Not rerun this pass (prior report green) |
-
----
-
-## Re-review (5ba4a9f..d6ead53)
-
-Reviewed fix delta only; spot-check of atomic create RPC and spec alignment.
-
-### Spec checklist
-
-| Requirement | Status |
-|-------------|--------|
-| TDD create product+variant with `price_vnd` bigint | ✅ `PriceVndSchema` + RPC create test |
-| Routes `/v1/catalog/products` CRUD | ✅ list/get/create/update/soft-delete |
-| Permissions `catalog.read` / `catalog.write` | ✅ `@RequirePermission` on all routes |
-| On write → `enqueueOutbox({ eventName: 'knowledge.reindex', payload: { orgId, sourceType: 'product', sourceId } })` | ✅ create in RPC; update/delete/variant post-commit |
-| Commit message | ✅ `feat(api): catalog crud with reindex outbox` |
-
-**Spec: ✅**
-
-### Findings
-
-#### Important — resolved
-
-1. **Create path was not atomic (product + variants + outbox).**
-   - Prior (`25d75b2`): `createProduct` inserted product, called `insertVariants`, then `enqueueProductReindex` as three separate service-role calls — partial failure could leave orphan product or product without reindex event.
-   - Fix (`d6ead53`): `create_product_with_variants_and_reindex` RPC mirrors the Plan B Meta webhook pattern (`record_meta_webhook_receipt_and_enqueue`): single transaction, revoked from `public`/`anon`/`authenticated`, granted to `service_role` only.
-   - Service and test confirm create no longer calls `enqueueOutbox` separately.
-
-#### Minor — deferred
-
-1. **Update/delete/variant writes enqueue outbox after commit.**
-   - If `enqueueOutbox` fails after a successful write, the catalog row is committed but no reindex event is queued (API returns 500). Acceptable deferred debt for C1; follow-up RPCs or compensating retry can align with create pattern later.
-2. **`createVariant` is also non-atomic** (insert then enqueue) — same class as above; defer with update paths.
-3. OpenAPI entries remain stubs (no shared response schemas) — consistent with other Plan C modules.
-
-### Verdict
-
-**Approved.**
-
-Important create atomicity is resolved. Outbox-on-update non-atomicity is documented and deferred as Minor.
+`docs(ops): staging resume migration status (SDD E2)`

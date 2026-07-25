@@ -1,10 +1,11 @@
 # Kế hoạch chi tiết — từng bước theo thứ tự ưu tiên tới hoàn thiện
 
 **Date:** 2026-07-25  
-**Baseline:** `main` @ `af8413a` — Plans **A–D DONE** · **Pilot Phase 1 READY**  
-**Authority:** [priority-execution-roadmap](./2026-07-24-priority-execution-roadmap.md) · [master-roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) · [CANONICAL](../specs/2026-07-24-CANONICAL-LOCKED-DECISIONS.md)
+**Baseline:** `main` @ `8026357` — Plans **A–H DONE** (CPC engineering READY) · Plan I scaffolding IN PROGRESS  
+**Authority:** [priority-execution-roadmap](./2026-07-24-priority-execution-roadmap.md) · [master-roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) · [CANONICAL](../specs/2026-07-24-CANONICAL-LOCKED-DECISIONS.md)  
+**Kế hoạch còn lại (chi tiết R0→R3):** [remaining-completion-priority](./2026-07-25-remaining-completion-priority.md)
 
-> Đây là **SoT thứ tự ưu tiên còn lại**. Plan E có playbook riêng; F–I viết full task JIT trước khi code.
+> Đây là **SoT thứ tự ưu tiên**. Phần **còn lại để hoàn thiện** (clear AMBER → CPC → E100) nằm ở file remaining ở trên.
 
 ---
 
@@ -168,14 +169,14 @@ Với mỗi plan E→I:
 
 ## Tóm tắt một trang — làm gì **tiếp theo**
 
+Chi tiết từng bước còn lại: **[remaining-completion-priority](./2026-07-25-remaining-completion-priority.md)**
+
 ```
-DONE P0 docs + P3 Plan E code/docs (paid/live AMBER = owner parallel)
-DONE Plan F 2A→2H
-DONE Plan G 3A→3F
-DONE Plan H 4A→4F → CPC engineering READY (live ops AMBER)
-▶ NOW eng: Plan I M4 scaffolding IN PROGRESS
-BLOCKED: E100 until I1–I8 live/compliance evidence is GREEN
-OWNER parallel: §12.1 · Meta Review submit · Pro+PITR drill · always-on
+DONE  A–H code (+ I scaffolding)
+▶ R0  staging migrate + §12.1 + Meta Review
+  R1  Pro+PITR+drill · always-on · uptime · LLM cap prove
+  R2  carrier/COD/returns live → CPC checklist  → CPC thương mại
+  R3  I1–I8 live/compliance                     → E100
 ```
 
 ---
@@ -189,6 +190,8 @@ OWNER parallel: §12.1 · Meta Review submit · Pro+PITR drill · always-on
 | Plan E DoD | [plan-e-dod-evidence](./plan-e-dod-evidence.md) |
 | Plan F playbook | [plan-f-priority-execution](./2026-07-24-plan-f-priority-execution.md) |
 | Plan H playbook | [plan-h-priority-execution](./2026-07-24-plan-h-priority-execution.md) |
+| **Còn lại R0→R3** | [remaining-completion-priority](./2026-07-25-remaining-completion-priority.md) |
+| CPC checklist | [cpc-checklist](./cpc-checklist.md) |
 | F–I index | [plans-f-i-post-phase1-index](./2026-07-24-plans-f-i-post-phase1-index.md) |
 | Wave chi tiết gốc | [master-roadmap](../specs/2026-07-24-master-roadmap-commercial-complete.md) |
 | Pilot DoD | [plan-d-dod-evidence](./plan-d-dod-evidence.md) |

@@ -89,8 +89,8 @@ curl -sS -o /dev/null -w "%{http_code}\n" https://<web>/
 | 3 | Upgrade `omni-ai-staging` | https://dashboard.render.com/web/srv-d9i2skbrjlhs73e95lsg → same (Free → Starter) |
 | 4 | Upgrade `omni-web-staging` | https://dashboard.render.com/web/srv-d9i2sl3h2c0s73823lqg → same (Free → Starter) |
 | 5 | (Optional) Sync blueprint | In `render.yaml`, change `plan: free` → `plan: starter` for all three services; commit so future Blueprint deploys match |
-| 6 | Verify always-on | From external network: `curl` all three URLs (see **Verify** above) — expect stable HTTP 200 without 30–90s cold-start page. Or dispatch [Staging Keep Warm](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/workflows/staging-keep-warm.yml) and confirm `healthy_count=3/3` |
-| 7 | Update evidence | Set R0.2 to **GREEN** in `docs/ops/r0-r3-execution-evidence.md` with upgrade date + probe proof |
+| 6 | Verify always-on (post-upgrade) | From **external** network **after** steps 2–4: `curl` all three URLs (see **Verify** above) — stable HTTP 200 with no 30–90s cold-start page on critical path (api `/health`, ai `/health`, web `/`). Re-probe after 15–30 min idle if possible |
+| 7 | Update evidence | **GREEN** only when steps 2–4 complete **and** step 6 post-upgrade no-cold-start proof is recorded. Keep-warm `healthy_count=3/3` supports **AMBER** reachability on free tier only — **not** sufficient for GREEN |
 
 **Live URLs (unchanged after upgrade):**
 
@@ -100,4 +100,4 @@ curl -sS -o /dev/null -w "%{http_code}\n" https://<web>/
 | `omni-ai-staging` | https://omni-ai-staging.onrender.com |
 | `omni-web-staging` | https://omni-web-staging.onrender.com |
 
-Keep-warm workflow (`.github/workflows/staging-keep-warm.yml`) can stay enabled but is **not** a substitute for Starter always-on.
+Keep-warm workflow (`.github/workflows/staging-keep-warm.yml`) can stay enabled to support **AMBER** reachability on free tier but is **not** a substitute for Starter always-on and **cannot** alone justify R0.2 GREEN.

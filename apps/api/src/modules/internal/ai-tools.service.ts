@@ -21,7 +21,7 @@ const VARIANT_SELECT =
   'id, org_id, product_id, sku, title, price_vnd, stock_qty, attrs_json, created_at, updated_at';
 const PRODUCT_WITH_VARIANTS_SELECT = `${PRODUCT_SELECT}, variants:product_variants(${VARIANT_SELECT})`;
 
-const JsonObjectSchema = z.record(z.unknown());
+const JsonObjectSchema = z.record(z.string(), z.unknown());
 const PaymentMethodSchema = z.enum(['cod', 'bank_transfer', 'other']);
 const AttributionTextSchema = z.string().trim().min(1).max(512);
 

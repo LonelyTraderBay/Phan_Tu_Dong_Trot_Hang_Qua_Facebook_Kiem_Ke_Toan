@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const JsonObjectSchema = z.record(z.unknown());
+const JsonObjectSchema = z.record(z.string(), z.unknown());
 const StatusSchema = z.enum(['active', 'archived']);
 const VndAmountSchema = z
   .union([

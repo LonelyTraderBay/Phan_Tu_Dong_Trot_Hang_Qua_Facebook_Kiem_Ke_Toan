@@ -19,7 +19,7 @@ const AI_RUN_SELECT =
   'id, org_id, conversation_id, message_id, prompt_version, model, input_tokens, output_tokens, tools_json, citations_json, status, created_at';
 
 const TokenCountSchema = z.number().int().min(0).safe();
-const JsonRecordArraySchema = z.array(z.record(z.unknown()));
+const JsonRecordArraySchema = z.array(z.record(z.string(), z.unknown()));
 
 export const WriteAiRunSchema = z.object({
   orgId: z.string().uuid(),

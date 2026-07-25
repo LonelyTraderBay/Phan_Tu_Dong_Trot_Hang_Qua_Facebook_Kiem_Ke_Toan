@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const JsonRecordSchema = z.record(z.unknown());
+const JsonRecordSchema = z.record(z.string(), z.unknown());
 
 export const AdvisorSuggestBodySchema = z
   .object({

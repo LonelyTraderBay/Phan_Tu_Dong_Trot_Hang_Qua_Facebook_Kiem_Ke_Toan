@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const ShippingProviderSchema = z.enum(['manual', 'ghn']);
-const JsonObjectSchema = z.record(z.unknown());
+const JsonObjectSchema = z.record(z.string(), z.unknown());
 
 export const UpsertCarrierConnectionBodySchema = z
   .object({

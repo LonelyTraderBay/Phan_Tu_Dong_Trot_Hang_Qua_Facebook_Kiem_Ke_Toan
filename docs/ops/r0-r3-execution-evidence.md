@@ -1,37 +1,37 @@
-# R0–R3 execution evidence (live completion path)
+# R0â€“R3 execution evidence (live completion path)
 
 **Baseline tip:** `main` @ see git  
 **Plan:** [remaining-completion-priority](../superpowers/plans/2026-07-25-remaining-completion-priority.md)
 
-## R0 — Staging + Meta
+## R0 â€” Staging + Meta
 
 | Step | Status | Evidence | Blocker |
 |------|--------|----------|---------|
-| R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
+| R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | â€” |
 | R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` 26 migrations; verified `public.*` tables | Prior staging/prod refs deleted |
-| R0.2 Always-on staging hosts | **AMBER** | Render free services created (SG): api `omni-api-staging-cs2w`, ai `omni-ai-staging`, web `omni-web-staging`; env wired to new Supabase | Free plan sleeps → not true always-on until starter + payment |
-| R0.3 §12.1 walkthrough | **AMBER** | Staging URLs exist; walkthrough after deploys go live | Meta still pending |
+| R0.2 Always-on staging hosts | **AMBER** | Render free services LIVE (api/ai/web) on commit `49cc493`; Nest boot OK; free plan sleeps | Not always-on until starter + payment; local curl TLS reset to onrender.com | Free plan sleeps â†’ not true always-on until starter + payment |
+| R0.3 Â§12.1 walkthrough | **AMBER** | Staging URLs exist; walkthrough after deploys go live | Meta still pending |
 | R0.4 Meta App Review submit | **AMBER** | Meta dashboard is owner-only (`META_*` still placeholders) | After public legal URLs + webhook always-on |
-| R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) — isolation + eval success (workflow_dispatch 2026-07-25) | — |
+| R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) â€” isolation + eval success (workflow_dispatch 2026-07-25) | â€” |
 
-## R1 — Plan E paid/live
-
-| Step | Status | Notes |
-|------|--------|-------|
-| R1.0–R1.6 | **AMBER / BLOCKED** | Requires Supabase Pro billing, always-on paid hosts, real LLM keys, uptime vendor |
-
-## R2 — CPC commercial clear
+## R1 â€” Plan E paid/live
 
 | Step | Status | Notes |
 |------|--------|-------|
-| R2.1–R2.7 | **AMBER / BLOCKED** | Requires staging/prod with carrier + Meta + walkthrough |
+| R1.0â€“R1.6 | **AMBER / BLOCKED** | Requires Supabase Pro billing, always-on paid hosts, real LLM keys, uptime vendor |
 
-## R3 — E100
+## R2 â€” CPC commercial clear
 
 | Step | Status | Notes |
 |------|--------|-------|
-| Scaffolding I1–I8 | **GREEN (docs/code)** | Merged Plan I |
-| Live/compliance I1–I8 | **AMBER** | Vendor SOC2/pen-test, legal SLA, real SSO, quarterly access review |
+| R2.1â€“R2.7 | **AMBER / BLOCKED** | Requires staging/prod with carrier + Meta + walkthrough |
+
+## R3 â€” E100
+
+| Step | Status | Notes |
+|------|--------|-------|
+| Scaffolding I1â€“I8 | **GREEN (docs/code)** | Merged Plan I |
+| Live/compliance I1â€“I8 | **AMBER** | Vendor SOC2/pen-test, legal SLA, real SSO, quarterly access review |
 
 ## Staging project (linked)
 
@@ -42,7 +42,7 @@
 | Region | `ap-southeast-1` |
 | URL | `https://tjsmpcgkeoglemptuymu.supabase.co` |
 | Dashboard | https://supabase.com/dashboard/project/tjsmpcgkeoglemptuymu |
-| Prod | **none** (old prod ref removed — recreate when needed) |
+| Prod | **none** (old prod ref removed â€” recreate when needed) |
 
 ## Render staging services
 
@@ -58,7 +58,7 @@ Local non-committed secrets: `.local-secrets/` (gitignored).
 
 ```
 # META_* real App Review credentials (replace placeholders on api)
-# Payment method on Render → upgrade plan free → starter for always-on
+# Payment method on Render â†’ upgrade plan free â†’ starter for always-on
 # Optional GitHub secrets for CI Staging Migrate workflow
 SUPABASE_ACCESS_TOKEN=
 STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu

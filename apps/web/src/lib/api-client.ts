@@ -430,11 +430,13 @@ export type OrdersExportFormat = 'csv' | 'xlsx' | 'pdf';
 
 export type EinvoiceJobStatus = 'pending' | 'sent' | 'failed' | 'dead';
 
+export type EinvoiceProvider = 'stub' | 'http_sandbox';
+
 export type EinvoiceJob = {
   id: string;
   orgId: string;
   orderId: string;
-  provider: 'stub' | string;
+  provider: EinvoiceProvider | string;
   status: EinvoiceJobStatus | string;
   attempts: number;
   lastError: string | null;
@@ -1174,10 +1176,15 @@ export async function listEinvoiceJobs(status?: EinvoiceJobStatus): Promise<Einv
   return jobs;
 }
 
-export async function issueEinvoice(orderId: string): Promise<EinvoiceJob> {
+export async function issueEinvoice(
+  orderId: string,
+  provider?: EinvoiceProvider,
+): Promise<EinvoiceJob> {
   const { job } = await apiFetch<{ job: EinvoiceJob }>('/v1/einvoice/issue', {
     method: 'POST',
-    body: JSON.stringify({ orderId, provider: 'stub' }),
+    body: JSON.stringify(
+      provider ? { orderId, provider } : { orderId },
+    ),
   });
   return job;
 }

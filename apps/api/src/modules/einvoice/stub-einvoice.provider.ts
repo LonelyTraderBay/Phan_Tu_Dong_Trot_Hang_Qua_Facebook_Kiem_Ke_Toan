@@ -10,6 +10,8 @@ export type EinvoiceIssueResult = {
   provider: EinvoiceProviderCode;
   externalId: string;
   sentAt: string;
+  /** Optional provider note (e.g. unconfigured sandbox URL). */
+  note?: string;
 };
 
 export interface EinvoiceProvider {

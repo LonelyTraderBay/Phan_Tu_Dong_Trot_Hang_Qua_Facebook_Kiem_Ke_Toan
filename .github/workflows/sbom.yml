@@ -1,3 +1,7 @@
+# Enforce SBOM on release tags (I7 / R3.7):
+# - Required on push tags v* and published releases (fails closed if SBOM missing/empty).
+# - Uploads workflow artifact always; attaches to GitHub Release when one exists for the tag.
+# - No separate release.yml; this job is the release-path gate for SBOM.
 name: SBOM
 
 on:
@@ -8,11 +12,15 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+
 jobs:
   sbom:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
       - name: Generate Syft SBOM
         uses: anchore/sbom-action@v0
         with:
@@ -20,12 +28,32 @@ jobs:
           format: spdx-json
           output-file: sbom.spdx.json
           upload-artifact: true
-      - name: Fail if SBOM missing
-        run: test -s sbom.spdx.json
-      - name: Upload release asset
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: sbom.spdx.json
+          # Attach via explicit step below so we control tag vs release and fail clearly.
+          upload-release-assets: false
+
+      - name: Fail if SBOM missing or empty
+        run: |
+          set -euo pipefail
+          if [ ! -s sbom.spdx.json ]; then
+            echo "::error::SBOM required for release tags: sbom.spdx.json is missing or empty"
+            exit 1
+          fi
+          bytes=$(wc -c < sbom.spdx.json | tr -d ' ')
+          echo "SBOM ok: sbom.spdx.json (${bytes} bytes)"
+
+      - name: Attach SBOM to GitHub Release (if release exists)
+        if: github.event_name == 'release' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          fi
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "No GitHub Release for tag $TAG yet; SBOM artifact retained on workflow run only."
+            exit 0
+          fi
+          gh release upload "$TAG" sbom.spdx.json --clobber
+          echo "Attached sbom.spdx.json to release $TAG"

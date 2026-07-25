@@ -15,7 +15,7 @@
 | I4 Status page | GREEN/AMBER | Static public VI page at `/status` with operational placeholder and incident link. AMBER: not wired to uptime/status vendor or live incident history. |
 | I5 Public subprocessors | GREEN/AMBER | Public page `/legal/subprocessors`; source doc `docs/legal/subprocessors.md` updated with public URL. AMBER: legal/customer notification process still needs owner approval. |
 | I6 SLA template | AMBER | Template exists at `docs/legal/sla-template.md`. Legal approval and customer contract use are not complete. |
-| I7 SBOM | GREEN/AMBER | `.github/workflows/sbom.yml` generates Syft SPDX on `v*` tags, `workflow_dispatch`, and attaches to GitHub Release. AMBER: org process must always cut releases with tags so SBOM is produced. |
+| I7 SBOM | GREEN/AMBER | Eng enforce GREEN: `.github/workflows/sbom.yml` fails closed if `sbom.spdx.json` is missing/empty on `v*` tag pushes and published releases; uploads Syft SPDX artifact and attaches to GitHub Release when one exists for the tag. AMBER: org process must still cut every release with a `v*` tag so the workflow runs (no separate `release.yml` dependency). |
 | I8 Access review | AMBER | Runbook exists at `docs/runbooks/platform-admin-access-review.md`. First quarterly review evidence is not complete. |
 
 ## Verification log

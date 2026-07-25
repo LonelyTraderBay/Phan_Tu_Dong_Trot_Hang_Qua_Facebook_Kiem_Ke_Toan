@@ -5,7 +5,7 @@ import { PLAN_CATALOG } from "../billing/plan-catalog";
 export const SetGlobalFlagBodySchema = z
   .object({
     enabled: z.boolean(),
-    payloadJson: z.record(z.unknown()).default({}),
+    payloadJson: z.record(z.string(), z.unknown()).default({}),
   })
   .strict();
 

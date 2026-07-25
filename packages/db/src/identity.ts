@@ -7,7 +7,7 @@ export const OrganizationSchema = z.object({
   name: z.string().min(1),
   slug: z.string().regex(/^[a-z0-9-]+$/),
   plan: z.string(),
-  settingsJson: z.record(z.unknown()).default({}),
+  settingsJson: z.record(z.string(), z.unknown()).default({}),
   timezone: z.string().default("Asia/Ho_Chi_Minh"),
   locale: z.string().default("vi"),
   suspendedAt: z.string().datetime().nullable().optional(),

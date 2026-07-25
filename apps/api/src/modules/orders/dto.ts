@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const JsonObjectSchema = z.record(z.unknown());
+const JsonObjectSchema = z.record(z.string(), z.unknown());
 const PaymentMethodSchema = z.enum(['cod', 'bank_transfer', 'other']);
 const AttributionTextSchema = z.string().trim().min(1).max(512);
 export const OrderStatusSchema = z.enum([
@@ -55,7 +55,7 @@ export const ReturnOrderBodySchema = z
     reason: z.string().trim().max(2_000).nullable().optional(),
     restock: z.boolean().default(true),
   })
-  .default({});
+  .default({ restock: true });
 
 export type CreateDraftOrderBody = z.output<typeof CreateDraftOrderBodySchema>;
 export type ListOrdersQuery = z.output<typeof ListOrdersQuerySchema>;

@@ -156,12 +156,13 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 | Local full stack (Docker Supabase + api/web/ai) | **GREEN** | `docs/ops/local-host.md` · `pnpm run dev:local` |
 | R0.1 migrate CI + remote staging | **GREEN** | Staging `tjsmpcgkeoglemptuymu` **29** migrations (warehouse + resume + http_sandbox) |
 | R0.5 Scheduled QA | **GREEN** | Actions run 30139904845 |
-| R0.2 Always-on staging (Render) | **AMBER** | Free + keep-warm; chưa starter always-on |
+| R0.2 Always-on staging (Render) | **BLOCKED** | E3 Attempt: no `RENDER_API_KEY` / payment; Free + keep-warm ≠ always-on |
 | R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3 done** (2 PASS · 3 partial · 2 BLOCKED Meta); E0.1 warehouse fix GREEN — criterion 5 confirm PASS local post-`20260727210000`; lặp staging sau R0.2+R0.4 |
-| R0.4 Meta App Review | **AMBER** | Prep pack xong (SDD Task 3); owner: `META_*` + submit |
-| E2 eng (resume/http_sandbox/billing gate) | **GREEN (eng)** | PR #22; staging 29/29; **CPC/E100 vẫn không 100%** |
+| R0.4 Meta App Review | **BLOCKED** | E3 Attempt: placeholder `META_*`; prep pack ready; owner: real creds + submit |
+| E2 eng (resume/http_sandbox/billing gate) | **GREEN (eng)** | PR #22 MERGED `e45bdc6`; staging 29/29; **CPC/E100 vẫn không 100%** |
+| E3 eng (R0 attempts + SBOM enforce) | **CLOSED / STOP** | PR #23; R0.2/R0.4 BLOCKED; I7 eng GREEN/AMBER |
 | R1–R2 live | **AMBER** | Billing / carrier / COD live — owner path |
-| R3 E100 | **BLOCKED** | Sau CPC thương mại |
+| R3 E100 | **BLOCKED** | Sau CPC thương mại (I7 eng enforce landed) |
 
 **Hai làn chạy song song (khuyến nghị):**
 
@@ -176,18 +177,19 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 
 Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md)
 
-**~% thật:** eng ~95% · CPC ~38% · E100 ~22% · tổng ~55% — **không** claim CPC/E100 100%.
+**~% thật:** eng ~95%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
 
 ```
-DONE   E0+E1+E2 eng (PR #22); staging 29 migr (resume + http_sandbox); entitlement gate proof
-▶ STOP Owner: R0.2 Render Starter ×3 → R0.4 META_* + App Review submit
+DONE   E0+E1+E2 eng (PR #22 MERGED e45bdc6); E3 eng CLOSED (PR #23); SBOM enforce I7 eng GREEN/AMBER
+▶ STOP Owner: R0.2 payment → Starter ×3
+▶ STOP Owner: R0.4 real META_* + App Review submit
 THEN   R0.3b staging §12.1 → Gate R0
 THEN   R1 paid (Pro/PITR/always-on/LLM/billing)
-THEN   R2.1–2.3 live → R2.7 → CPC thương mại 100%
-THEN   R3 I1–I8 → E100 100% → TỔNG 100%
+THEN   R2.1–2.3 live → R2.7 → CPC thương mại
+THEN   R3 I1–I8 → E100 → TỔNG 100%
 ```
 
-**Eng SDD STOP** until owner unblocks. Wave E2 gate: [r0-r3-execution-evidence § E2](../../ops/r0-r3-execution-evidence.md#wave-e2-sdd-gate-2026-07-25--eng-closed--owner-stop).
+**Eng SDD STOP** until owner unblocks. Wave E3 gate: [r0-r3-execution-evidence § E3](../../ops/r0-r3-execution-evidence.md#wave-e3-sdd-gate-2026-07-25--eng-closed--owner-stop).
 
 ---
 

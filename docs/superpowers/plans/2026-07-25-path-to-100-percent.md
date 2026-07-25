@@ -65,10 +65,10 @@ NOW ~55% tổng (CPC ~38% · E100 ~22% · eng ~95%)
 |--------:|------|-------------|--------|----------|
 | **R0.1** | Migrations | Staging + CI | **DONE** | — |
 | **R0.5** | Scheduled QA | Actions xanh | **DONE** | — |
-| **R0.2** | Always-on staging | Render payment → Starter × `omni-api/ai/web-staging` | AMBER | Health ổn định, không sleep; **không** dùng keep-warm làm GREEN |
+| **R0.2** | Always-on staging | Render payment → Starter × `omni-api/ai/web-staging` | **BLOCKED** (E3) | Health ổn định, không sleep; **không** dùng keep-warm làm GREEN |
 | **R0.3a** | Walkthrough local | `p0-staging-walkthrough-12-1.md` | AMBER/partial | Criteria không-Meta PASS |
 | **R0.3b** | Walkthrough staging | Lặp trên URL public sau R0.2 | AMBER | Full §12.1 (sau Meta) |
-| **R0.4** | Meta App Review | `META_*` thật; Terms/Privacy; webhook; submit | AMBER | **Submitted** (hoặc Approved) |
+| **R0.4** | Meta App Review | `META_*` thật; Terms/Privacy; webhook; submit | **BLOCKED** (E3) | **Submitted** (hoặc Approved) |
 
 **Gate R0:** R0.1 + R0.3 (staging đủ) + R0.4 submitted + R0.5.
 **Playbook:** `docs/ops/p0-staging-walkthrough-12-1.md` · `docs/ops/p0-meta-app-review-submit.md` · `docs/ops/deploy-staging-render.md`
@@ -123,7 +123,7 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 | **R3.4** | I4 Status | Statuspage/Better Stack live | 1 tuần | Trang public thật |
 | **R3.5** | I5 Subprocessors | Notify process + legal | 1 tuần | Policy published |
 | **R3.6** | I6 SLA | Legal approve template | 1–4 tuần | Dùng trong contract |
-| **R3.7** | I7 SBOM | CI fail nếu thiếu SBOM mỗi release | 2–5 ngày | Enforce xanh |
+| **R3.7** | I7 SBOM | CI fail nếu thiếu SBOM mỗi release | 2–5 ngày | **Eng enforce GREEN** (E3 T4); org `v*` tag process AMBER |
 | **R3.8** | I8 Access review | Review `platform_admins` quý 1 | 1 ngày | Biên bản |
 | **R3.9** | Đóng E100 | `plan-i-dod-evidence.md` I1–I8 GREEN | — | **E100 claimed** |
 
@@ -156,19 +156,20 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 ## Việc **tiếp theo ngay** (thứ tự cứng)
 
-**SDD Wave E2 eng CLOSED / STOP (2026-07-25):** Tasks 1–5 done on `cursor/e2-completion` (PR #22). Controller waits on owner — **không** claim CPC/E100 100%.
+**SDD Wave E3 eng CLOSED / STOP (2026-07-25):** Tasks 1–5 done on `cursor/e3-r0-owner-path` (PR #23). PR #22 MERGED (`e45bdc6`). R0.2/R0.4 **BLOCKED** (owner). SBOM enforce landed (I7 eng GREEN/AMBER). Controller waits on owner — **không** claim CPC/E100/tổng 100% (~38% / ~22%+ / ~55%).
 
 ```
-1. Owner: Render Starter ×3 (R0.2) — payment + upgrade api/ai/web-staging
-2. Owner: META_* + App Review submit (R0.4) — prep pack URLs current
-3. Cả hai: R0.3b staging full §12.1 (sau R0.2 + R0.4) → Gate R0
+1. Owner: R0.2 payment → Render Starter ×3 (api/ai/web-staging)
+2. Owner: R0.4 real META_* + App Review submit
+3. Cả hai: R0.3b staging full §12.1 → Gate R0
 4. Owner: R1 paid (Pro/PITR/always-on/LLM/billing) sau Gate R0
-5. Cả hai: R2.1→R2.3 live (carrier/COD/returns) → R2.7 CPC checklist → CPC 100%
-6. Cả hai: R3 I1–I8 (SOC2/pen-test/SSO/SLA) → E100 100% → TỔNG 100%
+5. Cả hai: R2.1→R2.3 live → R2.7 → CPC thương mại
+6. Cả hai: R3 I1–I8 (SOC2/pen-test/SSO/SLA) → E100 → TỔNG 100%
+(note) E3 eng closed; I7 SBOM enforce eng GREEN (org tag process AMBER)
 (song song OK) Owner: GEMINI_API_KEY → E0.2; E0.4 stub decisions trước R2 claim
 ```
 
-Eng SDD **STOP** until owner unblocks. Evidence: [r0-r3-execution-evidence § Wave E2](../../ops/r0-r3-execution-evidence.md#wave-e2-sdd-gate-2026-07-25--eng-closed--owner-stop).
+Eng SDD **STOP** until owner unblocks. Evidence: [r0-r3-execution-evidence § Wave E3](../../ops/r0-r3-execution-evidence.md#wave-e3-sdd-gate-2026-07-25--eng-closed--owner-stop).
 
 ---
 

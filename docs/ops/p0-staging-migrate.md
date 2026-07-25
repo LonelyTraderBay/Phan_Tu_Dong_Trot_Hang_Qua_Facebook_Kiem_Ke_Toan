@@ -33,5 +33,5 @@ select tablename from pg_tables where schemaname = 'public'
 | Date | Operator | Command | Result |
 |------|----------|---------|--------|
 | 2026-07-25 | agent | GitHub **Migrate Check** (`supabase start` + `db reset` on CI) | **GREEN** — SQL migrations apply cleanly in CI |
-| 2026-07-25 | agent | Remote staging `db push` | **AMBER / BLOCKED** — no `SUPABASE_ACCESS_TOKEN` + `STAGING_PROJECT_REF` |
-| | | When secrets ready | `pwsh scripts/staging-migrate.ps1` or workflow **Staging Migrate** |
+| 2026-07-25 | agent | Remote staging `db push` → `lrcsbrmqlyvkxxspbezi` (`Phan_mem_ban_hang_online-staging`) | **GREEN** — repaired orphan remote history then pushed 26 local migrations; verified `public.organizations/orders/stock_movements/warehouses` |
+| 2026-07-25 | agent | Note | Staging still has legacy schema `app.*` from prior product (left intact; new app uses `public.*`) |

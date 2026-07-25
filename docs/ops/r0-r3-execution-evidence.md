@@ -7,8 +7,8 @@
 
 | Step | Status | Evidence | Blocker |
 |------|--------|----------|---------|
-| R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` (`supabase start` + `db reset`) | Remote staging project still needs owner link |
-| R0.1 Migrations on remote staging | **AMBER** | No `SUPABASE_ACCESS_TOKEN` / project ref in agent or GitHub secrets | Provide token + `STAGING_PROJECT_REF` then run `scripts/staging-migrate.ps1` |
+| R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
+| R0.1 Migrations on remote staging | **GREEN** | Linked `lrcsbrmqlyvkxxspbezi` (`Phan_mem_ban_hang_online-staging`); repaired orphan history; `supabase db push` 26 migrations; verified core `public.*` tables | Legacy `app.*` schema remains from prior product |
 | R0.2 Always-on staging hosts | **AMBER** | No Docker/hosting credentials in env | Owner deploy Railway/Fly/Render |
 | R0.3 §12.1 walkthrough | **AMBER** | Needs live staging URLs | After R0.1–R0.2 |
 | R0.4 Meta App Review submit | **AMBER** | Meta dashboard is owner-only | After public legal URLs + webhook always-on |
@@ -33,17 +33,22 @@
 | Scaffolding I1–I8 | **GREEN (docs/code)** | Merged Plan I |
 | Live/compliance I1–I8 | **AMBER** | Vendor SOC2/pen-test, legal SLA, real SSO, quarterly access review |
 
-## Secrets needed to unblock automation
+## Staging project (linked)
+
+| Field | Value |
+|-------|-------|
+| Name | `Phan_mem_ban_hang_online-staging` |
+| Ref | `lrcsbrmqlyvkxxspbezi` |
+| Region | `ap-southeast-1` |
+| URL | `https://lrcsbrmqlyvkxxspbezi.supabase.co` |
+| Prod (do not push casually) | `sppdnlpbkdasmjealhjm` (`Phan_mem_ban_hang_online-prod`) |
+
+## Still needed to unblock R0.2+
 
 ```
+# Deploy hosts (web/api/ai always-on staging URLs)
+# META_* for App Review
+# Optional GitHub secrets for CI Staging Migrate workflow
 SUPABASE_ACCESS_TOKEN=
-STAGING_PROJECT_REF=
-# optional prod
-PROD_PROJECT_REF=
-TOKEN_ENCRYPTION_KEY=   # for app deploy
-META_APP_ID=
-META_APP_SECRET=
-META_VERIFY_TOKEN=
+STAGING_PROJECT_REF=lrcsbrmqlyvkxxspbezi
 ```
-
-Set as local env or GitHub Actions secrets, then re-run agent / `scripts/staging-migrate.ps1`.

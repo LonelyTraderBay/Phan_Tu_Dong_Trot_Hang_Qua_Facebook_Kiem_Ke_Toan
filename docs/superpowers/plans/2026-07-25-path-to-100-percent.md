@@ -156,13 +156,15 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 ## Việc **tiếp theo ngay** (thứ tự cứng)
 
+**SDD E0+R0 wave STOP (2026-07-25):** Eng Tasks 1–6 done on `feat/sdd-e0-r0-completion`. Controller waits on owner.
+
 ```
-1. Eng:   merge fix warehouse (E0.1) + db push staging
-2. Eng:   R0.3a walkthrough local (Inngest nếu cần chunks)
-3. Owner: Render Starter ×3 (R0.2)
-4. Owner: META_* + App Review submit (R0.4)
-5. Cả hai: R0.3b staging full §12.1
-6. Owner: R1 Pro/PITR/always-on/LLM/billing
+1. Owner: Render Starter ×3 (R0.2) — payment + upgrade api/ai/web-staging
+2. Owner: META_* + App Review submit (R0.4) — prep pack URLs current
+3. Cả hai: R0.3b staging full §12.1 (sau R0.2 + R0.4)
+4. Owner: GEMINI_API_KEY → E0.2 knowledge_chunks local (song song, criterion 3)
+5. Owner: E0.4 stub decisions Zalo/e-invoice/advisor (trước R2 claim)
+6. Sau Gate R0 GREEN → Owner: R1 Pro/PITR/always-on/LLM/billing
 7. Cả hai: R2.1→R2.3→R2.7  →  CPC 100%
 8. Cả hai: R3 I1–I8         →  E100 100%  →  TỔNG 100%
 ```

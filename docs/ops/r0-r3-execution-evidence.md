@@ -110,3 +110,34 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 **Next wave:** **R1 Plan E paid/live** (owner billing: Supabase Pro, prod always-on, LLM keys, uptime) — do not start SDD R1 until owner clears R0 blockers or explicitly requests R1 prep-only docs.
 
 **Not claimed:** CPC commercial GREEN · E100 · full Gate R0 GREEN.
+
+## E0+R0 SDD gate (2026-07-25)
+
+**SDD plan:** [2026-07-25-sdd-e0-r0.md](../superpowers/plans/2026-07-25-sdd-e0-r0.md) · **Branch:** `feat/sdd-e0-r0-completion` @ Task 6
+
+### Wave E0 — eng leftovers
+
+| Step | Status | Evidence | Blocker |
+|------|--------|----------|---------|
+| E0.1 Warehouse fix | **GREEN** | Migration `20260727210000_ensure_default_warehouse_on_org.sql` on branch + staging 27/27 (Task 5) | — |
+| E0.2 Knowledge reindex local | **BLOCKED** | Outbox `knowledge.reindex` publishes; `knowledge_chunks` count `0` — AI `502 GEMINI_API_KEY is required` ([local-host](./local-host.md), Task 2) | **Owner/eng:** set `GEMINI_API_KEY` in `.env` + `apps/ai/.env`; rerun with Inngest dev |
+| E0.3 §12.1 confirm local | **PASS** | Criterion 5 confirm GREEN post-warehouse fix; overall walkthrough **AMBER** (Meta rows blocked) ([walkthrough](./p0-staging-walkthrough-12-1.md), Task 3) | Staging repeat + Meta for full R0.3 GREEN |
+| E0.4 CPC stub decisions | **AMBER** | `cpc-checklist.md` stub table present; Zalo / e-invoice / advisor all **undecided** (Task 4) | **Owner:** fill REQUIRED \| AMBER_OK per R2.4–R2.6 |
+
+**Gate E0 verdict:** E0.1 + E0.3 confirm **GREEN**; E0.2 **BLOCKED** (GEMINI); E0.4 **undecided** (non-blocking for Gate R0).
+
+### Wave R0 — remaining (owner)
+
+| Step | Status | Owner action |
+|------|--------|--------------|
+| R0.1 Migrations | **GREEN** | — (27 incl. warehouse on `tjsmpcgkeoglemptuymu`) |
+| R0.2 Always-on staging | **AMBER** | Render payment → Starter on `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` — keep-warm `healthy_count=3/3` ≠ GREEN ([deploy-staging-render](./deploy-staging-render.md#upgrade-to-always-on-owner)) |
+| R0.3 §12.1 walkthrough | **AMBER** | R0.3a local partial PASS; **R0.3b** staging full repeat after R0.2 + Meta |
+| R0.4 Meta App Review | **AMBER** | Set `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` on API + submit ([prep pack](./p0-meta-app-review-submit.md) URLs verified vs staging) |
+| R0.5 Scheduled QA | **GREEN** | — |
+
+**Gate R0 verdict: AMBER (not GREEN).** Engineering SDD Tasks 1–6 complete; **controller STOP** — owner must clear R0.2 (payment) and R0.4 (`META_*` + submit) before R0.3b staging walkthrough.
+
+**Next wave:** **R1 Plan E paid/live** only after **Gate R0 GREEN** (owner). Do not start R1 paid billing in this SDD wave.
+
+**Verified Task 6:** `deploy-staging-render.md` always-on § states keep-warm ≠ GREEN; Meta prep pack staging URLs match Render services table above.

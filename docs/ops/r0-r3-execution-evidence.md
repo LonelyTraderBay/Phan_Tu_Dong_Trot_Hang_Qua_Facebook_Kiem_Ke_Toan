@@ -8,7 +8,7 @@
 | Step | Status | Evidence | Blocker |
 |------|--------|----------|---------|
 | R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
-| R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` 26 migrations; verified `public.*` tables | Prior staging/prod refs deleted |
+| R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` 27 migrations incl. `20260727210000_ensure_default_warehouse_on_org.sql` (SDD Task 5, 2026-07-25); verified `public.*` tables | Prior staging/prod refs deleted |
 | R0.2 Always-on staging hosts | **AMBER** | Free-tier LIVE; **not** always-on. Probes 2026-07-25: local probes failed — api `curl` TLS reset (exit 35); ai/web PowerShell timeout; GHA [keep-warm run 30143832342](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30143832342) `healthy_count=3/3` HTTP 200 (AMBER reachability only, not GREEN proof); prior external probe in [deploy-staging-render](./deploy-staging-render.md). Owner checklist: [Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner) | **BLOCKED (owner):** Render payment → upgrade `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` Free→Starter; GREEN needs post-upgrade no-cold-start external proof |
 | R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3** ([walkthrough](./p0-staging-walkthrough-12-1.md)): 2 PASS · 3 PASS (partial) · 2 BLOCKED (Meta); confirm GREEN after warehouse migration `20260727210000`; health 3/3; `pnpm test:isolation` 6 pass · 1 skip | Staging repeat + Meta OAuth/DM + knowledge reindex for GREEN |
 | R0.4 Meta App Review submit | **AMBER** | Prep pack complete ([p0-meta-app-review-submit](./p0-meta-app-review-submit.md), SDD Task 3 `2026-07-25`): staging Privacy/Terms/webhook/OAuth URLs filled; permissions list from code; `META_*` placeholders only in git (`.env.example`, `render.yaml` sync:false) | **BLOCKED (owner):** replace `META_*` on `omni-api-staging` + submit in Meta dashboard; needs R0.2 always-on for webhook during review |
@@ -93,7 +93,7 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 
 | Step | Gate | Status | SDD task | Notes |
 |------|------|--------|----------|-------|
-| R0.1 | Migrations | **GREEN** | — (pre-done) | CI + staging `tjsmpcgkeoglemptuymu` |
+| R0.1 | Migrations | **GREEN** | Task 5 | CI + staging `tjsmpcgkeoglemptuymu` (27 incl. warehouse `20260727210000`) |
 | R0.2 | Always-on staging | **AMBER** | Task 2 | Owner: Render payment → Starter on 3 services |
 | R0.3 | §12.1 walkthrough | **AMBER** | Task 3 (E0.3) | Local: 2 PASS · 3 partial · 2 BLOCKED (Meta); criterion 5 confirm PASS post-warehouse fix |
 | R0.4 | Meta App Review | **AMBER** | Task 3 | Prep pack complete; owner: `META_*` + submit |

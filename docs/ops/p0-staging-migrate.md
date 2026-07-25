@@ -37,3 +37,4 @@ select tablename from pg_tables where schemaname = 'public'
 | 2026-07-25 | agent | Note | Staging still has legacy schema `app.*` from prior product (left intact; new app uses `public.*`) |
 | 2026-07-25 | agent | Remote staging `db push` → `tjsmpcgkeoglemptuymu` (`omni-commerce-staging`) | **GREEN** — pushed `20260727210000_ensure_default_warehouse_on_org.sql` (27 total); `migration list` local=remote for all 27 |
 | 2026-07-25 | agent | Remote staging `db push` → `tjsmpcgkeoglemptuymu` (`omni-commerce-staging`) | **GREEN** — pushed `20260727220000_inbox_resume_rpc.sql` (28 total); `migration list` local=remote 28/28; verified `public.resume_inbox_conversation` RPC (SDD E2 Task 2) |
+| 2026-07-25 | agent | Remote staging `db push` → `tjsmpcgkeoglemptuymu` (`omni-commerce-staging`) | **GREEN** — pushed `20260727230000_einvoice_http_sandbox_provider.sql` (29 total); `migration list` local=remote 29/29 (SDD E2 Task 5) |

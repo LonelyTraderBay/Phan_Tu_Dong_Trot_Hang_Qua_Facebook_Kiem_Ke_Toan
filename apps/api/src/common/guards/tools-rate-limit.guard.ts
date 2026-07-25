@@ -2,13 +2,14 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Optional,
   type CanActivate,
   type ExecutionContext,
 } from "@nestjs/common";
 
 import {
   defaultRateLimiter,
-  type InMemoryRateLimiter,
+  InMemoryRateLimiter,
 } from "../rate-limit/in-memory-rate-limit";
 import { loadRateLimitConfig } from "../rate-limit/rate-limit-config";
 import { buildToolsRateLimitKey } from "../rate-limit/rate-limit-keys";
@@ -26,7 +27,11 @@ type RequestWithBody = {
 
 @Injectable()
 export class ToolsRateLimitGuard implements CanActivate {
-  constructor(private readonly limiter: InMemoryRateLimiter = defaultRateLimiter) {}
+  private readonly limiter: InMemoryRateLimiter;
+
+  constructor(@Optional() limiter?: InMemoryRateLimiter) {
+    this.limiter = limiter ?? defaultRateLimiter;
+  }
 
   canActivate(context: ExecutionContext) {
     const config = loadRateLimitConfig();

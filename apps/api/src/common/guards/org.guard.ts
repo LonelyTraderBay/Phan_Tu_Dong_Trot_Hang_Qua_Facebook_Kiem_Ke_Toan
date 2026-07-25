@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Optional,
   UnauthorizedException,
   type CanActivate,
   type ExecutionContext,
@@ -115,7 +116,7 @@ function getRequiredOrgId(headers: IncomingHttpHeaders) {
 export class SupabaseMembershipsRepository implements MembershipsRepository {
   private readonly supabase: SupabaseClient;
 
-  constructor(supabase?: SupabaseClient) {
+  constructor(@Optional() supabase?: SupabaseClient) {
     this.supabase = supabase ?? createSupabaseServiceClient();
   }
 

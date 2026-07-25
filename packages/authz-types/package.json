@@ -2,13 +2,23 @@
   "name": "@omni/authz-types",
   "version": "0.0.0",
   "private": true,
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "^5.7.2",
-    "vitest": "^4.1.10"
+    "@types/node": "^26.1.1",
+    "typescript": "5.8.3",
+    "vitest": "^3.0.0"
   }
 }

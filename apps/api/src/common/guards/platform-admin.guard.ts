@@ -2,6 +2,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Optional,
   UnauthorizedException,
   type CanActivate,
   type ExecutionContext,
@@ -33,7 +34,7 @@ export class SupabasePlatformAdminsRepository
 {
   private readonly supabase: SupabaseClient;
 
-  constructor(supabase?: SupabaseClient) {
+  constructor(@Optional() supabase?: SupabaseClient) {
     this.supabase = supabase ?? createSupabaseServiceClient();
   }
 

@@ -15,6 +15,10 @@ import type {
   IssueEinvoiceBody,
 } from './dto';
 import {
+  HttpSandboxEinvoiceProvider,
+  resolveDefaultEinvoiceProvider,
+} from './http-sandbox-einvoice.provider';
+import {
   StubEinvoiceProvider,
   type EinvoiceProvider,
   type EinvoiceIssueResult,
@@ -22,8 +26,12 @@ import {
 
 export const EINVOICE_SUPABASE = Symbol('EINVOICE_SUPABASE');
 export const EINVOICE_PROVIDER = Symbol('EINVOICE_PROVIDER');
+export const EINVOICE_PROVIDERS = Symbol('EINVOICE_PROVIDERS');
 
 export type SupabaseLike = Pick<SupabaseClient, 'from'>;
+export type EinvoiceProviderMap = Partial<
+  Record<EinvoiceProviderCode, EinvoiceProvider>
+>;
 
 type JsonObject = Record<string, unknown>;
 
@@ -66,7 +74,9 @@ const JOB_SELECT =
 @Injectable()
 export class EinvoiceService {
   private readonly supabase: SupabaseLike;
-  private readonly provider: EinvoiceProvider;
+  private readonly providers: Record<EinvoiceProviderCode, EinvoiceProvider>;
+  /** Test override: force a single provider for all codes. */
+  private readonly providerOverride: EinvoiceProvider | undefined;
 
   constructor(
     @Optional()
@@ -74,10 +84,18 @@ export class EinvoiceService {
     supabase?: SupabaseLike,
     @Optional()
     @Inject(EINVOICE_PROVIDER)
-    provider?: EinvoiceProvider,
+    providerOverride?: EinvoiceProvider,
+    @Optional()
+    @Inject(EINVOICE_PROVIDERS)
+    providers?: EinvoiceProviderMap,
   ) {
     this.supabase = supabase ?? createSupabaseServiceClient();
-    this.provider = provider ?? new StubEinvoiceProvider();
+    this.providerOverride = providerOverride;
+    this.providers = {
+      stub: providers?.stub ?? new StubEinvoiceProvider(),
+      http_sandbox:
+        providers?.http_sandbox ?? new HttpSandboxEinvoiceProvider(),
+    };
   }
 
   async listJobs(orgId: string, status?: EinvoiceJobStatus) {
@@ -110,13 +128,14 @@ export class EinvoiceService {
       });
     }
 
+    const providerCode = body.provider ?? resolveDefaultEinvoiceProvider();
     const payload = buildPayload(order);
     const { data, error } = await this.supabase
       .from('einvoice_jobs')
       .insert({
         org_id: orgId,
         order_id: body.orderId,
-        provider: body.provider,
+        provider: providerCode,
         status: 'pending',
         attempts: 0,
         payload_json: payload,
@@ -153,10 +172,17 @@ export class EinvoiceService {
     return data as OrderRow;
   }
 
+  private resolveProvider(code: EinvoiceProviderCode): EinvoiceProvider {
+    if (this.providerOverride) {
+      return this.providerOverride;
+    }
+    return this.providers[code] ?? this.providers.stub;
+  }
+
   private async runJob(job: EinvoiceJobRow, payload: JsonObject) {
     const attempts = job.attempts + 1;
     try {
-      const result = await this.provider.issue({
+      const result = await this.resolveProvider(job.provider).issue({
         orgId: job.org_id,
         orderId: job.order_id,
         payload,
@@ -229,6 +255,7 @@ function serializeProviderResult(result: EinvoiceIssueResult): JsonObject {
     provider: result.provider,
     externalId: result.externalId,
     sentAt: result.sentAt,
+    ...(result.note ? { note: result.note } : {}),
   };
 }
 

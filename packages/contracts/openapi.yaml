@@ -717,7 +717,7 @@ paths:
                 $ref: '#/components/schemas/ListEinvoiceJobsResponse'
   /v1/einvoice/issue:
     post:
-      summary: Issue a stub e-invoice for a done order
+      summary: Issue an e-invoice for a done order (stub or http_sandbox)
       requestBody:
         required: true
         content:
@@ -1036,6 +1036,19 @@ paths:
       responses:
         '201':
           description: Taken over
+  /v1/inbox/conversations/{id}/resume:
+    post:
+      summary: Resume bot after human takeover
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Bot resumed
   /v1/webhooks/meta:
     get:
       summary: Verify Meta webhook subscription
@@ -2311,6 +2324,7 @@ components:
           type: string
           enum:
             - stub
+            - http_sandbox
         status:
           $ref: '#/components/schemas/EinvoiceJobStatus'
         attempts:
@@ -2362,7 +2376,11 @@ components:
           type: string
           enum:
             - stub
-          default: stub
+            - http_sandbox
+          description: >
+            Optional. When omitted, API uses EINVOICE_PROVIDER env
+            (default stub). http_sandbox POSTs to EINVOICE_SANDBOX_URL
+            when set; otherwise returns deterministic engineering success.
       additionalProperties: false
     OrderStatus:
       type: string

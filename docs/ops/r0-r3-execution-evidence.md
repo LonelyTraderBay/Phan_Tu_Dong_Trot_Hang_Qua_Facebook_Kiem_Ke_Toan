@@ -8,7 +8,7 @@
 | Step | Status | Evidence | Blocker |
 |------|--------|----------|---------|
 | R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
-| R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` 27 migrations incl. `20260727210000_ensure_default_warehouse_on_org.sql` (SDD Task 5, 2026-07-25); verified `public.*` tables | Prior staging/prod refs deleted |
+| R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` **29** migrations incl. resume `20260727220000` (E2 T2) + e-invoice `20260727230000_einvoice_http_sandbox_provider.sql` (E2 T5, 2026-07-25); `migration list` local=remote **29/29**; verified `public.resume_inbox_conversation` RPC | Prior staging/prod refs deleted |
 | R0.2 Always-on staging hosts | **AMBER** | Free-tier LIVE; **not** always-on. Probes 2026-07-25: local probes failed — api `curl` TLS reset (exit 35); ai/web PowerShell timeout; GHA [keep-warm run 30143832342](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30143832342) `healthy_count=3/3` HTTP 200 (AMBER reachability only, not GREEN proof); prior external probe in [deploy-staging-render](./deploy-staging-render.md). Owner checklist: [Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner) | **BLOCKED (owner):** Render payment → upgrade `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` Free→Starter; GREEN needs post-upgrade no-cold-start external proof |
 | R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3** ([walkthrough](./p0-staging-walkthrough-12-1.md)): 2 PASS · 3 PASS (partial) · 2 BLOCKED (Meta); confirm GREEN after warehouse migration `20260727210000`; health 3/3; `pnpm test:isolation` 6 pass · 1 skip | Staging repeat + Meta OAuth/DM + knowledge reindex for GREEN |
 | R0.4 Meta App Review submit | **AMBER** | Prep pack complete ([p0-meta-app-review-submit](./p0-meta-app-review-submit.md), SDD Task 3 `2026-07-25`): staging Privacy/Terms/webhook/OAuth URLs filled; permissions list from code; `META_*` placeholders only in git (`.env.example`, `render.yaml` sync:false) | **BLOCKED (owner):** replace `META_*` on `omni-api-staging` + submit in Meta dashboard; needs R0.2 always-on for webhook during review |
@@ -93,7 +93,7 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 
 | Step | Gate | Status | SDD task | Notes |
 |------|------|--------|----------|-------|
-| R0.1 | Migrations | **GREEN** | Task 5 | CI + staging `tjsmpcgkeoglemptuymu` (27 incl. warehouse `20260727210000`) |
+| R0.1 | Migrations | **GREEN** | Task 5 / E2 T2+T5 | CI + staging `tjsmpcgkeoglemptuymu` (29 incl. resume `20260727220000` + http_sandbox `20260727230000`) |
 | R0.2 | Always-on staging | **AMBER** | Task 2 | Owner: Render payment → Starter on 3 services |
 | R0.3 | §12.1 walkthrough | **AMBER** | Task 3 (E0.3) | Local: 2 PASS · 3 partial · 2 BLOCKED (Meta); criterion 5 confirm PASS post-warehouse fix |
 | R0.4 | Meta App Review | **AMBER** | Task 3 | Prep pack complete; owner: `META_*` + submit |
@@ -119,7 +119,7 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 
 | Step | Status | Evidence | Blocker |
 |------|--------|----------|---------|
-| E0.1 Warehouse fix | **GREEN** | Migration `20260727210000_ensure_default_warehouse_on_org.sql` on branch + staging 27/27 (Task 5) | — |
+| E0.1 Warehouse fix | **GREEN** | Migration `20260727210000_ensure_default_warehouse_on_org.sql` on branch + staging 29/29 (Task 5 + E2 T2/T5) | — |
 | E0.2 Knowledge reindex local | **BLOCKED** | Outbox `knowledge.reindex` publishes; `knowledge_chunks` count `0` — AI `502 GEMINI_API_KEY is required` ([local-host](./local-host.md), Task 2) | **Owner/eng:** set `GEMINI_API_KEY` in `.env` + `apps/ai/.env`; rerun with Inngest dev |
 | E0.3 §12.1 confirm local | **PASS** | Criterion 5 confirm GREEN post-warehouse fix; overall walkthrough **AMBER** (Meta rows blocked) ([walkthrough](./p0-staging-walkthrough-12-1.md), Task 3) | Staging repeat + Meta for full R0.3 GREEN |
 | E0.4 CPC stub decisions | **AMBER** | `cpc-checklist.md` stub table present; Zalo / e-invoice / advisor all **undecided** (Task 4) | **Owner:** fill REQUIRED \| AMBER_OK per R2.4–R2.6 |
@@ -130,7 +130,7 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 
 | Step | Status | Owner action |
 |------|--------|--------------|
-| R0.1 Migrations | **GREEN** | — (27 incl. warehouse on `tjsmpcgkeoglemptuymu`) |
+| R0.1 Migrations | **GREEN** | — (29 incl. resume `20260727220000` + http_sandbox `20260727230000` on `tjsmpcgkeoglemptuymu`) |
 | R0.2 Always-on staging | **AMBER** | Render payment → Starter on `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` — keep-warm `healthy_count=3/3` ≠ GREEN ([deploy-staging-render](./deploy-staging-render.md#upgrade-to-always-on-owner)) |
 | R0.3 §12.1 walkthrough | **AMBER** | R0.3a local partial PASS; **R0.3b** staging full repeat after R0.2 + Meta |
 | R0.4 Meta App Review | **AMBER** | Set `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` on API + submit ([prep pack](./p0-meta-app-review-submit.md) URLs verified vs staging) |
@@ -141,3 +141,44 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 **Next wave:** **R1 Plan E paid/live** only after **Gate R0 GREEN** (owner). Do not start R1 paid billing in this SDD wave.
 
 **Verified Task 6:** `deploy-staging-render.md` always-on § states keep-warm ≠ GREEN; Meta prep pack staging URLs match Render services table above.
+
+## Wave E2 SDD gate (2026-07-25) — eng CLOSED / owner STOP
+
+**SDD plan:** [2026-07-25-sdd-e2-to-100.md](../superpowers/plans/2026-07-25-sdd-e2-to-100.md) · **Branch:** `cursor/e2-completion` · **PR:** [#22](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/22)
+
+| Task | Status | Evidence |
+|------|--------|----------|
+| **T1** Land E1 | **GREEN** | E1 (inbox resume / Gemini advisor / Zalo persist) on `cursor/e2-completion`; draft PR #22 → `main`; walkthrough conflict resolved (E0.3 confirm PASS + E1 resume PASS; Meta BLOCKED) |
+| **T2** Staging resume migr | **GREEN** | `20260727220000_inbox_resume_rpc.sql` on `tjsmpcgkeoglemptuymu`; was 28/28 local=remote; RPC `public.resume_inbox_conversation` verified |
+| **T3** R2.5 eng http_sandbox | **GREEN** | `http_sandbox` provider + tests; stub remains default; no live tax-compliance claim ([einvoice-providers](./einvoice-providers.md)) |
+| **T4** R1 eng entitlement gate | **GREEN** | `entitlement-gate.proof.spec.ts`; eng-proven gates vs owner-paid Pro/PITR/always-on distinguished in `plan-e-dod-evidence.md` |
+| **T5** Gate + STOP | **GREEN** | This section; path-to-100 “tiếp theo ngay” = owner-only; **controller STOPS eng SDD** |
+
+### Staging migrations (E2 tip)
+
+| Item | Status |
+|------|--------|
+| Resume `20260727220000` | **GREEN** (E2 T2) |
+| http_sandbox `20260727230000_einvoice_http_sandbox_provider.sql` | **GREEN** (E2 T5 push 2026-07-25) — `migration list` local=remote **29/29** |
+
+### Honest maturity (do **not** invent 100%)
+
+| Đích | ~% sau E2 eng | Còn thiếu (không phải eng SDD) |
+|------|---------------|--------------------------------|
+| **Eng path** | ~**95%** | E0.2 GEMINI local; E0.4 stub decisions; live R2 polish only |
+| **CPC thương mại** | ~**38%** | **NOT 100%** — R0.2/R0.4 → R1 paid → R2.1–2.3 live → R2.7 checklist |
+| **E100** | ~**22%** | **NOT 100%** — R3 SOC2/pen-test/SSO/SLA vendor+legal |
+| **Tổng intended** | ~**55%** | CPC GREEN **và** E100 GREEN |
+
+**Gate E2 verdict: eng CLOSED.** CPC thương mại and E100 remain **not** 100%. Owner/vendor blockers unchanged.
+
+| Blocker | Owner / vendor next action |
+|---------|----------------------------|
+| **R0.2** | Render payment → Starter × `omni-api/ai/web-staging` ([owner unblock](#r02-owner-unblock-always-on)) |
+| **R0.4** | Set `META_*` on API + submit App Review ([owner unblock](#r04-owner-unblock-meta-app-review)) |
+| **R0.3b** | Staging full §12.1 after R0.2 + R0.4 |
+| **R1** | Supabase Pro / PITR / always-on prod / LLM keys / billing live |
+| **R2.1–2.3** | Carrier + COD + returns **live** |
+| **R3** | SOC2 / pen-test / SSO / SLA vendors |
+
+**Controller STOP.** Resume eng SDD only when owner unblocks or provides keys. Do not invent Meta/Render/Supabase Pro credentials.

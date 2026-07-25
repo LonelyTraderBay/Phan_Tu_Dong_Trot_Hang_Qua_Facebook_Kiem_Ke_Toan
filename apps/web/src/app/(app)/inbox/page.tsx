@@ -13,6 +13,7 @@ import {
   ApiClientError,
   listInboxConversations,
   listInboxMessages,
+  resumeInboxConversation,
   takeoverInboxConversation,
   type InboxConversation,
   type InboxMessage,
@@ -34,6 +35,7 @@ export default function InboxPage() {
   const [conversationsLoading, setConversationsLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [takingOver, setTakingOver] = useState(false);
+  const [resuming, setResuming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [takeoverMessage, setTakeoverMessage] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
@@ -159,6 +161,23 @@ export default function InboxPage() {
     return () => window.clearInterval(intervalId);
   }, [loadConversations, loadMessages]);
 
+  function patchConversation(updatedConversation: InboxConversation) {
+    setConversations((current) =>
+      current.map((conversation) =>
+        conversation.id === updatedConversation.id
+          ? {
+              ...conversation,
+              ...updatedConversation,
+              contact: updatedConversation.contact ?? conversation.contact,
+              channelConnection:
+                updatedConversation.channelConnection ??
+                conversation.channelConnection,
+            }
+          : conversation,
+      ),
+    );
+  }
+
   async function handleTakeover() {
     if (!selectedConversation) {
       return;
@@ -172,25 +191,34 @@ export default function InboxPage() {
       const updatedConversation = await takeoverInboxConversation(
         selectedConversation.id,
       );
-      setConversations((current) =>
-        current.map((conversation) =>
-          conversation.id === updatedConversation.id
-            ? {
-                ...conversation,
-                ...updatedConversation,
-                contact: updatedConversation.contact ?? conversation.contact,
-                channelConnection:
-                  updatedConversation.channelConnection ??
-                  conversation.channelConnection,
-              }
-            : conversation,
-        ),
-      );
+      patchConversation(updatedConversation);
       setTakeoverMessage('Đã tạm dừng bot cho cuộc hội thoại này.');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Không thể tiếp quản hội thoại.'));
     } finally {
       setTakingOver(false);
+    }
+  }
+
+  async function handleResume() {
+    if (!selectedConversation) {
+      return;
+    }
+
+    setResuming(true);
+    setTakeoverMessage(null);
+    setError(null);
+
+    try {
+      const updatedConversation = await resumeInboxConversation(
+        selectedConversation.id,
+      );
+      patchConversation(updatedConversation);
+      setTakeoverMessage('Đã bật lại bot cho cuộc hội thoại này.');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Không thể bật lại bot.'));
+    } finally {
+      setResuming(false);
     }
   }
 
@@ -287,26 +315,42 @@ export default function InboxPage() {
                     {getContactHandle(selectedConversation)}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void handleTakeover()}
-                  disabled={takingOver || selectedConversation.botPaused}
-                  style={{
-                    ...primaryButtonStyle,
-                    cursor:
-                      takingOver || selectedConversation.botPaused
-                        ? 'not-allowed'
-                        : 'pointer',
-                    opacity:
-                      takingOver || selectedConversation.botPaused ? 0.7 : 1,
-                  }}
-                >
-                  {takingOver
-                    ? 'Đang tiếp quản...'
-                    : selectedConversation.botPaused
-                      ? 'Đã tiếp quản'
-                      : 'Tiếp quản'}
-                </button>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => void handleTakeover()}
+                    disabled={takingOver || selectedConversation.botPaused}
+                    style={{
+                      ...primaryButtonStyle,
+                      cursor:
+                        takingOver || selectedConversation.botPaused
+                          ? 'not-allowed'
+                          : 'pointer',
+                      opacity:
+                        takingOver || selectedConversation.botPaused ? 0.7 : 1,
+                    }}
+                  >
+                    {takingOver
+                      ? 'Đang tiếp quản...'
+                      : selectedConversation.botPaused
+                        ? 'Đã tiếp quản'
+                        : 'Tiếp quản'}
+                  </button>
+                  {selectedConversation.botPaused ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleResume()}
+                      disabled={resuming}
+                      style={{
+                        ...secondaryButtonStyle,
+                        cursor: resuming ? 'not-allowed' : 'pointer',
+                        opacity: resuming ? 0.7 : 1,
+                      }}
+                    >
+                      {resuming ? 'Đang bật bot...' : 'Bật lại bot'}
+                    </button>
+                  ) : null}
+                </div>
               </div>
 
               {messagesLoading ? (

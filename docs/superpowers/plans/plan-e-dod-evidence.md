@@ -57,10 +57,19 @@
 | ADR billing | **GREEN** | `docs/adr/0004-billing-invoice-plan-flags.md` — **invoice + plan flags** |
 | Plan catalog | **GREEN** | `apps/api/src/modules/billing/plan-catalog.ts` |
 | Ops PATCH plan | **GREEN** | `PATCH /ops/v1/orgs/:orgId/plan` |
-| Enforce max_pages | **GREEN** | `ChannelsService.assertPageQuota` |
-| Enforce auto_confirm | **GREEN** | `OrdersService.create` → 403 if plan disallows |
+| Enforce max_pages | **GREEN (eng)** | `ChannelsService.ensureWithinMaxPages` → **403** `max_pages_exceeded` |
+| Enforce auto_confirm | **GREEN (eng)** | Entitlement/`past_due` soft-blocks auto-confirm → stays **draft** (not hard 403) |
+| R1 eng gate harness | **GREEN** | `apps/api/src/modules/billing/entitlement-gate.proof.spec.ts` (SDD E2 Task 4) |
 | Module wiring | **GREEN** | `BillingModule` + `AppModule` |
-| API tests | **GREEN** | Suite includes plan/entitlement cases (113 passing at tip) |
+| API tests | **GREEN** | Plan/entitlement + R1 gate proof specs |
+| Ops evidence split | **GREEN** | [`docs/ops/plan-e-dod-evidence.md`](../../ops/plan-e-dod-evidence.md) — eng vs owner-paid |
+
+### R1 eng-proven vs owner-paid (2026-07-25)
+
+| Bucket | Items | Status |
+|--------|-------|--------|
+| **Eng-proven** | `max_pages` 403 gate; `auto_confirm` blocked when plan/`past_due` disallows; free catalog limits; stub invoice+flags | **GREEN** — no Supabase Pro required |
+| **Owner-paid / live** | Pro + PITR + restore drill; always-on hosts; uptime/on-call; live LLM keys+cap; live ops billing ticket; paid E0–E3 rows → GREEN | **AMBER / BLOCKED** — owner/vendor only |
 
 ---
 

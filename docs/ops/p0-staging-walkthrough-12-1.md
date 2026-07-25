@@ -22,7 +22,7 @@
 | 3 | Create products; knowledge updates | Catalog CRUD → wait reindex / check chunks | **PASS (partial)** — `POST /v1/catalog/products` OK; outbox `knowledge.reindex` **published** with Inngest dev (`:8288`); **`knowledge_chunks`=0 BLOCKED** — AI `502 GEMINI_API_KEY is required for embeddings`. `2026-07-25` · `sdd-task-2` |
 | 4 | Test DM; AI grounded | Send DM with known SKU/price; no invented SKUs | **BLOCKED** — requires Meta Page DM + public webhook; localhost not callable by Meta. `2026-07-25` · `sdd-task-1` |
 | 5 | Draft → approve → export | Confirm order; download CSV/XLSX | **PASS** — org auto `MAIN` warehouse; draft + `POST …/confirm` 200 → `confirmed`; `variant_stocks` 5→4; `GET /v1/orders/export?format=csv` 200 (335 B). `2026-07-25` · `sdd-task-3` |
-| 6 | Takeover pause/resume | Inbox → Chiếm quyền; bot_epoch; reply as staff | **PASS (partial)** — `POST /v1/inbox/conversations/:id/takeover` → `botPaused=true`, `botEpoch=1` (pause only); **resume not verified**. `2026-07-25` · `sdd-task-1` |
+| 6 | Takeover pause/resume | Inbox → Chiếm quyền; bot_epoch; reply as staff | **PASS** — `POST /v1/inbox/conversations/:id/takeover` → `botPaused=true`, `botEpoch`++; `POST …/resume` → `botPaused=false`, `botEpoch`++ (E1 unit-tested; staff reply not manually verified). `2026-07-25` · `sdd-task-e1` |
 | 7 | No cross-tenant data | Second org; confirm isolation (also `pnpm test:isolation`) | **PASS** — `pnpm test:isolation` @ `c2cf68e`: 6 passed, 1 skipped (parent worktree; worktree vitest `#module-evaluator` startup error). `2026-07-25` · `sdd-task-1` |
 
 ## Sign-off
@@ -35,4 +35,4 @@
 | Environment | **Local** stack (`docs/ops/local-host.md`); staging §12.1 repeat pending R0.3b |
 | Blockers | Meta OAuth/DM (criteria 2, 4); staging always-on + owner `META_*` for full GREEN |
 
-**Overall R0.3:** **AMBER** — local §12.1 partially verified (2 PASS · 3 PASS partial · 2 BLOCKED; criterion 3 chunks leg BLOCKED on `GEMINI_API_KEY`). Not claiming R0.3 GREEN until staging + Meta owner actions.
+**Overall R0.3:** **AMBER** — local §12.1 partially verified (3 PASS · 2 PASS partial · 2 BLOCKED; criterion 3 chunks leg BLOCKED on `GEMINI_API_KEY`). Not claiming R0.3 GREEN until staging + Meta owner actions.

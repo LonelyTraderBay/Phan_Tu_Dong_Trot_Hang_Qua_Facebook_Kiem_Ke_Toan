@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const EinvoiceProviderSchema = z.enum(['stub']);
+export const EinvoiceProviderSchema = z.enum(['stub', 'http_sandbox']);
 export const EinvoiceJobStatusSchema = z.enum([
   'pending',
   'sent',
@@ -10,7 +10,8 @@ export const EinvoiceJobStatusSchema = z.enum([
 
 export const IssueEinvoiceBodySchema = z.object({
   orderId: z.string().uuid(),
-  provider: EinvoiceProviderSchema.optional().default('stub'),
+  /** When omitted, API uses EINVOICE_PROVIDER env (default stub). */
+  provider: EinvoiceProviderSchema.optional(),
 });
 
 export type EinvoiceProviderCode = z.output<typeof EinvoiceProviderSchema>;

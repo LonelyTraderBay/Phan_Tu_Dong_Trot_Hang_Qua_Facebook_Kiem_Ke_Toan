@@ -191,6 +191,43 @@ describe("outbox publisher", () => {
     });
   });
 
+  it("maps zalo/inbound.received to the Zalo persist inbound Inngest event", async () => {
+    const { client } = mockSupabase({
+      selectResults: [
+        {
+          data: [
+            outboxRow({
+              event_name: "zalo/inbound.received",
+              payload_json: { oa_id: "oa-1", message: { msg_id: "zalo-1" } },
+            }),
+          ],
+          error: null,
+        },
+      ],
+    });
+    const sentEvents: unknown[] = [];
+    const publisher = new OutboxPublisher(client, {
+      send: async (event) => {
+        sentEvents.push(event);
+        return { ids: ["evt_1"] };
+      },
+    });
+
+    await publisher.publishPending(10);
+
+    expect(sentEvents).toEqual([
+      {
+        name: "zalo/inbound/received",
+        data: {
+          oa_id: "oa-1",
+          message: { msg_id: "zalo-1" },
+          orgId: ORG_ID,
+          outboxEventId: OUTBOX_ID,
+        },
+      },
+    ]);
+  });
+
   it("maps meta.inbound to the persist inbound Inngest event", async () => {
     const { client } = mockSupabase({
       selectResults: [

@@ -25,8 +25,8 @@ e-invoice jobs, staff mobile PWA surface, and accounting CSV export.
 - Money remains integer VND strings. Do not introduce floating point.
 - PO receiving must go through `receive_po`; do not mutate
   `variant_stocks` directly from application code.
-- E-invoice provider is `stub` only. Live provider onboarding and sandbox E2E
-  are AMBER until owner/vendor credentials exist.
+- E-invoice providers: `stub` (default) and `http_sandbox` (eng HTTP POST to
+  `EINVOICE_SANDBOX_URL`). Live tax-compliant vendor onboarding remains AMBER.
 - `/m` is a thin staff surface, not a full offline mobile app. Service worker is
   network-only.
 - Accounting CSV is journal-like import aid, not a legal accounting subsystem.
@@ -45,12 +45,12 @@ e-invoice jobs, staff mobile PWA surface, and accounting CSV export.
 ### E-invoice jobs failing
 
 1. Filter `/einvoice` by failed/dead status through API if needed.
-2. For `failed` jobs, investigate `last_error`; current stub should normally
-   succeed.
+2. For `failed` jobs, investigate `last_error`. `stub` should normally succeed;
+   `http_sandbox` fails on non-2xx from `EINVOICE_SANDBOX_URL` (status in message).
 3. Jobs with `attempts >= 3` are dead-lettered (`dead`) and require manual
    replay after provider/runbook update.
-4. Do not claim live tax invoice readiness until a real provider sandbox is
-   integrated and tested.
+4. Do not claim live tax invoice readiness — `http_sandbox` is an engineering
+   path only, not a certified VN e-invoice vendor.
 
 ### Accounting export mismatch
 

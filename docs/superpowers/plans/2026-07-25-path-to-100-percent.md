@@ -7,10 +7,10 @@
 
 | Đích | = 100% khi | Hiện tại |
 |------|------------|----------|
-| **Eng path** | A→H không stub chặn bán + regression xanh | ~**88%** |
-| **CPC thương mại** | Gate R0+R1+R2.1–2.3+R2.7 GREEN; `cpc-checklist` verdict GREEN | ~**38%** |
-| **E100** | Plan I I1–I8 live/compliance GREEN | ~**22%** |
-| **Tổng intended scope** | CPC thương mại **và** E100 | ~**55%** |
+| **Eng path** | A→H không stub chặn bán + regression xanh | ~**95%** (E0+E1+E2 eng landed; E0.2/E0.4 còn) |
+| **CPC thương mại** | Gate R0+R1+R2.1–2.3+R2.7 GREEN; `cpc-checklist` verdict GREEN | ~**38%** — **không** 100% |
+| **E100** | Plan I I1–I8 live/compliance GREEN | ~**22%** — **không** 100% |
+| **Tổng intended scope** | CPC thương mại **và** E100 | ~**55%** — **không** 100% |
 
 ```
 100% tổng = CPC thương mại GREEN + E100 GREEN
@@ -33,9 +33,9 @@
 | 5 | **R4** Epoch 5 | Ngoài 100% mặc định | — | Optional |
 
 ```
-NOW ~55% tổng
+NOW ~55% tổng (CPC ~38% · E100 ~22% · eng ~95%)
   │
-  ├─ E0 eng leftovers ──────────────► eng ~95%
+  ├─ E0+E1+E2 eng ── DONE ──────────► eng ~95% (SDD eng STOP)
   ├─ R0 (còn R0.2–R0.4) ────────────► mở Meta + staging E2E
   ├─ R1 paid/live ──────────────────► DR / always-on / LLM / billing
   ├─ R2.1–2.3 + R2.7 ───────────────► ★ CPC thương mại 100%
@@ -156,18 +156,19 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 ## Việc **tiếp theo ngay** (thứ tự cứng)
 
-**SDD E0+R0 wave STOP (2026-07-25):** Eng Tasks 1–6 done on `feat/sdd-e0-r0-completion`. Controller waits on owner.
+**SDD Wave E2 eng CLOSED / STOP (2026-07-25):** Tasks 1–5 done on `cursor/e2-completion` (PR #22). Controller waits on owner — **không** claim CPC/E100 100%.
 
 ```
 1. Owner: Render Starter ×3 (R0.2) — payment + upgrade api/ai/web-staging
 2. Owner: META_* + App Review submit (R0.4) — prep pack URLs current
-3. Cả hai: R0.3b staging full §12.1 (sau R0.2 + R0.4)
-4. Owner: GEMINI_API_KEY → E0.2 knowledge_chunks local (song song, criterion 3)
-5. Owner: E0.4 stub decisions Zalo/e-invoice/advisor (trước R2 claim)
-6. Sau Gate R0 GREEN → Owner: R1 Pro/PITR/always-on/LLM/billing
-7. Cả hai: R2.1→R2.3→R2.7  →  CPC 100%
-8. Cả hai: R3 I1–I8         →  E100 100%  →  TỔNG 100%
+3. Cả hai: R0.3b staging full §12.1 (sau R0.2 + R0.4) → Gate R0
+4. Owner: R1 paid (Pro/PITR/always-on/LLM/billing) sau Gate R0
+5. Cả hai: R2.1→R2.3 live (carrier/COD/returns) → R2.7 CPC checklist → CPC 100%
+6. Cả hai: R3 I1–I8 (SOC2/pen-test/SSO/SLA) → E100 100% → TỔNG 100%
+(song song OK) Owner: GEMINI_API_KEY → E0.2; E0.4 stub decisions trước R2 claim
 ```
+
+Eng SDD **STOP** until owner unblocks. Evidence: [r0-r3-execution-evidence § Wave E2](../../ops/r0-r3-execution-evidence.md#wave-e2-sdd-gate-2026-07-25--eng-closed--owner-stop).
 
 ---
 

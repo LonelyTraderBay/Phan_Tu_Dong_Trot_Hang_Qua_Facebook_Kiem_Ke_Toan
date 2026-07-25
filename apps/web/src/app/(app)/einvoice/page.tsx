@@ -62,7 +62,8 @@ export default function EinvoicePage() {
       <header>
         <h1 style={{ margin: 0, fontSize: 32 }}>Hóa đơn điện tử</h1>
         <p style={mutedStyle}>
-          Stub provider cho engineering path. Live provider/sandbox vận hành vẫn AMBER.
+          Stub / http_sandbox engineering path. Live tax provider vẫn AMBER. Xem{' '}
+          docs/ops/einvoice-providers.md.
         </p>
       </header>
       {error ? <p style={errorStyle}>{error}</p> : null}

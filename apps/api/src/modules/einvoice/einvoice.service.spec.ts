@@ -103,6 +103,108 @@ describe('EinvoiceService', () => {
       attempts: 1,
     });
   });
+
+  it('maps http_sandbox provider failure into failed job status', async () => {
+    const updates: unknown[] = [];
+    const inserts: unknown[] = [];
+    const client = {
+      from(table: string) {
+        if (table === 'orders') {
+          return {
+            select() {
+              return {
+                eq() {
+                  return {
+                    eq() {
+                      return {
+                        maybeSingle: async () => ({
+                          data: orderRow(),
+                          error: null,
+                        }),
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        }
+
+        return {
+          insert(values: unknown) {
+            inserts.push(values);
+            return {
+              select() {
+                return {
+                  single: async () => ({
+                    data: jobRow({
+                      provider: 'http_sandbox',
+                      status: 'pending',
+                      attempts: 0,
+                    }),
+                    error: null,
+                  }),
+                };
+              },
+            };
+          },
+          update(values: unknown) {
+            updates.push(values);
+            return {
+              eq() {
+                return {
+                  eq() {
+                    return {
+                      select() {
+                        return {
+                          single: async () => ({
+                            data: jobRow({
+                              provider: 'http_sandbox',
+                              status: 'failed',
+                              attempts: 1,
+                              last_error:
+                                'http_sandbox provider failed with HTTP 500',
+                            }),
+                            error: null,
+                          }),
+                        };
+                      },
+                    };
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    } as unknown as SupabaseLike;
+
+    const failingProvider: EinvoiceProvider = {
+      issue: async () => {
+        throw new Error('http_sandbox provider failed with HTTP 500');
+      },
+    };
+
+    const service = new EinvoiceService(client, undefined, {
+      http_sandbox: failingProvider,
+    });
+    const result = await service.issue(ORG_ID, {
+      orderId: ORDER_ID,
+      provider: 'http_sandbox',
+    });
+
+    expect(inserts[0]).toMatchObject({ provider: 'http_sandbox' });
+    expect(updates[0]).toMatchObject({
+      status: 'failed',
+      attempts: 1,
+      last_error: 'http_sandbox provider failed with HTTP 500',
+    });
+    expect(result.job).toMatchObject({
+      provider: 'http_sandbox',
+      status: 'failed',
+      attempts: 1,
+    });
+  });
 });
 
 function orderRow() {

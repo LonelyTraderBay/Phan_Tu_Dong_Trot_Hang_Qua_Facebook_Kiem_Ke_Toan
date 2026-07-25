@@ -43,7 +43,10 @@ function mockSupabase(row: Row) {
   const client = {
     rpc(fn: string, args: Row) {
       calls.push({ args, fn, op: 'rpc' });
-      if (fn !== 'takeover_inbox_conversation') {
+      if (
+        fn !== 'takeover_inbox_conversation' &&
+        fn !== 'resume_inbox_conversation'
+      ) {
         throw new Error(`Unexpected RPC ${fn}`);
       }
 
@@ -58,7 +61,7 @@ function mockSupabase(row: Row) {
 
           state.conversation = {
             ...state.conversation,
-            bot_paused: true,
+            bot_paused: fn === 'takeover_inbox_conversation',
             bot_epoch: Number(state.conversation.bot_epoch) + 1,
             updated_at: args.p_updated_at,
           };
@@ -176,6 +179,58 @@ describe('InboxService', () => {
         meta: {
           previousBotEpoch: 4,
           nextBotEpoch: 5,
+        },
+      },
+    ]);
+  });
+
+  it('resume unpauses the bot, increments epoch, and writes audit', async () => {
+    const fixedNow = new Date('2026-07-24T12:05:00.000Z');
+    const paused = conversationRow({ bot_paused: true, bot_epoch: 5 });
+    const { calls, client } = mockSupabase(paused);
+    const auditCalls: unknown[] = [];
+    const service = new InboxService(client, {
+      writeAudit: async (input) => {
+        auditCalls.push(input);
+        return { audit: { id: 'audit-2' } };
+      },
+    });
+
+    await expect(
+      service.resumeConversation({
+        orgId: ORG_ID,
+        conversationId: CONVERSATION_ID,
+        actorUserId: USER_ID,
+        now: fixedNow,
+      }),
+    ).resolves.toMatchObject({
+      conversation: {
+        id: CONVERSATION_ID,
+        botPaused: false,
+        botEpoch: 6,
+      },
+    });
+
+    expect(calls).toContainEqual({
+      args: {
+        p_org_id: ORG_ID,
+        p_conversation_id: CONVERSATION_ID,
+        p_updated_at: fixedNow.toISOString(),
+      },
+      fn: 'resume_inbox_conversation',
+      op: 'rpc',
+    });
+    expect(auditCalls).toEqual([
+      {
+        orgId: ORG_ID,
+        actorUserId: USER_ID,
+        actorType: 'user',
+        action: 'inbox.resume',
+        entityType: 'conversation',
+        entityId: CONVERSATION_ID,
+        meta: {
+          previousBotEpoch: 5,
+          nextBotEpoch: 6,
         },
       },
     ]);

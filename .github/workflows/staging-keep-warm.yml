@@ -1,0 +1,38 @@
+name: Staging Keep Warm
+
+# Ping free-tier Render services so they sleep less often.
+# Not a substitute for always-on (starter+) — only reduces cold starts.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Wake staging hosts
+        shell: bash
+        run: |
+          set +e
+          urls=(
+            "https://omni-api-staging-cs2w.onrender.com/health"
+            "https://omni-ai-staging.onrender.com/health"
+            "https://omni-web-staging.onrender.com/"
+          )
+          ok=0
+          for url in "${urls[@]}"; do
+            echo "==> $url"
+            # free tier cold start can take >60s
+            code=$(curl -sS -o /tmp/body.txt -w "%{http_code}" --max-time 120 "$url" || echo "000")
+            echo "HTTP $code"
+            head -c 200 /tmp/body.txt; echo
+            if [[ "$code" =~ ^(200|301|302|307|308)$ ]]; then
+              ok=$((ok+1))
+            fi
+          done
+          echo "healthy_count=$ok/${#urls[@]}"
+          # do not fail the schedule on transient cold-start — report only
+          exit 0

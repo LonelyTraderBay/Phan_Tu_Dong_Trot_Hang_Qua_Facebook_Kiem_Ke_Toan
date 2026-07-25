@@ -62,3 +62,18 @@ curl -sS -o /dev/null -w "%{http_code}\n" https://<web>/
 | Blueprint committed | YES â€” `render.yaml` |
 | Live services | **LIVE (free)** — api/ai/web; API Nest started on Node 22 (`49cc493`) |
 | Supabase staging | `tjsmpcgkeoglemptuymu` migrated |
+
+## Troubleshoot "URL không lên"
+
+1. **Free tier cold start**: lần đầu sau ~15 phút idle, Render hiện trang *Application loading* 30–90s — đợi rồi F5.
+2. **Mạng local chặn onrender.com**: nếu browser/curl TLS reset, thử 4G hotspot hoặc VPN; agent máy local cũng bị reset trong khi probe quốc tế vẫn 200.
+3. **Keep-warm**: workflow `.github/workflows/staging-keep-warm.yml` ping mỗi 10 phút (giảm sleep, không thay starter).
+4. **Always-on thật**: thêm payment trên Render → đổi plan `free` → `starter`.
+
+## Verified (external probe 2026-07-25)
+
+| URL | Result |
+|-----|--------|
+| https://omni-api-staging-cs2w.onrender.com/health | `{"status":"ok"}` |
+| https://omni-ai-staging.onrender.com/health | `{"status":"ok"}` (sau wake) |
+| https://omni-web-staging.onrender.com/ | landing Omni Commerce (sau wake) |

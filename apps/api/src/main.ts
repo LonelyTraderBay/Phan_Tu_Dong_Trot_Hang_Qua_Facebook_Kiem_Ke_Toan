@@ -28,7 +28,7 @@ async function bootstrap() {
   app.use(idempotencyMiddleware);
   app.useGlobalFilters(new ProblemDetailsFilter());
 
-  await app.listen(env.PORT);
+  await app.listen(env.PORT, "0.0.0.0");
 }
 
 void bootstrap();

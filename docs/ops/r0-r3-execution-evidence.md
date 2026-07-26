@@ -697,7 +697,7 @@ Do **not** invent Meta credentials. Owner must:
 | **T1** Land code-first SoT + L3 plan + ledger | **GREEN** | SoT `2026-07-26-completion-priority-code-first.md` + path-to-100 / remaining / completion-step-by-step; plan `2026-07-26-sdd-l3-gate-a.md`; this ledger · parent `main` clean after copy |
 | **T2** A1 local walkthrough smoke post-L2 | **GREEN** | Non-Meta §12.1 re-smoke: invite create+accept · product · stock · draft→confirm · export CSV 200 · advisor suggest · stub Inngest → `knowledge_chunks` > 0 (org count 1; local total ≥ 3). Meta 2/4 **BLOCKED OK**. Inbox live SKIP (empty org; prior unit PASS). Ops note: orphan AI on `:8000` without stub caused transient `502 GEMINI…` — killed spawn child + restarted AI with stub. Walkthrough [p0-staging-walkthrough-12-1](./p0-staging-walkthrough-12-1.md) updated |
 | **T3** A2 minimal local e2e smoke | **GREEN** | `scripts/local-e2e-smoke.mjs` + `pnpm test:e2e:local` — health→signup→org→invite accept→catalog→stock→draft→confirm→export CSV; fails if `/health` down · [local-host](./local-host.md) |
-| **T4** A3 ESLint real OR remove unused + typecheck | **PENDING** | packages typecheck green |
+| **T4** A3 ESLint real OR remove unused + typecheck | **GREEN** | Removed unused root `eslint` + empty `eslint.config.js`; `lint`/`typecheck` = `tsc --noEmit` on api/web/authz-types/db (turbo 4 pkgs, no silent skip); `pnpm lint` + `pnpm typecheck` GREEN; README documents scope |
 | **T5** A4 isolation + A5 OpenAPI honesty + Gate A + STOP | **PENDING** | Gate A evidence; CPC/E100 still deferred |
 
 **Constraints (active):** Local only · No Render payment · Meta BLOCKED OK · Gate A = wave success · No CPC / E100 / tổng 100% claim · “100%” this wave = **Gate A Code local READY** only.

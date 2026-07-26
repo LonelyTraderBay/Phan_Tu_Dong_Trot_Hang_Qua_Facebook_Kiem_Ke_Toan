@@ -203,7 +203,7 @@ Mỗi bước: **Ưu tiên** · **Ai** · **Làm gì** · **Xong khi** · **Evid
 ```
 [x] A1  pnpm run dev:local → smoke walkthrough non-Meta (invite accept + confirm + chunks)
 [x] A2  Thêm e2e smoke local (Playwright hoặc API script)
-[ ] A3  ESLint/typecheck monorepo xanh
+[x] A3  ESLint/typecheck monorepo xanh
 [ ] A4  Isolation: hết skip hoặc proof thay thế
 [ ] A5  OpenAPI/api-client drift đóng
 [ ] A6  (tuỳ) offline SW

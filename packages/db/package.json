@@ -5,6 +5,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "test": "vitest run",
+    "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

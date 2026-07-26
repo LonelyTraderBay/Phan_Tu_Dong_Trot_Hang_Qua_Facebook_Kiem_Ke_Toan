@@ -2,7 +2,7 @@
 <#
 .SYNOPSIS
   Patch local env files to match config/local-ports.json (Omni locked ports).
-  Does not print secret values — only updates URL/PORT keys.
+  Does not print secret values - only updates URL/PORT keys.
 #>
 param(
   [switch]$DryRun
@@ -67,7 +67,9 @@ function Update-EnvFile([string]$Path) {
     Write-Host ("DRY-RUN would update: {0}" -f $Path)
     return
   }
-  Set-Content -Path $Path -Value $out -Encoding utf8
+  # PS 5.1 -Encoding utf8 writes BOM; supabase CLI rejects BOM in .env
+  $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+  [System.IO.File]::WriteAllLines($Path, $out.ToArray(), $utf8NoBom)
   Write-Host ("updated: {0}" -f $Path)
 }
 

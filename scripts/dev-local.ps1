@@ -62,7 +62,7 @@ function Stop-LocalStack {
     }
     Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
   } else {
-    Write-Host "No PID file — cleaning by locked Omni ports..."
+    Write-Host "No PID file - cleaning by locked Omni ports..."
   }
   # Always clear locked app ports (orphans / duplicate Inngest)
   Stop-ByPort -Port $PortWeb -Label "web"
@@ -76,7 +76,7 @@ if ($Stop) {
   exit 0
 }
 
-Write-Host ("Omni locked ports → web:{0} api:{1} ai:{2} inngest:{3} (see config/local-ports.json)" -f `
+Write-Host ("Omni locked ports -> web:{0} api:{1} ai:{2} inngest:{3} (see config/local-ports.json)" -f `
   $PortWeb, $PortApi, $PortAi, $PortInngest)
 
 if (-not $SkipPortCheck) {

@@ -9,7 +9,7 @@
 |------|--------|----------|---------|
 | R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
 | R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` **29** migrations incl. resume `20260727220000` (E2 T2) + e-invoice `20260727230000_einvoice_http_sandbox_provider.sql` (E2 T5, 2026-07-25); `migration list` local=remote **29/29**; verified `public.resume_inbox_conversation` RPC | Prior staging/prod refs deleted |
-| R0.2 Always-on staging hosts | **BLOCKED** | **E3 Task 2 (2026-07-25 Attempt R0.2):** `RENDER_API_KEY` **ABSENT** (env + parent `.env*` + parent `.local-secrets/*` + GH secrets — presence probe only). No API Free→Starter upgrade possible. Local curl TLS reset (exit 35) on api/ai/web. GHA keep-warm [30154127860](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30154127860) `healthy_count=3/3` = **AMBER reachability only** (free-tier sleep + keep-warm ≠ always-on). **Not GREEN.** Owner clicks: [Upgrade to always-on](./deploy-staging-render.md#upgrade-to-always-on-owner) · [E3 Task 2 section](#wave-e3-task-2--r02-render-always-on-attempt-2026-07-25) | **BLOCKED (owner):** Billing payment + Free→Starter ×3; GREEN only with post-upgrade no-cold-start proof |
+| R0.2 Always-on staging hosts | **BLOCKED** | **E4 Task 2 (2026-07-26 Re-attempt R0.2):** `RENDER_API_KEY` still **ABSENT** (env + parent `.env*` + parent `.local-secrets/*` + GH secrets — presence probe only; no `rnd_` / apiKey hit). Free→Starter API upgrade **SKIPPED**. Latest GHA keep-warm [30182626561](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30182626561) `healthy_count=3/3` = **AMBER reachability only** (api ~63s cold-start before HTTP 200 — free-tier sleep + keep-warm ≠ always-on). **Not GREEN.** Prior E3: [30154127860](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30154127860). Owner clicks: [Upgrade to always-on](./deploy-staging-render.md#upgrade-to-always-on-owner) · [E4 Task 2 section](#wave-e4-task-2--r02-render-always-on-re-attempt-2026-07-26) | **BLOCKED (owner):** Billing payment + Free→Starter ×3; GREEN only with post-upgrade no-cold-start proof |
 | R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3** ([walkthrough](./p0-staging-walkthrough-12-1.md)): 2 PASS · 3 PASS (partial) · 2 BLOCKED (Meta); confirm GREEN after warehouse migration `20260727210000`; health 3/3; `pnpm test:isolation` 6 pass · 1 skip | Staging repeat + Meta OAuth/DM + knowledge reindex for GREEN |
 | R0.4 Meta App Review submit | **BLOCKED** | **E3 Task 3 (2026-07-25 Attempt R0.4):** Prep pack still complete. Parent `.env` / `.env.staging.local` (values never printed): `META_APP_ID` len=7 placeholderish; `META_APP_SECRET` len=7 placeholderish; `META_VERIFY_TOKEN` len=32 placeholderish=false (local only); `META_REDIRECT_URI` = local `127.0.0.1` (not staging). Local legal/API curl **timeout (28)** / prior TLS fail. GHA keep-warm [30154127860](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30154127860) `healthy_count=3/3` = AMBER host reachability only. Webhook GET **SKIPPED** (no local warm API). **No Meta dashboard submit.** R0.2 BLOCKED remains webhook reliability prerequisite. · [E3 Task 3 section](#wave-e3-task-3--r04-meta-app-review-attempt-2026-07-25) · [prep pack](./p0-meta-app-review-submit.md) | **BLOCKED (owner):** real `META_*` on `omni-api-staging` + Meta dashboard submit; needs R0.2 always-on |
 | R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) — isolation + eval success (workflow_dispatch 2026-07-25) | — |
@@ -131,7 +131,7 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 | Step | Status | Owner action |
 |------|--------|--------------|
 | R0.1 Migrations | **GREEN** | — (29 incl. resume `20260727220000` + http_sandbox `20260727230000` on `tjsmpcgkeoglemptuymu`) |
-| R0.2 Always-on staging | **BLOCKED** | E3 Attempt R0.2: no `RENDER_API_KEY` / payment; Free + keep-warm ≠ GREEN — owner: payment → Starter ×3 ([deploy-staging-render](./deploy-staging-render.md#upgrade-to-always-on-owner); [Task 2](#wave-e3-task-2--r02-render-always-on-attempt-2026-07-25)) |
+| R0.2 Always-on staging | **BLOCKED** | E4 Re-attempt R0.2: still no `RENDER_API_KEY` / payment; keep-warm [30182626561](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30182626561) 3/3 = AMBER ≠ GREEN — owner: payment → Starter ×3 ([deploy-staging-render](./deploy-staging-render.md#upgrade-to-always-on-owner); [E4 Task 2](#wave-e4-task-2--r02-render-always-on-re-attempt-2026-07-26)) |
 | R0.3 §12.1 walkthrough | **AMBER** | R0.3a local partial PASS; **R0.3b** staging full repeat after R0.2 + Meta |
 | R0.4 Meta App Review | **BLOCKED** | E3 Attempt R0.4: set real `META_*` on API + submit App Review ([prep pack](./p0-meta-app-review-submit.md); [Task 3 evidence](#wave-e3-task-3--r04-meta-app-review-attempt-2026-07-25)) |
 | R0.5 Scheduled QA | **GREEN** | — |
@@ -313,3 +313,44 @@ Do **not** invent Meta credentials. Owner must:
 | **R3** | SOC2 / pen-test / SSO / SLA → E100 |
 
 **Controller STOP.** Resume eng SDD only when owner unblocks R0.2/R0.4 or provides keys. Do not invent Meta/Render/Supabase Pro credentials. Do not claim CPC / E100 / tổng 100%.
+
+## Wave E4 Task 2 — R0.2 Render always-on re-attempt (2026-07-26)
+
+**SDD plan:** [2026-07-26-sdd-e4-owner-path.md](../superpowers/plans/2026-07-26-sdd-e4-owner-path.md) · **Branch:** `cursor/e4-owner-path` · **Attempt:** R0.2 re-attempt
+
+### Verdict: **BLOCKED** (not GREEN)
+
+Always-on Starter was **not** applied. Keep-warm reachability is **AMBER only** — **not** R0.2 GREEN.
+
+### Probes (secret values never printed)
+
+| Probe | Result |
+|-------|--------|
+| `env:RENDER_API_KEY` / `RENDER_API_TOKEN` | **ABSENT** |
+| Parent `.env` / `.env.staging.local` / `.env.example` | **ABSENT** (no `RENDER_API_KEY=` / `TOKEN=` line with a real value) |
+| Worktree `.env*` | **ABSENT** |
+| Parent `.local-secrets/*` (incl. `render-*-create.json`, `render-staging-keys.json`, `keys-raw.txt`) | **ABSENT** (no `RENDER_API_KEY` / `apiKey` / `rnd_` shape) |
+| GitHub Actions secrets (`gh secret list`) | **ABSENT** (`RENDER_API_KEY` not listed) |
+| Render API Free→Starter for `omni-api-staging`, `omni-ai-staging`, `omni-web-staging` | **SKIPPED** — no API key; payment UI cannot be invented by agent |
+
+### Health / reachability (free tier)
+
+| Path | Result | Interpretation |
+|------|--------|----------------|
+| GHA Staging Keep Warm [30182626561](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30182626561) (2026-07-26 schedule) | `healthy_count=3/3` — api HTTP 200 `{"status":"ok"}` (~63s), ai HTTP 200 (~22s), web HTTP 200 (~33s) | **AMBER** free-tier reachability only; cold-start latency still on critical path |
+| Plan / Instance Type | Still **free** (blueprint `render.yaml` `plan: free`; no Starter upgrade performed) | Cold-start sleep remains |
+
+### Owner next clicks (exact path)
+
+From [deploy-staging-render.md § Upgrade to always-on (owner)](./deploy-staging-render.md#upgrade-to-always-on-owner). Do **not** invent payment. Owner must:
+
+| # | Click path |
+|---|------------|
+| 1 | https://dashboard.render.com/u/billing → **Add payment method** |
+| 2 | https://dashboard.render.com/web/srv-d9i2sjbeo5us7394purg (`omni-api-staging`) → **Settings** → **Instance Type** → **Free** → **Starter** → **Save** |
+| 3 | https://dashboard.render.com/web/srv-d9i2skbrjlhs73e95lsg (`omni-ai-staging`) → same Free → Starter → Save |
+| 4 | https://dashboard.render.com/web/srv-d9i2sl3h2c0s73823lqg (`omni-web-staging`) → same Free → Starter → Save |
+| 5 | Optional: `render.yaml` `plan: free` → `plan: starter` for all three; commit |
+| 6 | Post-upgrade external proof: stable HTTP 200 on api `/health`, ai `/health`, web `/` with **no** 30–90s cold-start after idle — then mark R0.2 **GREEN** |
+
+**Not claimed:** R0.2 GREEN · always-on · Starter plan on any of the three services.

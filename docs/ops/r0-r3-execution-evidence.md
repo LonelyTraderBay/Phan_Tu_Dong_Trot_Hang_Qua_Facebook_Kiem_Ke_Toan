@@ -750,7 +750,7 @@ Do **not** invent Meta credentials. Owner must:
 
 **SDD plan:** [2026-07-27-sdd-p0-post-audit.md](../superpowers/plans/2026-07-27-sdd-p0-post-audit.md) · **Branch:** `cursor/p0-post-audit` · **PR:** [#31](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/31) · **SoT ports:** `config/local-ports.json` → web **4700** · api **4701** · ai **4702** · inngest **4788** · supabase **54721**
 
-**Date:** 2026-07-27 · **Pre-commit HEAD:** `527c1e7` (evidence commit SHA recorded in plan Task 2 after push)
+**Date:** 2026-07-27 · **Evidence commit:** `016672b` (parent `527c1e7`)
 
 ### Stack health (locked ports)
 

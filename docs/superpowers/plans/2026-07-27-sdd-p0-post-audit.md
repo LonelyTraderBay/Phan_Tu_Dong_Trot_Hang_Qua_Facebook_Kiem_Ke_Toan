@@ -56,7 +56,7 @@
 
 - All required commands GREEN **or** FAIL documented with root cause; evidence dated; Meta still BLOCKED OK.
 
-**Status:** DONE — commit pending push (SHA filled in ledger after commit). Gate A all GREEN on locked ports; Meta BLOCKED OK; no CPC/E100 100% claim. Minimal fix: `scripts/local-e2e-smoke.mjs` prefers repo `.env` + `local-ports.json` over stale shell `SUPABASE_URL` (legacy `:54321`).
+**Status:** DONE — commit `016672b`. Gate A all GREEN on locked ports; Meta BLOCKED OK; no CPC/E100 100% claim. Minimal fix: `scripts/local-e2e-smoke.mjs` prefers repo `.env` + `local-ports.json` over stale shell `SUPABASE_URL` (legacy `:54321`).
 
 ---
 
@@ -111,6 +111,6 @@ Next = Pha B only when owner wants to sell (B1 Render Starter)
 | Task | Status | Commit / note |
 |------|--------|---------------|
 | T1 SoT + plan | DONE | `527c1e7` · PR #31 |
-| T2 P0.1 regression | DONE | SHA after commit · evidence § Wave P0 / Gate A re-verify 2026-07-27 · e2e port-lock fix |
+| T2 P0.1 regression | DONE | `016672b` · evidence § Wave P0 / Gate A re-verify 2026-07-27 · e2e port-lock fix |
 | T3 P0.2 docs drift | PENDING | — |
 | T4 P0.3 + Gate P0 | PENDING | — |

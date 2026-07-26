@@ -4,13 +4,13 @@
 **Branch:** `cursor/e5-owner-path`  
 **Worktree:** `.worktrees/e5-sdd`  
 **Base:** `main` @ `9e5976f` (PR #24 merge)  
-**PR:** _(draft — fill after Task 1 push)_  
-**Wave status:** **IN PROGRESS** (Task 1)
+**PR:** [#25](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/25) (draft)  
+**Wave status:** **IN PROGRESS** (Task 1 DONE — await T2–T5)
 
 | Task | Title | Status | Notes |
 |------|-------|--------|-------|
 | 0 | Write SDD plan | **DONE** | Plan committed this wave |
-| 1 | Open E5 branch + plan + draft PR | **IN PROGRESS** | Worktree `.worktrees/e5-sdd` from `origin/main` @ `9e5976f` |
+| 1 | Open E5 branch + plan + draft PR | **DONE** | Worktree `.worktrees/e5-sdd`; draft [PR #25](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/25); SHA `538e436` |
 | 2 | Re-probe R0.2 Render always-on | **PENDING** | Presence `RENDER_API_KEY` / keep-warm AMBER only; BLOCKED or GREEN |
 | 3 | Re-probe R0.4 Meta App Review | **PENDING** | `META_*` placeholder check; BLOCKED or Submitted |
 | 4 | Eng parallel I5 subprocessors notify process | **PENDING** | Runbook/template under docs/; I5 eng ready + legal AMBER — **not** full GREEN |
@@ -27,7 +27,7 @@
 
 ## Controllers
 
-- Wave E5 **IN PROGRESS** — Task 1 opening branch/plan/draft PR
+- Wave E5 **IN PROGRESS** — Task 1 **DONE**; next: Task 2 R0.2 re-probe
 - Owner critical path (unchanged until re-probe): (1) R0.2 payment → Starter ×3; (2) R0.4 real META_* + App Review submit
 - Prior: Wave E4 CLOSED / STOP @ `9e5976f` (PR #24); R0.2/R0.4 still BLOCKED; I8 dry-run AMBER
 - Honest % baseline (post-E4): eng ~95%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **NOT 100%**

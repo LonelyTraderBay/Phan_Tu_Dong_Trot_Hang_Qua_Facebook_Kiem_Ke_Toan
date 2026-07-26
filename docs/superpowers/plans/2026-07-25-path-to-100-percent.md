@@ -164,7 +164,7 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 **Post-L3 (2026-07-26):** Wave **L3 CLOSED** — **Gate A Code local READY = YES** ([gate](../../ops/r0-r3-execution-evidence.md#wave-l3-gate-a-2026-07-26--code-local-ready--yes-commercial-deferred)). **Chính sách:** code local xong → thương mại chỉ khi owner muốn bán. ~% thật: eng Gate A READY · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
 
-**NOW = post–Gate A** — optional polish **hoặc** Pha B khi owner muốn commercial. Checklist: [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md).
+**NOW = post–Gate A + post-audit** — P0 re-verify/docs **hoặc** Pha B khi owner muốn commercial. Checklist: [2026-07-27-completion-priority-post-audit.md](./2026-07-27-completion-priority-post-audit.md).
 
 ```
 DONE    L1 + L2 + L3 ★ Gate A Code local READY
@@ -181,7 +181,8 @@ CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại — Gate A **k
 
 | Tài liệu | Path |
 |----------|------|
-| **Checklist ưu tiên code-first (SoT)** | [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md) |
+| **Checklist ưu tiên sau audit (SoT)** | [2026-07-27-completion-priority-post-audit.md](./2026-07-27-completion-priority-post-audit.md) |
+| Checklist code-first (Gate A lịch sử) | [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md) |
 | Checklist CPC claim (Render/Meta…) | [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md) |
 | Wave L1 local-first | [2026-07-26-sdd-l1-local-first.md](./2026-07-26-sdd-l1-local-first.md) |
 | Wave L2 code-complete local | [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-complete.md) |

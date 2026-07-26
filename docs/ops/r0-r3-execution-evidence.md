@@ -1,5 +1,9 @@
 # R0—R3 execution evidence (live completion path)
 
+> **SoT local ports (current):** [`config/local-ports.json`](../../config/local-ports.json) · [`local-ports.md`](./local-ports.md)  
+> Web **4700** · API **4701** · AI **4702** · Inngest **4788** · Supabase API **54721**.  
+> Older rows mentioning `:3000` / `:3001` / `:8000` / `:54321` are **legacy evidence** — do **not** use those ports for new runs. Fresh Gate A re-verify (2026-07-27) used the locked ports.
+
 **Baseline tip:** `main` @ see git  
 **Plan:** [remaining-completion-priority](../superpowers/plans/2026-07-25-remaining-completion-priority.md) · SDD Wave R0: [2026-07-25-sdd-completion-r0.md](../superpowers/plans/2026-07-25-sdd-completion-r0.md)
 
@@ -10,7 +14,7 @@
 | R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
 | R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` **29** migrations incl. resume `20260727220000` (E2 T2) + e-invoice `20260727230000_einvoice_http_sandbox_provider.sql` (E2 T5, 2026-07-25); `migration list` local=remote **29/29**; verified `public.resume_inbox_conversation` RPC | Prior staging/prod refs deleted |
 | R0.2 Always-on staging hosts | **BLOCKED** | **E5 Task 2 (2026-07-26 Re-probe R0.2):** `RENDER_API_KEY` still **ABSENT** (env + parent `.env*` + parent `.local-secrets/*` + GH secrets — presence probe only; no `rnd_` / apiKey hit). Free→Starter API upgrade **SKIPPED**. Latest GHA keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) `healthy_count=3/3` = **AMBER reachability only** (api ~43s / ai ~22s / web ~52s cold-start before HTTP 200 — free-tier sleep + keep-warm ≠ always-on). **Not GREEN.** Prior E4: [30182626561](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30182626561). Owner clicks: [Upgrade to always-on](./deploy-staging-render.md#upgrade-to-always-on-owner) · [E5 Task 2 section](#wave-e5-task-2--r02-render-always-on-re-probe-2026-07-26) | **BLOCKED (owner):** Billing payment + Free→Starter ×3; GREEN only with post-upgrade no-cold-start proof |
-| R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3 + L1 Task 2 (2026-07-26)** ([walkthrough](./p0-staging-walkthrough-12-1.md)): stack health 3/3 + Supabase `:54321` **PASS**; non-Meta rows carry prior PASS/partial; Meta **BLOCKED** OK (no public webhook); chunks still open until L1 Task 3 | Staging/Meta deferred until CPC claim; knowledge reindex for full criterion 3 |
+| R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3 + L1 Task 2 (2026-07-26)** ([walkthrough](./p0-staging-walkthrough-12-1.md)): stack health 3/3 + Supabase `:54321` **PASS** (*legacy port*; current SoT `:54721`); non-Meta rows carry prior PASS/partial; Meta **BLOCKED** OK (no public webhook); chunks still open until L1 Task 3 | Staging/Meta deferred until CPC claim; knowledge reindex for full criterion 3 |
 | R0.4 Meta App Review submit | **BLOCKED** | **E5 Task 3 (2026-07-26 Re-probe R0.4):** Prep pack still complete. Parent `.env` / `.env.staging.local` (values never printed): `META_APP_ID` len=7 placeholderish; `META_APP_SECRET` len=7 placeholderish; `META_VERIFY_TOKEN` len=32 placeholderish=false (local only; hash-equal across both files); `META_REDIRECT_URI` = local `127.0.0.1` (not staging). Legal/webhook probes **SKIPPED** (creds not real — no Meta dashboard path). GHA keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) `healthy_count=3/3` = AMBER host reachability only — **no direct `/legal/*` proof**. **No Meta dashboard submit.** R0.2 still **BLOCKED** (webhook reliability prerequisite). · [E5 Task 3 section](#wave-e5-task-3--r04-meta-app-review-re-probe-2026-07-26) · [prep pack](./p0-meta-app-review-submit.md) | **BLOCKED (owner):** real `META_*` on `omni-api-staging` + Meta dashboard submit; needs R0.2 always-on |
 | R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) — isolation + eval success (workflow_dispatch 2026-07-25) | — |
 
@@ -242,7 +246,7 @@ Agent cannot log into Meta App Dashboard. Parent `META_APP_ID` / `META_APP_SECRE
 | Parent `.env` | `META_APP_ID` | yes | 7 | **true** |
 | Parent `.env` | `META_APP_SECRET` | yes | 7 | **true** |
 | Parent `.env` | `META_VERIFY_TOKEN` | yes | 32 | **false** (local only — not proof on Render) |
-| Parent `.env` | `META_REDIRECT_URI` | yes | 48 | local `http://127.0.0.1:3000/settings/channels/callback` (≠ staging) |
+| Parent `.env` | `META_REDIRECT_URI` | yes | 48 | local `http://127.0.0.1:3000/settings/channels/callback` (≠ staging) — *legacy port*; current SoT web **:4700** |
 | Parent `.env.staging.local` | same four keys | same lens / same placeholderish flags; `VERIFY_TOKEN` hash-equal to `.env` | | |
 | `.env.example` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | yes | 24 / 28 / 37 | **true** (known placeholders) |
 | `render.yaml` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | `sync: false` | — | dashboard-only |
@@ -371,7 +375,7 @@ Agent cannot log into Meta App Dashboard. Parent `META_APP_ID` / `META_APP_SECRE
 | Parent `.env` | `META_APP_ID` | yes | 7 | **true** |
 | Parent `.env` | `META_APP_SECRET` | yes | 7 | **true** |
 | Parent `.env` | `META_VERIFY_TOKEN` | yes | 32 | **false** (local only — not proof on Render) |
-| Parent `.env` | `META_REDIRECT_URI` | yes | 48 | local `http://127.0.0.1:3000/settings/channels/callback` (≠ staging) |
+| Parent `.env` | `META_REDIRECT_URI` | yes | 48 | local `http://127.0.0.1:3000/settings/channels/callback` (≠ staging) — *legacy port*; current SoT web **:4700** |
 | Parent `.env.staging.local` | same four keys | same lens / same placeholderish flags; `VERIFY_TOKEN` hash-equal to `.env` | | |
 | `.env.example` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | yes | 24 / 28 / 37 | **true** (known placeholders) |
 | `render.yaml` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | `sync: false` | — | dashboard-only |
@@ -574,7 +578,9 @@ Do **not** invent Meta credentials. Owner must:
 
 **Controller STOP.** Wave E5 CLOSED. Resume eng SDD only when owner unblocks R0.2/R0.4 or provides keys. Do not invent Meta/Render/Supabase Pro credentials. Do not claim CPC / E100 / tổng 100%.
 
-## Wave L1 Task 2 — Local stack verify (2026-07-26)
+## Wave L1 Task 2 — Local stack verify (2026-07-26) — *legacy evidence* (pre-port-lock)
+
+Ports in this table (`:3000` / `:3001` / `:8000` / `:54321`) predate the Omni lock. **Current SoT:** 4700 / 4701 / 4702 / 4788 / 54721 ([local-ports.md](./local-ports.md)). Kept for history only.
 
 **SDD plan:** [2026-07-26-sdd-l1-local-first.md](../superpowers/plans/2026-07-26-sdd-l1-local-first.md) · **Branch:** `cursor/l1-local-first` · **Playbook:** [local-host.md](./local-host.md)
 
@@ -648,7 +654,7 @@ Do **not** invent Meta credentials. Owner must:
 |------|--------|----------|
 | **T1** Plan + SoT code-first + ledger | **GREEN** | Plan `2026-07-26-sdd-l2-code-complete.md`; path-to-100 / completion-step-by-step / remaining “tiếp theo ngay” = **NOW = L2 code-complete local**; CPC claim deferred · commit `980bb4f` |
 | **T2** Invite list + accept loop | **GREEN** | `GET /v1/orgs/:orgId/invites` · `POST /v1/invites/accept` · create returns raw `token` once · web settings/invites · OpenAPI · vitest identity+org.guard **17/17 PASS** |
-| **T3** Inngest in `dev:local` + chunks smoke | **GREEN** | `scripts/dev-local.ps1` starts/stops Inngest (`-u http://127.0.0.1:3001/api/inngest`); stub `APP_ENV`/`EMBEDDINGS_ALLOW_STUB`; smoke stub reindex → `knowledge_chunks` count **1** (not Gemini quality) · [local-host](./local-host.md) |
+| **T3** Inngest in `dev:local` + chunks smoke | **GREEN** | `scripts/dev-local.ps1` starts/stops Inngest (`-u http://127.0.0.1:3001/api/inngest` — *legacy*; current SoT `:4701` / Inngest `:4788`); stub `APP_ENV`/`EMBEDDINGS_ALLOW_STUB`; smoke stub reindex → `knowledge_chunks` count **1** (not Gemini quality) · [local-host](./local-host.md) |
 | **T4** Advisor aggregates + Zalo runbook | **GREEN** | Real catalog/sales aggregates from `products`/`product_variants`/`orders` (empty-state OK; no invented Meta ads); `zalo-oa-connect.md` + `phase2-operations.md` note worker `zalo-persist-inbound` shipped — remaining gap = full OAuth vs token paste |
 | **T5** CI Node 22 + L2 gate | **GREEN** | `node-version: 22` in `ci-api`/`ci-web`/`ci-isolation`/`scheduled-qa` (matches `engines.node >=22` + `.nvmrc`); this gate section |
 
@@ -695,7 +701,7 @@ Do **not** invent Meta credentials. Owner must:
 | Task | Status | Evidence |
 |------|--------|----------|
 | **T1** Land code-first SoT + L3 plan + ledger | **GREEN** | SoT `2026-07-26-completion-priority-code-first.md` + path-to-100 / remaining / completion-step-by-step; plan `2026-07-26-sdd-l3-gate-a.md`; this ledger · parent `main` clean after copy |
-| **T2** A1 local walkthrough smoke post-L2 | **GREEN** | Non-Meta §12.1 re-smoke: invite create+accept · product · stock · draft→confirm · export CSV 200 · advisor suggest · stub Inngest → `knowledge_chunks` > 0 (org count 1; local total ≥ 3). Meta 2/4 **BLOCKED OK**. Inbox live SKIP (empty org; prior unit PASS). Ops note: orphan AI on `:8000` without stub caused transient `502 GEMINI…` — killed spawn child + restarted AI with stub. Walkthrough [p0-staging-walkthrough-12-1](./p0-staging-walkthrough-12-1.md) updated |
+| **T2** A1 local walkthrough smoke post-L2 | **GREEN** | Non-Meta §12.1 re-smoke: invite create+accept · product · stock · draft→confirm · export CSV 200 · advisor suggest · stub Inngest → `knowledge_chunks` > 0 (org count 1; local total ≥ 3). Meta 2/4 **BLOCKED OK**. Inbox live SKIP (empty org; prior unit PASS). Ops note: orphan AI on `:8000` (*legacy*; current SoT AI **:4702**) without stub caused transient `502 GEMINI…` — killed spawn child + restarted AI with stub. Walkthrough [p0-staging-walkthrough-12-1](./p0-staging-walkthrough-12-1.md) updated |
 | **T3** A2 minimal local e2e smoke | **GREEN** | `scripts/local-e2e-smoke.mjs` + `pnpm test:e2e:local` — health→signup→org→invite accept→catalog→stock→draft→confirm→export CSV; fails if `/health` down · [local-host](./local-host.md) |
 | **T4** A3 ESLint real OR remove unused + typecheck | **GREEN** | Removed unused root `eslint` + empty `eslint.config.js`; `lint`/`typecheck` = `tsc --noEmit` on api/web/authz-types/db (turbo 4 pkgs, no silent skip); `pnpm lint` + `pnpm typecheck` GREEN; README documents scope |
 | **T5** A4 isolation + A5 OpenAPI honesty + Gate A + STOP | **GREEN** | A4: removed `it.skip`; `cross-tenant.rls.spec.ts` migration proof + Docker Data API (memberships/entitlements/feature_flags UPDATE denied; cross-tenant SELECT empty); `pnpm test:isolation` **8/8 pass · 0 skip**; CI starts Supabase. A5: `packages/api-client` marked **DEPRECATED/STUB**; SoT client = `apps/web/src/lib/api-client.ts`; invite paths already in OpenAPI (L2) — no drift claim. Gate A section below |

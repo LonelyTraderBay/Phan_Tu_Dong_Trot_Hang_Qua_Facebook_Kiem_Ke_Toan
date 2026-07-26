@@ -75,7 +75,7 @@
 
 - New reader uses `:4700` from SoT docs.
 
-**Status:** PENDING
+**Status:** DONE — SoT banners on `local-host.md` + `r0-r3-execution-evidence.md`; legacy `:3000`/`:3001`/`:8000`/`:54321` rows labeled; how-to Inngest uses `:4701`/`:4788`; README already locked ports.
 
 ---
 
@@ -112,5 +112,5 @@ Next = Pha B only when owner wants to sell (B1 Render Starter)
 |------|--------|---------------|
 | T1 SoT + plan | DONE | `527c1e7` · PR #31 |
 | T2 P0.1 regression | DONE | `016672b` · evidence § Wave P0 / Gate A re-verify 2026-07-27 · e2e port-lock fix |
-| T3 P0.2 docs drift | PENDING | — |
+| T3 P0.2 docs drift | DONE | SoT banners + legacy labels; how-to → locked ports |
 | T4 P0.3 + Gate P0 | PENDING | — |

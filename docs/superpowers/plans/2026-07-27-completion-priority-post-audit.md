@@ -268,8 +268,8 @@ B6.7  R2.7 tick cpc-checklist → ★ CPC 100%
 ### Ngay (không cần thẻ / Meta)
 
 ```
-[ ] P0.1  Regression Gate A tươi + ghi evidence (SHA d77c197+)
-[ ] P0.2  Dọn doc ports/evidence drift → SoT local-ports.json
+[x] P0.1  Regression Gate A tươi + ghi evidence (SHA d77c197+)
+[x] P0.2  Dọn doc ports/evidence drift → SoT local-ports.json
 [ ] P0.3a (tuỳ) A6 offline SW hoặc AMBER_OK
 [ ] P0.3b (tuỳ) Owner: R2.4 Zalo = REQUIRED|AMBER_OK
 ```

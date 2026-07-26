@@ -31,7 +31,7 @@
 |-------|-------|
 | Date | 2026-07-26 |
 | Operator | L1-task-2 (local stack verify + non-Meta refresh) |
-| Commit SHA | c0771d4 on `cursor/l1-local-first` |
+| Commit SHA | `0044785` on `cursor/l1-local-first` (L1 Task 2 verify) |
 | Environment | **Local** stack (`docs/ops/local-host.md`); Docker Supabase + api/web/ai on `127.0.0.1`; staging §12.1 repeat deferred until CPC claim / R0.3b |
 | Blockers | Meta OAuth/DM (criteria 2, 4) — **BLOCKED OK** locally; `knowledge_chunks` until L1 Task 3 / GEMINI; staging always-on + owner `META_*` for full GREEN (CPC claim only) |
 

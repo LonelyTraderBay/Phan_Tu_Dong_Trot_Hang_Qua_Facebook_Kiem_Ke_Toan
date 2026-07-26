@@ -836,3 +836,32 @@ Ports in this table (`:3000` / `:3001` / `:8000` / `:54321`) predate the Omni lo
 | **CPC / E100 / tổng** | Still **not** claimable |
 
 **Controller STOP (Wave P0).** Do not start Pha B / Render / Meta without owner. Do not claim CPC / E100 / tổng 100%.
+
+---
+
+## Wave B1 OPEN 2026-07-27 — eng kickoff Render Starter (R0.2 vẫn BLOCKED owner)
+
+**SDD:** [2026-07-27-sdd-b1-render-starter.md](../superpowers/plans/2026-07-27-sdd-b1-render-starter.md) · **Owner runbook VI:** [b1-render-starter-owner.md](./b1-render-starter-owner.md) · **Dashboard clicks:** [deploy-staging-render § Upgrade](./deploy-staging-render.md#upgrade-to-always-on-owner)
+
+**Date:** 2026-07-27 · **Baseline tip before this wave:** `main` @ `ae16347` (Gate P0 CLOSED)
+
+### Re-probe R0.2 (eng — không nâng Starter)
+
+| Check | Result |
+|-------|--------|
+| `RENDER_API_KEY` in repo `.env` / `.env.staging.local` | **ABSENT** (presence-only; no value printed) |
+| GitHub secret `RENDER_*` | **ABSENT** (list) |
+| `render.yaml` plans | `plan: free` ×3 (`omni-api/ai/web-staging`) |
+| Keep-warm latest | [30214990011](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30214990011) `success` (schedule) — **AMBER** reachability only |
+| Local probe api health | **FAIL** TLS/send closed (~39s) — mạng local thường chặn/không ổn định tới onrender.com; **không** dùng làm GREEN |
+| Free→Starter Dashboard | **NOT DONE** (owner) |
+
+### Verdict
+
+| Item | Status |
+|------|--------|
+| Eng B1 kickoff (docs + re-probe + owner runbook VI) | **YES** |
+| R0.2 always-on GREEN | **NO — BLOCKED (owner)** payment + Starter ×3 + no-cold-start proof |
+| CPC / E100 / tổng 100% | **NOT claimed** (~38% / ~22%+ / ~55%) |
+
+**Next:** Owner làm [b1-render-starter-owner.md](./b1-render-starter-owner.md) → eng ghi R0.2 GREEN → **B2** Meta.

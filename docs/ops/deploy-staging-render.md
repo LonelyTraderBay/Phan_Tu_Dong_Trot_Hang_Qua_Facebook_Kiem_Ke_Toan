@@ -80,6 +80,8 @@ curl -sS -o /dev/null -w "%{http_code}\n" https://<web>/
 
 ## Upgrade to always-on (owner)
 
+**Runbook tiếng Việt (B1):** [b1-render-starter-owner.md](./b1-render-starter-owner.md) · SDD: [2026-07-27-sdd-b1-render-starter.md](../superpowers/plans/2026-07-27-sdd-b1-render-starter.md)
+
 **Prerequisite:** Owner billing only — agent must not add payment methods.
 
 | # | Action | Detail |

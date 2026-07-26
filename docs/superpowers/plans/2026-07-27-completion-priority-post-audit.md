@@ -280,7 +280,8 @@ B6.7  R2.7 tick cpc-checklist → ★ CPC 100%
 ### Khi owner muốn bán
 
 ```
-[ ] B1  Render Starter ×3          ← BLOCKED owner until then
+[x] B1 eng kickoff  Runbook VI + SDD + re-probe R0.2 (2026-07-27) — R0.2 GREEN vẫn BLOCKED owner
+[ ] B1 R0.2 GREEN   Owner: payment + Starter ×3 + no-cold-start — xem docs/ops/b1-render-starter-owner.md
 [ ] B2  META_* + App Review submit
 [ ] B3  Staging walkthrough → Gate R0
 [ ] B4  R1 paid ops (+ kick-off C1 vendor)

@@ -10,7 +10,7 @@
 | R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
 | R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` **29** migrations incl. resume `20260727220000` (E2 T2) + e-invoice `20260727230000_einvoice_http_sandbox_provider.sql` (E2 T5, 2026-07-25); `migration list` local=remote **29/29**; verified `public.resume_inbox_conversation` RPC | Prior staging/prod refs deleted |
 | R0.2 Always-on staging hosts | **BLOCKED** | **E5 Task 2 (2026-07-26 Re-probe R0.2):** `RENDER_API_KEY` still **ABSENT** (env + parent `.env*` + parent `.local-secrets/*` + GH secrets — presence probe only; no `rnd_` / apiKey hit). Free→Starter API upgrade **SKIPPED**. Latest GHA keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) `healthy_count=3/3` = **AMBER reachability only** (api ~43s / ai ~22s / web ~52s cold-start before HTTP 200 — free-tier sleep + keep-warm ≠ always-on). **Not GREEN.** Prior E4: [30182626561](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30182626561). Owner clicks: [Upgrade to always-on](./deploy-staging-render.md#upgrade-to-always-on-owner) · [E5 Task 2 section](#wave-e5-task-2--r02-render-always-on-re-probe-2026-07-26) | **BLOCKED (owner):** Billing payment + Free→Starter ×3; GREEN only with post-upgrade no-cold-start proof |
-| R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3** ([walkthrough](./p0-staging-walkthrough-12-1.md)): 2 PASS · 3 PASS (partial) · 2 BLOCKED (Meta); confirm GREEN after warehouse migration `20260727210000`; health 3/3; `pnpm test:isolation` 6 pass · 1 skip | Staging repeat + Meta OAuth/DM + knowledge reindex for GREEN |
+| R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3 + L1 Task 2 (2026-07-26)** ([walkthrough](./p0-staging-walkthrough-12-1.md)): stack health 3/3 + Supabase `:54321` **PASS**; non-Meta rows carry prior PASS/partial; Meta **BLOCKED** OK (no public webhook); chunks still open until L1 Task 3 | Staging/Meta deferred until CPC claim; knowledge reindex for full criterion 3 |
 | R0.4 Meta App Review submit | **BLOCKED** | **E5 Task 3 (2026-07-26 Re-probe R0.4):** Prep pack still complete. Parent `.env` / `.env.staging.local` (values never printed): `META_APP_ID` len=7 placeholderish; `META_APP_SECRET` len=7 placeholderish; `META_VERIFY_TOKEN` len=32 placeholderish=false (local only; hash-equal across both files); `META_REDIRECT_URI` = local `127.0.0.1` (not staging). Legal/webhook probes **SKIPPED** (creds not real — no Meta dashboard path). GHA keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) `healthy_count=3/3` = AMBER host reachability only — **no direct `/legal/*` proof**. **No Meta dashboard submit.** R0.2 still **BLOCKED** (webhook reliability prerequisite). · [E5 Task 3 section](#wave-e5-task-3--r04-meta-app-review-re-probe-2026-07-26) · [prep pack](./p0-meta-app-review-submit.md) | **BLOCKED (owner):** real `META_*` on `omni-api-staging` + Meta dashboard submit; needs R0.2 always-on |
 | R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) — isolation + eval success (workflow_dispatch 2026-07-25) | — |
 
@@ -572,3 +572,20 @@ Do **not** invent Meta credentials. Owner must:
 | **R3 / I5 / I8** | I5 legal approve notify + I8 quarterly signed + SOC2 / pen-test / SSO / SLA → E100 |
 
 **Controller STOP.** Wave E5 CLOSED. Resume eng SDD only when owner unblocks R0.2/R0.4 or provides keys. Do not invent Meta/Render/Supabase Pro credentials. Do not claim CPC / E100 / tổng 100%.
+
+## Wave L1 Task 2 — Local stack verify (2026-07-26)
+
+**SDD plan:** [2026-07-26-sdd-l1-local-first.md](../superpowers/plans/2026-07-26-sdd-l1-local-first.md) · **Branch:** `cursor/l1-local-first` · **Playbook:** [local-host.md](./local-host.md)
+
+| Check | Result |
+|-------|--------|
+| Docker + `npx supabase status` | **PASS** — `API_URL=http://127.0.0.1:54321`; containers up (vector restarting non-blocking) |
+| Env → local Supabase | **PASS** — parent `.env` / `apps/web/.env.local` `SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_URL` = `http://127.0.0.1:54321` |
+| api `GET :3001/health` | **PASS** — 200 `{"status":"ok"}` |
+| ai `GET :8000/health` | **PASS** — 200 `{"status":"ok"}` |
+| web `GET :3000/` | **PASS** — 200 (`Omni Commerce`) |
+| Supabase auth | **PASS** — `GET :54321/auth/v1/health` 200 |
+| Meta criteria (walkthrough 2, 4) | **BLOCKED** — localhost cannot receive Meta webhooks (expected; OK for L1) |
+| Walkthrough refresh | **DONE** — [p0-staging-walkthrough-12-1.md](./p0-staging-walkthrough-12-1.md) non-Meta dates + health; Meta stays BLOCKED |
+
+**Verdict:** local eng surface **PASS**. R0.3 remains **AMBER** (Meta BLOCKED; chunks pending Task 3). No CPC / E100 / tổng 100% claim. Render/Meta still deferred until CPC claim.

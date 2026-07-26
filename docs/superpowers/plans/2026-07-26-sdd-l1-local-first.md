@@ -71,6 +71,8 @@ Owner wants **local-first** development on their PC. **Render billing / Starter 
 
 - Health PASS recorded; non-Meta walkthrough evidence refreshed; Meta BLOCKED OK.
 
+**Status:** DONE — `2026-07-26` local health 3/3 + Supabase auth PASS; Meta BLOCKED OK; docs refresh this commit.
+
 ---
 
 ## Task 3: E0.2 — GEMINI chunks or local stub embeddings

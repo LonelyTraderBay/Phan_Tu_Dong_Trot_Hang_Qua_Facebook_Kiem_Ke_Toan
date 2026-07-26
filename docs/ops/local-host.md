@@ -49,6 +49,18 @@ pnpm run dev:local:stop
 | Studio | http://127.0.0.1:54323 |
 | Mailpit | http://127.0.0.1:54324 |
 
+### L1 Task 2 stack verify (2026-07-26)
+
+| Check | Result |
+|-------|--------|
+| Docker Desktop + `npx supabase status` | **PASS** — `API_URL=http://127.0.0.1:54321`; project `omni-commerce` |
+| Env alignment | **PASS** — parent `.env` + `apps/web/.env.local` use `127.0.0.1:54321` (worktree shares parent secrets; not committed) |
+| api `GET /health` | **PASS** — HTTP 200 `{"status":"ok"}` |
+| ai `GET /health` | **PASS** — HTTP 200 `{"status":"ok"}` |
+| web `GET /` | **PASS** — HTTP 200 (`Omni Commerce`) |
+| Supabase auth health | **PASS** — `GET http://127.0.0.1:54321/auth/v1/health` 200 |
+| Meta webhooks | **BLOCKED** — localhost not callable by Meta (expected) |
+
 ## Knowledge reindex (`knowledge_chunks`)
 
 Product create enqueues `knowledge.reindex` via outbox → Inngest → AI embed → `replace_knowledge_chunks`.

@@ -1,14 +1,14 @@
 # Kế hoạch chi tiết — từng bước tới **100%** hoàn thiện
 
-**Date:** 2026-07-25
-**SoT song song:** [remaining-completion-priority](./2026-07-25-remaining-completion-priority.md) · [cpc-checklist](./cpc-checklist.md)  
+**Date:** 2026-07-25 (cập nhật 2026-07-26 — **local-first** / Wave L1)  
+**SoT song song:** [remaining-completion-priority](./2026-07-25-remaining-completion-priority.md) · [cpc-checklist](./cpc-checklist.md) · [L1 plan](./2026-07-26-sdd-l1-local-first.md)  
 **Checklist thực thi từng bước (owner+eng):** [completion-step-by-step](./2026-07-25-completion-step-by-step.md)
 
 ## Định nghĩa 100%
 
 | Đích | = 100% khi | Hiện tại |
 |------|------------|----------|
-| **Eng path** | A→H không stub chặn bán + regression xanh | ~**95%** (E0+E1+E2 eng landed; E0.2/E0.4 còn) |
+| **Eng path** | A→H không stub chặn bán + regression xanh | ~**96%**+ (L1: E0.2 stub + E0.4 notes DONE; live R2 polish còn) |
 | **CPC thương mại** | Gate R0+R1+R2.1–2.3+R2.7 GREEN; `cpc-checklist` verdict GREEN | ~**38%** — **không** 100% |
 | **E100** | Plan I I1–I8 live/compliance GREEN | ~**22%** — **không** 100% |
 | **Tổng intended scope** | CPC thương mại **và** E100 | ~**55%** — **không** 100% |
@@ -20,24 +20,27 @@
 
 **Quy tắc claim:** Không ghi 100% CPC trước Gate R0–R2 · Không ghi E100 trước I1–I8 · Một critical path tại một thời điểm.
 
+**Owner policy (2026-07-26):** **local-first** trên PC. Render billing / Meta staging **không** “tiếp theo ngay” — chỉ khi claim CPC thương mại.
+
 ---
 
 ## Bản đồ % → Wave (thứ tự ưu tiên)
 
 | # | Wave | Đẩy % nào | Owner | Điều kiện bắt đầu |
 |--:|------|-----------|-------|-------------------|
-| 0 | **E0** Eng leftover | 88% → ~95% eng | Eng | Ngay (song song R0) |
-| 1 | **R0** Staging + Meta | CPC live | Owner+Eng | Đang làm (R0.1/R0.5 DONE) |
+| 0 | **L1 / E0 leftover** | Eng local ↑ | Eng | **NOW** — Docker + `dev:local` |
+| 1 | **R0** Staging + Meta | CPC live | Owner+Eng | **Khi claim CPC** (sau Pha Local) |
 | 2 | **R1** Plan E paid/live | CPC live | Owner | Sau R0.2 (always-on) tối thiểu |
 | 3 | **R2** F/G/H live → **CPC 100%** | CPC → **100%** | Eng+Owner | Sau Gate R0+R1 |
 | 4 | **R3** Plan I → **E100 100%** | E100 → **100%** | Eng+Legal+Vendor | Sau CPC (kick-off vendor sớm từ R1) |
 | 5 | **R4** Epoch 5 | Ngoài 100% mặc định | — | Optional |
 
 ```
-NOW ~55% tổng (CPC ~38% · E100 ~22% · eng ~95%)
+NOW ~55% tổng (CPC ~38% · E100 ~22% · eng ~96%+)
   │
-  ├─ E0+E1+E2 eng ── DONE ──────────► eng ~95% (SDD eng STOP)
-  ├─ R0 (còn R0.2–R0.4) ────────────► mở Meta + staging E2E
+  ├─ ▶ Pha Local (L1): E0.2 · E0.4 notes · walkthrough — **CLOSED**
+  ├─ E0+E1+E2 eng ── DONE (scaffolding)
+  ├─ R0 (R0.2–R0.4) ── deferred tới CPC claim ──► Meta + staging E2E
   ├─ R1 paid/live ──────────────────► DR / always-on / LLM / billing
   ├─ R2.1–2.3 + R2.7 ───────────────► ★ CPC thương mại 100%
   └─ R3 I1–I8 ──────────────────────► ★ E100 100%  ⇒ ★ TỔNG 100%
@@ -45,34 +48,36 @@ NOW ~55% tổng (CPC ~38% · E100 ~22% · eng ~95%)
 
 ---
 
-## Wave E0 — Đóng eng leftover (song song R0)
+## Wave E0 / L1 — Đóng eng leftover (**NOW** local-first)
 
-**Mục tiêu:** Hết bug/stub chặn walkthrough và bán tối thiểu.
+**Mục tiêu:** Hết bug/stub chặn walkthrough local; không cần Render payment.
 
 | Ưu tiên | Bước | Việc | Xong khi |
 |--------:|------|------|----------|
-| **E0.1** | Merge warehouse fix | PR `fix/default-warehouse-on-org-create` → `main`; push migration staging | Confirm order không còn 500 `orders_failed` |
-| **E0.2** | Local Inngest | `npx inngest-cli dev -u http://127.0.0.1:3001/api/inngest` trong `local-host.md` đã ghi; verify `knowledge_chunks` > 0 sau create product | Criterion 3 reindex PASS local |
-| **E0.3** | §12.1 local đầy đủ | Walkthrough không-Meta PASS; Meta rows vẫn BLOCKED đến R0.4 | File walkthrough cập nhật |
-| **E0.4** | Quyết định stub CPC | Owner ghi rõ: Zalo / e-invoice / advisor = GREEN bắt buộc hay AMBER chấp nhận khi claim CPC | Ghi trong `cpc-checklist.md` |
+| **E0.1** | Merge warehouse fix | PR → `main`; migration local | Confirm order không còn 500 — **DONE** |
+| **E0.2** | Local Inngest + embed | GEMINI → chunks > 0 **hoặc** stub embeddings khi key trống (non-prod) | Criterion reindex PASS local; **không** claim live LLM quality |
+| **E0.3** | §12.1 local đầy đủ | Walkthrough không-Meta PASS; Meta rows **BLOCKED** OK local | File walkthrough cập nhật |
+| **E0.4** | Stub notes local-phase | Local: R2.4–R2.6 **may** stay `undecided`; recommend Meta-only `AMBER_OK` intent (no forged signature); **must** be `REQUIRED`/`AMBER_OK` trước CPC claim | [cpc-checklist § Stub decisions](./cpc-checklist.md#stub-decisions-owner) |
 
-**Gate E0:** E0.1 merged + confirm E2E xanh (local hoặc staging).
+**Gate L1 (local):** Stack health + E0.2 local path + walkthrough non-Meta refresh + E0.4 notes.  
+**Không** = Gate R0 / CPC.
 
 ---
 
-## Wave R0 — Staging + Meta → mở đường live
+## Wave R0 — Staging + Meta → mở đường live (**khi claim CPC**)
 
 | Ưu tiên | Bước | Việc cụ thể | Status | Xong khi |
 |--------:|------|-------------|--------|----------|
 | **R0.1** | Migrations | Staging + CI | **DONE** | — |
 | **R0.5** | Scheduled QA | Actions xanh | **DONE** | — |
-| **R0.2** | Always-on staging | Render payment → Starter × `omni-api/ai/web-staging` | **BLOCKED** (E5 re-probe) | Health ổn định, không sleep; **không** dùng keep-warm làm GREEN |
+| **R0.2** | Always-on staging | Render payment → Starter × `omni-api/ai/web-staging` | **BLOCKED** (deferred) | Health ổn định, không sleep; **không** dùng keep-warm làm GREEN |
 | **R0.3a** | Walkthrough local | `p0-staging-walkthrough-12-1.md` | AMBER/partial | Criteria không-Meta PASS |
 | **R0.3b** | Walkthrough staging | Lặp trên URL public sau R0.2 | AMBER | Full §12.1 (sau Meta) |
-| **R0.4** | Meta App Review | `META_*` thật; Terms/Privacy; webhook; submit | **BLOCKED** (E5 re-probe) | **Submitted** (hoặc Approved) |
+| **R0.4** | Meta App Review | `META_*` thật; Terms/Privacy; webhook; submit | **BLOCKED** (deferred) | **Submitted** (hoặc Approved) |
 
-**Gate R0:** R0.1 + R0.3 (staging đủ) + R0.4 submitted + R0.5.
-**Playbook:** `docs/ops/p0-staging-walkthrough-12-1.md` · `docs/ops/p0-meta-app-review-submit.md` · `docs/ops/deploy-staging-render.md`
+**Gate R0:** R0.1 + R0.3 (staging đủ) + R0.4 submitted + R0.5.  
+**Playbook:** `docs/ops/p0-staging-walkthrough-12-1.md` · `docs/ops/p0-meta-app-review-submit.md` · `docs/ops/deploy-staging-render.md`  
+**Lịch:** chỉ khi owner mở Pha CPC claim — **không** “tiếp theo ngay”.
 
 ---
 
@@ -137,11 +142,11 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 | Tuần | Focus | % đích gần |
 |-----:|-------|------------|
-| **Ngay** | E0.1 merge warehouse · E0.3 local walkthrough · Owner: Render payment + META_* | eng↑ · mở R0 |
-| **1** | R0.2 → R0.3b → R0.4 submitted | Gate R0 |
-| **1–2** | R1.0–R1.6 + R3.0 kick-off vendor | Gate R1 |
-| **2–3** | R2.1–R2.3 → R2.7 | **★ CPC 100%** |
-| **3–12+** | R3.1–R3.9 (SOC2 overlap dài) | **★ E100 100%** → **★ Tổng 100%** |
+| **Ngay** | **Pha Local:** E0.2 · E0.4 notes · walkthrough non-Meta (Wave L1) | eng↑ local |
+| **Khi claim CPC** | R0.2 Render Starter · R0.4 META_* · R0.3b staging | Gate R0 |
+| **+1–2** | R1.0–R1.6 + R3.0 kick-off vendor | Gate R1 |
+| **+2–3** | R2.1–R2.3 → R2.7 | **★ CPC 100%** |
+| **+3–12+** | R3.1–R3.9 (SOC2 overlap dài) | **★ E100 100%** → **★ Tổng 100%** |
 
 ---
 
@@ -157,21 +162,21 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 ## Việc **tiếp theo ngay** (thứ tự cứng)
 
-**SDD Wave E5 eng CLOSED / STOP (2026-07-26):** draft **PR #25** (`cursor/e5-owner-path`). T1 plan/PR · T2 R0.2 **BLOCKED** (re-probe) · T3 R0.4 **BLOCKED** (re-probe) · T4 I5 notify process eng **GREEN/AMBER** (legal still AMBER). **không** claim CPC/E100/tổng 100% (~38% / ~22%+ / ~55%). **Hard STOP:** further eng-only SDD waves without owner R0.2+R0.4 will **not** advance CPC/E100 to 100%.
+**Post-L1 (2026-07-26):** Wave **L1 CLOSED** — local-first eng advanced ([gate](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred)). ~% thật: eng ~96%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%.
 
-**Thực thi chi tiết từng bước:** [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md) (Bước 1→26 + TODO owner).
+**Thực thi chi tiết:** [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md).
 
 ```
-1. Owner: R0.2 payment → Render Starter ×3 (api/ai/web-staging)
-2. Owner: R0.4 real META_* + App Review submit
-3. Cả hai: R0.3b staging full §12.1 → Gate R0
-4. Owner: R1 paid (Pro/PITR/always-on/LLM/billing) sau Gate R0
-5. Cả hai: R2.1→R2.3 live → R2.7 → CPC thương mại
-6. Cả hai: R3 I1–I8 (SOC2/pen-test/SSO/SLA + I5 legal + I8 quarterly signed) → E100 → TỔNG 100%
-(song song OK) Owner: GEMINI_API_KEY → E0.2; E0.4 stub decisions trước R2 claim
+▶ NOW   (optional) tiếp tục eng local trên Docker + dev:local — không cần Render
+OR      (khi sẵn sàng claim CPC) Owner: R0.2 Render Starter ×3
+THEN    (khi claim CPC) Owner: R0.4 real META_* + App Review submit
+THEN    R0.3b staging §12.1 → Gate R0
+THEN    Owner E0.4: REQUIRED/AMBER_OK cho R2.4–R2.6 (không còn undecided)
+THEN    R1 paid → R2.1–2.3 → R2.7 → CPC thương mại
+THEN    R3 I1–I8 → E100 → TỔNG 100%
 ```
 
-Eng SDD **STOP** (Wave E5 CLOSED). Evidence: [r0-r3-execution-evidence § Wave E5](../../ops/r0-r3-execution-evidence.md#wave-e5-sdd-gate-2026-07-26--eng-closed--owner-stop).
+CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại — eng local không thay Gate R0. L1 gate: [r0-r3-execution-evidence § Wave L1](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred). Prior E5: [§ Wave E5](../../ops/r0-r3-execution-evidence.md#wave-e5-sdd-gate-2026-07-26--eng-closed--owner-stop).
 
 ---
 
@@ -180,9 +185,11 @@ Eng SDD **STOP** (Wave E5 CLOSED). Evidence: [r0-r3-execution-evidence § Wave E
 | Tài liệu | Path |
 |----------|------|
 | **Checklist thực thi từng bước** | [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md) |
+| Wave L1 local-first | [2026-07-26-sdd-l1-local-first.md](./2026-07-26-sdd-l1-local-first.md) |
 | SoT R0–R3 chi tiết | [2026-07-25-remaining-completion-priority.md](./2026-07-25-remaining-completion-priority.md) |
 | CPC checklist | [cpc-checklist.md](./cpc-checklist.md) |
 | Evidence live | `docs/ops/r0-r3-execution-evidence.md` |
 | Walkthrough §12.1 | `docs/ops/p0-staging-walkthrough-12-1.md` |
 | Meta App Review | `docs/ops/p0-meta-app-review-submit.md` |
 | Plan E / I playbooks | `2026-07-24-plan-e-priority-execution.md` · `2026-07-24-plan-i-priority-execution.md` |
+| Local host | `docs/ops/local-host.md` |

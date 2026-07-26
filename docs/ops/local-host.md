@@ -2,6 +2,8 @@
 
 Full local stack: Supabase (Docker) + API + Web + AI on this machine.
 
+> **Default for coding / SDD (2026-07-26):** Local-first is the default development surface. Render staging payment / Starter and Meta App Review are **deferred** until owner wants to **claim CPC thương mại** (Gate R0 live) — see [L1 plan](../superpowers/plans/2026-07-26-sdd-l1-local-first.md) and [completion-step-by-step](../superpowers/plans/2026-07-25-completion-step-by-step.md).
+
 ## Prerequisites
 
 - Docker Desktop running (`docker` on PATH, or `C:\Program Files\Docker\Docker\resources\bin`)
@@ -47,35 +49,77 @@ pnpm run dev:local:stop
 | Studio | http://127.0.0.1:54323 |
 | Mailpit | http://127.0.0.1:54324 |
 
+### L1 Task 2 stack verify (2026-07-26)
+
+| Check | Result |
+|-------|--------|
+| Docker Desktop + `npx supabase status` | **PASS** — `API_URL=http://127.0.0.1:54321`; project `omni-commerce` |
+| Env alignment | **PASS** — parent `.env` + `apps/web/.env.local` use `127.0.0.1:54321` (worktree shares parent secrets; not committed) |
+| api `GET /health` | **PASS** — HTTP 200 `{"status":"ok"}` |
+| ai `GET /health` | **PASS** — HTTP 200 `{"status":"ok"}` |
+| web `GET /` | **PASS** — HTTP 200 (`Omni Commerce`) |
+| Supabase auth health | **PASS** — `GET http://127.0.0.1:54321/auth/v1/health` 200 |
+| Meta webhooks | **BLOCKED** — localhost not callable by Meta (expected) |
+
 ## Knowledge reindex (`knowledge_chunks`)
 
 Product create enqueues `knowledge.reindex` via outbox → Inngest → AI embed → `replace_knowledge_chunks`.
-Without a local Inngest dev server **and** `GEMINI_API_KEY`, chunks stay empty even though the product exists.
+Without a local Inngest dev server, chunks stay empty even though the product exists.
 
 ```powershell
 # separate terminal while API is running (must be up before outbox publishes)
 npx inngest-cli@latest dev -u http://127.0.0.1:3001/api/inngest
 ```
 
-Set `GEMINI_API_KEY` in repo `.env` and `apps/ai/.env`, then restart AI (`pnpm run dev:local` or restart AI process).
+### Embeddings: Gemini vs local stub
 
-### E0.2 local verify (2026-07-25 · sdd-task-2)
+| Mode | When | Quality |
+|------|------|---------|
+| **Gemini** | `GEMINI_API_KEY` set (non-empty) | Real `text-embedding-004` (768-d) |
+| **Local stub** | Key empty **and** (`APP_ENV` ∈ local/dev/test **or** `EMBEDDINGS_ALLOW_STUB=1`) | Deterministic hash vectors (768-d). **Not** Gemini quality; **not** for CPC/live-LLM claims |
+| **Refused** | Key empty **and** `APP_ENV`/`NODE_ENV` = `production` (even if allow flag set) | Clear error — stub never silent in prod |
+
+Enable stub for local-only (key already empty on this PC — probe `GEMINI_API_KEY` len=0):
+
+```powershell
+# parent .env and/or apps/ai/.env
+APP_ENV=local
+# optional explicit flag (needed if APP_ENV is neither local/dev/test):
+EMBEDDINGS_ALLOW_STUB=1
+```
+
+Restart AI after env changes (`pnpm run dev:local` or restart AI process).
+
+Unit coverage: `cd apps/ai; uv run pytest tests/test_stub_embeddings.py -q`
+
+### E0.2 local verify (2026-07-26 · L1 Task 3)
 
 | Step | Result |
 |------|--------|
-| Stack health (api/ai/supabase) | **PASS** — `/health` 200 on 3001 + 8000; Supabase @ 54321 |
-| Inngest dev | **PASS** — `inngest-cli@1.38.1` on `:8288`; apps synced to `http://127.0.0.1:3001/api/inngest` |
-| `POST /v1/catalog/products` | **PASS** — product + variant created (`539c1233-…`) |
-| `outbox_events` `knowledge.reindex` | **PASS** — `published_at` set when Inngest dev running (2 rows) |
-| `knowledge_chunks` count | **BLOCKED** — `0`; Inngest `knowledge-reindex` → AI `502 GEMINI_API_KEY is required for embeddings` |
+| `GEMINI_API_KEY` probe (parent `.env`, value len only) | **EMPTY** — len=0 → stub path (not live Gemini) |
+| Stub embeddings code | **PASS** — `apps/ai` factory + `StubEmbeddingProvider` (768-d, labeled `local-stub-embeddings`) |
+| Prod guard | **PASS** — stub refused when `APP_ENV`/`NODE_ENV=production` even with `EMBEDDINGS_ALLOW_STUB=1` |
+| `uv run pytest tests/test_stub_embeddings.py -q` | **PASS** — see commit evidence |
+| Create product + Inngest → `knowledge_chunks` > 0 | **VERIFY STEPS** (optional smoke) — stack + Inngest required; see below |
 
-**Owner to unblock chunks:** add `GEMINI_API_KEY` to `.env` + `apps/ai/.env`, restart AI, keep Inngest dev running, create product (or reset outbox `attempts`/`published_at`), then:
+**Optional smoke (after AI restart with stub enabled):**
 
 ```powershell
+# 1) Ensure APP_ENV=local (or EMBEDDINGS_ALLOW_STUB=1), GEMINI empty OK
+# 2) API + AI + Inngest dev running
+# 3) POST /v1/catalog/products (auth as usual)
+# 4) Wait for knowledge.reindex, then:
 docker exec supabase_db_omni-commerce psql -U postgres -d postgres -t -c "select count(*) from knowledge_chunks;"
 ```
 
-Expect `> 0`. Do not claim PASS until then.
+Expect `> 0` with stub vectors. **Do not** claim Gemini retrieval / CPC quality from stub chunks.
+
+### Prior E0.2 note (2026-07-25 · sdd-task-2)
+
+| Step | Result |
+|------|--------|
+| Stack + Inngest | **PASS** — product/outbox published |
+| `knowledge_chunks` | Was **BLOCKED** on `502 GEMINI_API_KEY is required` — unblocked by L1 Task 3 stub path above |
 
 ## Meta webhooks
 

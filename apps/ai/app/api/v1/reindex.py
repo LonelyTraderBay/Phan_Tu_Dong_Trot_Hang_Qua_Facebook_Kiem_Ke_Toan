@@ -8,15 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import settings
 from app.infra.core import CoreKnowledgeClient
-from app.infra.embeddings.gemini import (
-    EMBEDDING_DIMENSIONS,
-    EmbeddingProvider,
-    GeminiEmbeddingProvider,
-)
+from app.infra.embeddings.factory import create_embedding_provider
+from app.infra.embeddings.gemini import EMBEDDING_DIMENSIONS, EmbeddingProvider
 
 router = APIRouter(prefix="/internal/v1")
 
-embedding_provider: EmbeddingProvider = GeminiEmbeddingProvider()
+embedding_provider: EmbeddingProvider = create_embedding_provider()
 core_client = CoreKnowledgeClient()
 
 

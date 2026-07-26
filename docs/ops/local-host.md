@@ -2,6 +2,8 @@
 
 Full local stack: Supabase (Docker) + API + Web + AI on this machine.
 
+> **Default for coding / SDD (2026-07-26):** Local-first is the default development surface. Render staging payment / Starter and Meta App Review are **deferred** until owner wants to **claim CPC thương mại** (Gate R0 live) — see [L1 plan](../superpowers/plans/2026-07-26-sdd-l1-local-first.md) and [completion-step-by-step](../superpowers/plans/2026-07-25-completion-step-by-step.md).
+
 ## Prerequisites
 
 - Docker Desktop running (`docker` on PATH, or `C:\Program Files\Docker\Docker\resources\bin`)

@@ -4,14 +4,14 @@
 **Branch:** `cursor/e4-owner-path`  
 **Worktree:** `.worktrees/e4-sdd`  
 **Base:** `main` @ `0221a4c` (PR #23 merge)  
-**Wave status:** **IN PROGRESS** (Task 2 BLOCKED — owner)
+**Wave status:** **IN PROGRESS** (Tasks 2–3 BLOCKED — owner)
 
 | Task | Title | Status | Notes |
 |------|-------|--------|-------|
 | 0 | Write SDD plan | **DONE** | Plan committed this wave |
 | 1 | Land completion-step-by-step + link SoT | **DONE** | Checklist + path-to-100 / remaining links; draft PR |
 | 2 | Re-attempt R0.2 Render Starter ×3 | **BLOCKED** | `RENDER_API_KEY` ABSENT; Free→Starter SKIPPED; keep-warm [30182626561](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30182626561) 3/3 = AMBER ≠ GREEN; owner: [always-on clicks](../../docs/ops/deploy-staging-render.md#upgrade-to-always-on-owner) |
-| 3 | Re-attempt R0.4 Meta | **PENDING** | Submit only if real META_*; else BLOCKED |
+| 3 | Re-attempt R0.4 Meta | **BLOCKED** | Parent `META_APP_ID`/`SECRET` len=7 placeholderish; no Meta dashboard; R0.2 still BLOCKED (webhook prereq); [E4 Task 3 evidence](../../docs/ops/r0-r3-execution-evidence.md#wave-e4-task-3--r04-meta-app-review-re-attempt-2026-07-26) |
 | 4 | Eng parallel I8 access review dry-run | **PENDING** | Runbook exists → I8 (not I4 fallback) |
 | 5 | E4 gate docs + STOP | **PENDING** | Update path-to-100 tiếp theo ngay; no 100% claim |
 
@@ -24,7 +24,7 @@
 
 ## Controllers
 
-- **Wave E4 IN PROGRESS** — Task 2 **BLOCKED** (owner payment + Starter ×3); Tasks 3–5 next
+- **Wave E4 IN PROGRESS** — Tasks 2–3 **BLOCKED** (owner payment/Starter + real META_* + App Review submit); Tasks 4–5 next
 - Owner critical path: R0.2 payment → Starter ×3; R0.4 real META_* + App Review submit
 - Eng parallel: I8 dry-run per `docs/runbooks/platform-admin-access-review.md`
 - Then: R0.3b → Gate R0 → R1 paid → R2 live → CPC → R3 → E100

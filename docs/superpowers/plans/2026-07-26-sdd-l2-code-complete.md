@@ -69,7 +69,7 @@ Owner wants **code-complete / local perfection** on PC first. Commercial / Rende
 
 - Local invite loop works without email provider; tests green; no secrets committed.
 
-**Status:** PENDING
+**Status:** DONE — `2026-07-26` invite list + accept + raw token once; web wired; unit tests green.
 
 ---
 

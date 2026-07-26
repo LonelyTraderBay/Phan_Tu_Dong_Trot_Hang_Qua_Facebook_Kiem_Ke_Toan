@@ -479,6 +479,7 @@ export type MembershipInvite = {
   role: OrganizationRole;
   expiresAt: string;
   createdAt: string;
+  acceptedAt?: string | null;
 };
 
 export class ApiClientError extends Error {
@@ -1274,8 +1275,8 @@ export async function createInvite(input: {
   orgId: string;
   email: string;
   role: OrganizationRole;
-}): Promise<{ invite: MembershipInvite }> {
-  return apiFetch<{ invite: MembershipInvite }>(
+}): Promise<{ invite: MembershipInvite; token: string }> {
+  return apiFetch<{ invite: MembershipInvite; token: string }>(
     `/v1/orgs/${encodeURIComponent(input.orgId)}/invites`,
     {
       method: 'POST',
@@ -1284,6 +1285,33 @@ export async function createInvite(input: {
         role: input.role,
       }),
     },
+  );
+}
+
+export async function listInvites(orgId: string): Promise<{
+  invites: MembershipInvite[];
+}> {
+  return apiFetch<{ invites: MembershipInvite[] }>(
+    `/v1/orgs/${encodeURIComponent(orgId)}/invites`,
+  );
+}
+
+export async function acceptInvite(token: string): Promise<{
+  membership: {
+    id: string;
+    orgId: string;
+    userId: string;
+    role: OrganizationRole;
+  };
+  invite: MembershipInvite;
+}> {
+  return apiFetch(
+    '/v1/invites/accept',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    },
+    { requireOrg: false },
   );
 }
 

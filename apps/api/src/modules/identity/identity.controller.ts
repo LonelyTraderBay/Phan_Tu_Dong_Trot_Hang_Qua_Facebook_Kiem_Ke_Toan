@@ -20,6 +20,7 @@ import { OrgId } from "../../common/decorators/org-id.decorator";
 import { RequirePermission } from "../../common/decorators/require-permission.decorator";
 import { PermissionsGuard } from "../authz/permissions.guard";
 import {
+  AcceptInviteBodySchema,
   CreateInviteBodySchema,
   CreateOrgBodySchema,
 } from "./dto";
@@ -54,6 +55,17 @@ export class IdentityController {
     );
   }
 
+  @Get(":orgId/invites")
+  @UseGuards(PermissionsGuard)
+  @RequirePermission("members.invite")
+  listInvites(
+    @Param("orgId") orgId: string,
+    @OrgId() guardOrgId: string | undefined,
+  ) {
+    assertOrgRouteMatchesGuard(orgId, guardOrgId);
+    return this.identity.listInvites(orgId);
+  }
+
   @Post(":orgId/invites")
   @UseGuards(PermissionsGuard)
   @RequirePermission("members.invite")
@@ -62,20 +74,7 @@ export class IdentityController {
     @OrgId() guardOrgId: string | undefined,
     @Body() body: unknown,
   ) {
-    if (!UUID_PATTERN.test(orgId)) {
-      throw new BadRequestException({
-        code: "invalid_org_id",
-        message: "orgId route parameter must be a UUID",
-      });
-    }
-
-    if (orgId !== guardOrgId) {
-      throw new BadRequestException({
-        code: "org_context_mismatch",
-        message: "orgId route parameter must match X-Org-Id",
-      });
-    }
-
+    assertOrgRouteMatchesGuard(orgId, guardOrgId);
     return this.identity.createInvite(
       orgId,
       parseBody(CreateInviteBodySchema, body),
@@ -107,6 +106,42 @@ export class IdentityController {
     return this.identity.requestOrganizationDelete({
       orgId: requireOrgId(orgId),
       actorUserId: requireUserId(user),
+    });
+  }
+}
+
+@Controller("v1/invites")
+export class InvitesController {
+  constructor(private readonly identity: IdentityService) {}
+
+  @Post("accept")
+  @HttpCode(200)
+  acceptInvite(
+    @CurrentUser() user: AuthenticatedUser | undefined,
+    @Body() body: unknown,
+  ) {
+    return this.identity.acceptInvite(
+      { id: requireUserId(user), email: user?.email },
+      parseBody(AcceptInviteBodySchema, body),
+    );
+  }
+}
+
+function assertOrgRouteMatchesGuard(
+  orgId: string,
+  guardOrgId: string | undefined,
+) {
+  if (!UUID_PATTERN.test(orgId)) {
+    throw new BadRequestException({
+      code: "invalid_org_id",
+      message: "orgId route parameter must be a UUID",
+    });
+  }
+
+  if (orgId !== guardOrgId) {
+    throw new BadRequestException({
+      code: "org_context_mismatch",
+      message: "orgId route parameter must match X-Org-Id",
     });
   }
 }

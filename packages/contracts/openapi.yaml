@@ -73,6 +73,137 @@ paths:
                 $ref: '#/components/schemas/PdpaDeleteRequestResponse'
         '403':
           description: Owner permission required
+  /v1/orgs/{orgId}/invites:
+    get:
+      summary: List pending membership invites for an organization
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Org-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pending invites
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - invites
+                properties:
+                  invites:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MembershipInvite'
+        '403':
+          description: members.invite permission required
+    post:
+      summary: Create a membership invite (returns raw token once)
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Org-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [owner, cskh, kho]
+      responses:
+        '201':
+          description: Invite created; token returned once for local/Mailpit copy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - invite
+                  - token
+                properties:
+                  invite:
+                    $ref: '#/components/schemas/MembershipInvite'
+                  token:
+                    type: string
+                    description: One-time raw invite token (hash stored server-side)
+        '403':
+          description: members.invite permission required
+  /v1/invites/accept:
+    post:
+      summary: Accept a membership invite by token (JWT required; no X-Org-Id)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  minLength: 32
+                  maxLength: 128
+      responses:
+        '200':
+          description: Membership created; invite invalidated
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - membership
+                  - invite
+                properties:
+                  membership:
+                    type: object
+                    required: [id, orgId, userId, role]
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orgId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        format: uuid
+                      role:
+                        type: string
+                        enum: [owner, cskh, kho]
+                  invite:
+                    $ref: '#/components/schemas/MembershipInvite'
+        '400':
+          description: Expired invite or missing user email
+        '403':
+          description: Signed-in email does not match invite
+        '404':
+          description: Invite not found or already accepted
   /v1/channels:
     get:
       summary: List channel connections for current org
@@ -1324,6 +1455,38 @@ components:
         minLength: 1
         maxLength: 128
   schemas:
+    MembershipInvite:
+      type: object
+      required:
+        - id
+        - orgId
+        - email
+        - role
+        - expiresAt
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [owner, cskh, kho]
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        acceptedAt:
+          type: string
+          format: date-time
+          nullable: true
     ChannelProvider:
       type: string
       enum:

@@ -3,6 +3,7 @@
 import {
   type CSSProperties,
   type FormEvent,
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -10,7 +11,9 @@ import {
 
 import {
   ApiClientError,
+  acceptInvite,
   createInvite,
+  listInvites,
   type MembershipInvite,
 } from '../../../../lib/api-client';
 import {
@@ -32,16 +35,42 @@ export default function InvitesSettingsPage() {
   const [organizations, setOrganizations] = useState<StoredOrganization[]>([]);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<OrganizationRole>('cskh');
-  const [createdInvites, setCreatedInvites] = useState<MembershipInvite[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<MembershipInvite[]>([]);
+  const [lastToken, setLastToken] = useState<string | null>(null);
+  const [acceptToken, setAcceptToken] = useState('');
+  const [loadingList, setLoadingList] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const refreshPendingInvites = useCallback(async (orgId: string) => {
+    setLoadingList(true);
+    try {
+      const { invites } = await listInvites(orgId);
+      setPendingInvites(invites);
+    } catch (err) {
+      const message =
+        err instanceof ApiClientError
+          ? err.message
+          : 'Không thể tải danh sách lời mời.';
+      setError(message);
+    } finally {
+      setLoadingList(false);
+    }
+  }, []);
+
   useEffect(() => {
     function loadOrgContext() {
-      setActiveOrgId(getActiveOrgId());
+      const orgId = getActiveOrgId();
+      setActiveOrgId(orgId);
       setOrganizations(getStoredOrganizations());
-      setCreatedInvites([]);
+      setLastToken(null);
+      if (orgId) {
+        void refreshPendingInvites(orgId);
+      } else {
+        setPendingInvites([]);
+      }
     }
 
     loadOrgContext();
@@ -52,7 +81,7 @@ export default function InvitesSettingsPage() {
       window.removeEventListener(SESSION_CHANGED_EVENT, loadOrgContext);
       window.removeEventListener('storage', loadOrgContext);
     };
-  }, []);
+  }, [refreshPendingInvites]);
 
   const activeOrganization = useMemo(
     () => organizations.find((org) => org.id === activeOrgId) ?? null,
@@ -63,6 +92,7 @@ export default function InvitesSettingsPage() {
     event.preventDefault();
     setSuccess(null);
     setError(null);
+    setLastToken(null);
 
     if (!activeOrgId) {
       setError('Hãy chọn tổ chức trước khi tạo lời mời.');
@@ -77,14 +107,17 @@ export default function InvitesSettingsPage() {
 
     setSubmitting(true);
     try {
-      const { invite } = await createInvite({
+      const { invite, token } = await createInvite({
         orgId: activeOrgId,
         email: inviteEmail,
         role,
       });
-      setCreatedInvites((current) => [invite, ...current]);
+      setPendingInvites((current) => [invite, ...current]);
+      setLastToken(token);
       setEmail('');
-      setSuccess(`Đã tạo lời mời cho ${invite.email}.`);
+      setSuccess(
+        `Đã tạo lời mời cho ${invite.email}. Sao chép token một lần bên dưới (local/Mailpit).`,
+      );
     } catch (err) {
       const message =
         err instanceof ApiClientError
@@ -96,13 +129,44 @@ export default function InvitesSettingsPage() {
     }
   }
 
+  async function handleAccept(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSuccess(null);
+    setError(null);
+
+    const token = acceptToken.trim();
+    if (!token) {
+      setError('Vui lòng dán token lời mời.');
+      return;
+    }
+
+    setAccepting(true);
+    try {
+      const { membership } = await acceptInvite(token);
+      setAcceptToken('');
+      setSuccess(
+        `Đã chấp nhận lời mời — vai trò ${formatRole(membership.role)} trong tổ chức ${membership.orgId}.`,
+      );
+      if (activeOrgId) {
+        void refreshPendingInvites(activeOrgId);
+      }
+    } catch (err) {
+      const message =
+        err instanceof ApiClientError
+          ? err.message
+          : 'Không thể chấp nhận lời mời.';
+      setError(message);
+    } finally {
+      setAccepting(false);
+    }
+  }
+
   return (
     <main>
       <h1 style={{ margin: 0, fontSize: 32 }}>Lời mời thành viên</h1>
       <p style={{ color: '#475569', fontSize: 18, maxWidth: 760 }}>
-        Tạo lời mời thành viên theo tổ chức đang chọn. API hiện có endpoint tạo
-        lời mời, nhưng chưa có endpoint liệt kê lời mời; bảng bên dưới chỉ hiển
-        thị các lời mời vừa tạo trong phiên trình duyệt này.
+        Tạo lời mời, xem danh sách đang chờ, và chấp nhận bằng token (local —
+        không cần email provider). Token thô chỉ hiện một lần khi tạo.
       </p>
 
       <section
@@ -172,6 +236,33 @@ export default function InvitesSettingsPage() {
           </button>
         </form>
 
+        {lastToken ? (
+          <div
+            role="status"
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: 10,
+              marginTop: 16,
+              padding: 12,
+            }}
+          >
+            <p style={{ margin: '0 0 8px', fontWeight: 700, fontSize: 14 }}>
+              Token một lần (sao chép ngay)
+            </p>
+            <code
+              style={{
+                display: 'block',
+                fontSize: 12,
+                overflowWrap: 'anywhere',
+                wordBreak: 'break-all',
+              }}
+            >
+              {lastToken}
+            </code>
+          </div>
+        ) : null}
+
         {success ? (
           <p role="status" style={{ color: '#15803d', fontSize: 15 }}>
             {success}
@@ -184,24 +275,71 @@ export default function InvitesSettingsPage() {
         ) : null}
       </section>
 
+      <section
+        style={{
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: 14,
+          marginTop: 24,
+          maxWidth: 760,
+          padding: 24,
+        }}
+      >
+        <h2 style={{ fontSize: 22, margin: 0 }}>Chấp nhận lời mời</h2>
+        <p style={{ color: '#64748b', fontSize: 15 }}>
+          Đăng nhập bằng đúng email được mời, dán token, rồi chấp nhận. Không
+          cần X-Org-Id.
+        </p>
+        <form onSubmit={(event) => void handleAccept(event)}>
+          <label style={labelStyle}>
+            Token
+            <input
+              type="text"
+              value={acceptToken}
+              onChange={(event) => setAcceptToken(event.target.value)}
+              placeholder="Dán token 64 ký tự hex"
+              style={{ ...inputStyle, maxWidth: '100%', fontFamily: 'monospace' }}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={accepting}
+            style={{
+              background: '#0f766e',
+              border: 'none',
+              borderRadius: 10,
+              color: '#ffffff',
+              cursor: accepting ? 'not-allowed' : 'pointer',
+              fontSize: 16,
+              fontWeight: 800,
+              marginTop: 18,
+              opacity: accepting ? 0.7 : 1,
+              padding: '12px 18px',
+            }}
+          >
+            {accepting ? 'Đang chấp nhận...' : 'Chấp nhận lời mời'}
+          </button>
+        </form>
+      </section>
+
       <section style={{ marginTop: 36 }}>
         <h2 style={{ margin: '0 0 16px', fontSize: 22 }}>
-          Lời mời vừa tạo
+          Lời mời đang chờ
+          {loadingList ? ' (đang tải...)' : ''}
         </h2>
 
-        {createdInvites.length === 0 ? (
+        {pendingInvites.length === 0 ? (
           <div
             style={{
-              background: '#fffbeb',
-              border: '1px solid #fde68a',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
               borderRadius: 12,
-              color: '#92400e',
+              color: '#475569',
               maxWidth: 760,
               padding: 16,
             }}
           >
-            Chưa có lời mời nào trong phiên này. TODO backend: thêm GET
-            /v1/orgs/:orgId/invites để web hiển thị toàn bộ lịch sử lời mời.
+            Không có lời mời đang chờ cho tổ chức này.
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -221,7 +359,7 @@ export default function InvitesSettingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {createdInvites.map((invite) => (
+                {pendingInvites.map((invite) => (
                   <tr key={invite.id}>
                     <td style={tableCellStyle}>{invite.email}</td>
                     <td style={tableCellStyle}>{formatRole(invite.role)}</td>

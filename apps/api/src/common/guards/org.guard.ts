@@ -85,6 +85,7 @@ function isSkippedPath(path: string, method = "GET") {
     path === "/api/inngest" ||
     path === "/v1/webhooks/meta" ||
     path === "/v1/channels/zalo/webhook" ||
+    path === "/v1/invites/accept" ||
     path === "/ops" ||
     path.startsWith("/ops/") ||
     path.startsWith("/public/v1/") ||

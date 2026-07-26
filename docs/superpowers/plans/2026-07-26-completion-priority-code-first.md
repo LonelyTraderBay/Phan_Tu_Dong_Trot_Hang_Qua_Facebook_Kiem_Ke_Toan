@@ -1,10 +1,11 @@
 # Kế hoạch chi tiết — hoàn thiện theo thứ tự ưu tiên (code trước, thương mại sau)
 
-**Date:** 2026-07-26  
-**Baseline:** `main` @ `e2105a6` (Wave L2 MERGED — PR #27)  
+**Date:** 2026-07-26 (Gate A lịch sử)  
+**Baseline lúc viết:** `main` @ `e2105a6` (Wave L2); Gate A đóng L3 PR #28  
+**▶ SoT kế hoạch tiếp theo (sau audit 2026-07-27):** [2026-07-27-completion-priority-post-audit.md](./2026-07-27-completion-priority-post-audit.md)  
 **Chính sách owner:** Hoàn thiện & kiểm tra code trên PC trước; triển khai thương mại sâu chỉ khi code ổn.
 
-**SoT liên quan:** [path-to-100](./2026-07-25-path-to-100-percent.md) · [completion-step-by-step](./2026-07-25-completion-step-by-step.md) · [cpc-checklist](./cpc-checklist.md) · [local-host](../../ops/local-host.md) · [evidence](../../ops/r0-r3-execution-evidence.md)
+**SoT liên quan:** [path-to-100](./2026-07-25-path-to-100-percent.md) · [completion-step-by-step](./2026-07-25-completion-step-by-step.md) · [cpc-checklist](./cpc-checklist.md) · [local-host](../../ops/local-host.md) · [evidence](../../ops/r0-r3-execution-evidence.md) · [local-ports](../../ops/local-ports.md)
 
 ---
 
@@ -206,7 +207,7 @@ Mỗi bước: **Ưu tiên** · **Ai** · **Làm gì** · **Xong khi** · **Evid
 [x] A8  Tick Gate A “Code local READY” = YES (commercial still deferred)
 ```
 
-**★ Gate A đạt (2026-07-26).** Tiếp theo: optional A6/A7 polish **hoặc** Pha B khi owner muốn bán.
+**★ Gate A đạt (2026-07-26).** Tiếp theo chi tiết: [post-audit plan 2026-07-27](./2026-07-27-completion-priority-post-audit.md) (P0 re-verify → B CPC → C E100).
 
 ### Pha B — chỉ khi Gate A xong & muốn bán
 

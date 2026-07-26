@@ -1,5 +1,9 @@
 # Local host mode (PC as server)
 
+> **SoT local ports (current):** [`config/local-ports.json`](../../config/local-ports.json) · [`local-ports.md`](./local-ports.md)  
+> Web **4700** · API **4701** · AI **4702** · Inngest **4788** · Supabase API **54721**.  
+> Rows below that still mention `:3000` / `:3001` / `:8000` / `:54321` are **legacy evidence** — do **not** use those ports for new runs.
+
 Full local stack: Supabase (Docker) + API + Web + AI on this machine.
 
 **Port lock (anti-collision):** [`local-ports.md`](./local-ports.md) · SoT `config/local-ports.json`  
@@ -63,7 +67,9 @@ AI process gets `APP_ENV=local` and `EMBEDDINGS_ALLOW_STUB=1` when unset so stub
 | Studio | http://127.0.0.1:54723 |
 | Mailpit | http://127.0.0.1:54724 |
 
-### L1 Task 2 stack verify (2026-07-26)
+### L1 Task 2 stack verify (2026-07-26) — *legacy evidence* (pre-port-lock)
+
+Ports in this table (`:54321` etc.) predate the Omni lock — **current SoT is 4700/4701/4702/4788/54721** ([local-ports.md](./local-ports.md)). Kept for history only.
 
 | Check | Result |
 |-------|--------|
@@ -83,8 +89,10 @@ Without Inngest, chunks stay empty even though the product exists.
 **Default (L2):** `pnpm run dev:local` already starts Inngest. Manual companion (only if `-NoInngest` or debugging):
 
 ```powershell
-npx --yes inngest-cli@latest dev -u http://127.0.0.1:3001/api/inngest
+npx --yes inngest-cli@latest dev -u http://127.0.0.1:4701/api/inngest -p 4788
 ```
+
+*(Legacy evidence below may still show `-u …:3001` — that was pre-port-lock; do not use for new runs.)*
 
 ### Embeddings: Gemini vs local stub
 
@@ -117,7 +125,9 @@ Unit coverage: `cd apps/ai; uv run pytest tests/test_stub_embeddings.py -q`
 | `uv run pytest tests/test_stub_embeddings.py -q` | **PASS** — see commit evidence |
 | Create product + Inngest → `knowledge_chunks` > 0 | **ENG PATH READY** (L2 Task 3) — `dev:local` bundles Inngest; smoke commands below |
 
-### L2 Task 3 — Inngest in `dev:local` (2026-07-26)
+### L2 Task 3 — Inngest in `dev:local` (2026-07-26) — *legacy evidence* (pre-port-lock)
+
+Inngest URL in this table used legacy API `:3001`. **Current SoT:** `-u http://127.0.0.1:4701/api/inngest -p 4788`.
 
 | Check | Result |
 |-------|--------|
@@ -141,7 +151,9 @@ docker exec supabase_db_omni-commerce psql -U postgres -d postgres -t -c "select
 
 Expect `> 0` with stub vectors. **Do not** claim Gemini retrieval / CPC quality from stub chunks.
 
-### L3 Task 2 — walkthrough smoke reconfirm (2026-07-26)
+### L3 Task 2 — walkthrough smoke reconfirm (2026-07-26) — *legacy evidence* (pre-port-lock)
+
+Ports `:8000` / Inngest `:8288` below are historical. **Current SoT:** AI **4702**, Inngest **4788**.
 
 | Check | Result |
 |-------|--------|
@@ -151,7 +163,7 @@ Expect `> 0` with stub vectors. **Do not** claim Gemini retrieval / CPC quality 
 | Product → `knowledge_chunks` > 0 (stub) | **PASS** — after clearing orphan AI on `:8000` (spawn child kept old Gemini-only process); restart AI with `APP_ENV=local` + `EMBEDDINGS_ALLOW_STUB=1` |
 | Meta OAuth / DM | **BLOCKED** — localhost (expected) |
 
-If `POST .../reindex` returns `502 {"detail":"GEMINI_API_KEY is required for embeddings"}` while logs claim stub: check for a **zombie** Python/uvicorn still bound to `:8000` (`Get-NetTCPConnection -LocalPort 8000`; kill orphan `multiprocessing.spawn` children), then restart AI only.
+If `POST .../reindex` returns `502 {"detail":"GEMINI_API_KEY is required for embeddings"}` while logs claim stub: check for a **zombie** Python/uvicorn still bound to the **locked AI port** (`Get-NetTCPConnection -LocalPort 4702`; kill orphan `multiprocessing.spawn` children), then restart AI only. *(Legacy runs used `:8000`.)*
 
 ### L3 Task 3 — A2 local e2e smoke (API script)
 

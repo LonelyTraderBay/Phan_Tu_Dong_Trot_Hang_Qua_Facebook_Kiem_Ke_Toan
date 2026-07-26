@@ -1,5 +1,9 @@
 # R0—R3 execution evidence (live completion path)
 
+> **SoT local ports (current):** [`config/local-ports.json`](../../config/local-ports.json) · [`local-ports.md`](./local-ports.md)  
+> Web **4700** · API **4701** · AI **4702** · Inngest **4788** · Supabase API **54721**.  
+> Older rows mentioning `:3000` / `:3001` / `:8000` / `:54321` are **legacy evidence** — do **not** use those ports for new runs. Fresh Gate A re-verify (2026-07-27) used the locked ports.
+
 **Baseline tip:** `main` @ see git  
 **Plan:** [remaining-completion-priority](../superpowers/plans/2026-07-25-remaining-completion-priority.md) · SDD Wave R0: [2026-07-25-sdd-completion-r0.md](../superpowers/plans/2026-07-25-sdd-completion-r0.md)
 
@@ -10,7 +14,7 @@
 | R0.1 Migrations apply (CI local Supabase) | **GREEN** | GitHub Actions **Migrate Check** succeeds on `main` | — |
 | R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` **29** migrations incl. resume `20260727220000` (E2 T2) + e-invoice `20260727230000_einvoice_http_sandbox_provider.sql` (E2 T5, 2026-07-25); `migration list` local=remote **29/29**; verified `public.resume_inbox_conversation` RPC | Prior staging/prod refs deleted |
 | R0.2 Always-on staging hosts | **BLOCKED** | **E5 Task 2 (2026-07-26 Re-probe R0.2):** `RENDER_API_KEY` still **ABSENT** (env + parent `.env*` + parent `.local-secrets/*` + GH secrets — presence probe only; no `rnd_` / apiKey hit). Free→Starter API upgrade **SKIPPED**. Latest GHA keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) `healthy_count=3/3` = **AMBER reachability only** (api ~43s / ai ~22s / web ~52s cold-start before HTTP 200 — free-tier sleep + keep-warm ≠ always-on). **Not GREEN.** Prior E4: [30182626561](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30182626561). Owner clicks: [Upgrade to always-on](./deploy-staging-render.md#upgrade-to-always-on-owner) · [E5 Task 2 section](#wave-e5-task-2--r02-render-always-on-re-probe-2026-07-26) | **BLOCKED (owner):** Billing payment + Free→Starter ×3; GREEN only with post-upgrade no-cold-start proof |
-| R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3 + L1 Task 2 (2026-07-26)** ([walkthrough](./p0-staging-walkthrough-12-1.md)): stack health 3/3 + Supabase `:54321` **PASS**; non-Meta rows carry prior PASS/partial; Meta **BLOCKED** OK (no public webhook); chunks still open until L1 Task 3 | Staging/Meta deferred until CPC claim; knowledge reindex for full criterion 3 |
+| R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3 + L1 Task 2 (2026-07-26)** ([walkthrough](./p0-staging-walkthrough-12-1.md)): stack health 3/3 + Supabase `:54321` **PASS** (*legacy port*; current SoT `:54721`); non-Meta rows carry prior PASS/partial; Meta **BLOCKED** OK (no public webhook); chunks still open until L1 Task 3 | Staging/Meta deferred until CPC claim; knowledge reindex for full criterion 3 |
 | R0.4 Meta App Review submit | **BLOCKED** | **E5 Task 3 (2026-07-26 Re-probe R0.4):** Prep pack still complete. Parent `.env` / `.env.staging.local` (values never printed): `META_APP_ID` len=7 placeholderish; `META_APP_SECRET` len=7 placeholderish; `META_VERIFY_TOKEN` len=32 placeholderish=false (local only; hash-equal across both files); `META_REDIRECT_URI` = local `127.0.0.1` (not staging). Legal/webhook probes **SKIPPED** (creds not real — no Meta dashboard path). GHA keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) `healthy_count=3/3` = AMBER host reachability only — **no direct `/legal/*` proof**. **No Meta dashboard submit.** R0.2 still **BLOCKED** (webhook reliability prerequisite). · [E5 Task 3 section](#wave-e5-task-3--r04-meta-app-review-re-probe-2026-07-26) · [prep pack](./p0-meta-app-review-submit.md) | **BLOCKED (owner):** real `META_*` on `omni-api-staging` + Meta dashboard submit; needs R0.2 always-on |
 | R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) — isolation + eval success (workflow_dispatch 2026-07-25) | — |
 
@@ -242,7 +246,7 @@ Agent cannot log into Meta App Dashboard. Parent `META_APP_ID` / `META_APP_SECRE
 | Parent `.env` | `META_APP_ID` | yes | 7 | **true** |
 | Parent `.env` | `META_APP_SECRET` | yes | 7 | **true** |
 | Parent `.env` | `META_VERIFY_TOKEN` | yes | 32 | **false** (local only — not proof on Render) |
-| Parent `.env` | `META_REDIRECT_URI` | yes | 48 | local `http://127.0.0.1:3000/settings/channels/callback` (≠ staging) |
+| Parent `.env` | `META_REDIRECT_URI` | yes | 48 | local `http://127.0.0.1:3000/settings/channels/callback` (≠ staging) — *legacy port*; current SoT web **:4700** |
 | Parent `.env.staging.local` | same four keys | same lens / same placeholderish flags; `VERIFY_TOKEN` hash-equal to `.env` | | |
 | `.env.example` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | yes | 24 / 28 / 37 | **true** (known placeholders) |
 | `render.yaml` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | `sync: false` | — | dashboard-only |
@@ -371,7 +375,7 @@ Agent cannot log into Meta App Dashboard. Parent `META_APP_ID` / `META_APP_SECRE
 | Parent `.env` | `META_APP_ID` | yes | 7 | **true** |
 | Parent `.env` | `META_APP_SECRET` | yes | 7 | **true** |
 | Parent `.env` | `META_VERIFY_TOKEN` | yes | 32 | **false** (local only — not proof on Render) |
-| Parent `.env` | `META_REDIRECT_URI` | yes | 48 | local `http://127.0.0.1:3000/settings/channels/callback` (≠ staging) |
+| Parent `.env` | `META_REDIRECT_URI` | yes | 48 | local `http://127.0.0.1:3000/settings/channels/callback` (≠ staging) — *legacy port*; current SoT web **:4700** |
 | Parent `.env.staging.local` | same four keys | same lens / same placeholderish flags; `VERIFY_TOKEN` hash-equal to `.env` | | |
 | `.env.example` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | yes | 24 / 28 / 37 | **true** (known placeholders) |
 | `render.yaml` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | `sync: false` | — | dashboard-only |
@@ -574,7 +578,9 @@ Do **not** invent Meta credentials. Owner must:
 
 **Controller STOP.** Wave E5 CLOSED. Resume eng SDD only when owner unblocks R0.2/R0.4 or provides keys. Do not invent Meta/Render/Supabase Pro credentials. Do not claim CPC / E100 / tổng 100%.
 
-## Wave L1 Task 2 — Local stack verify (2026-07-26)
+## Wave L1 Task 2 — Local stack verify (2026-07-26) — *legacy evidence* (pre-port-lock)
+
+Ports in this table (`:3000` / `:3001` / `:8000` / `:54321`) predate the Omni lock. **Current SoT:** 4700 / 4701 / 4702 / 4788 / 54721 ([local-ports.md](./local-ports.md)). Kept for history only.
 
 **SDD plan:** [2026-07-26-sdd-l1-local-first.md](../superpowers/plans/2026-07-26-sdd-l1-local-first.md) · **Branch:** `cursor/l1-local-first` · **Playbook:** [local-host.md](./local-host.md)
 
@@ -648,7 +654,7 @@ Do **not** invent Meta credentials. Owner must:
 |------|--------|----------|
 | **T1** Plan + SoT code-first + ledger | **GREEN** | Plan `2026-07-26-sdd-l2-code-complete.md`; path-to-100 / completion-step-by-step / remaining “tiếp theo ngay” = **NOW = L2 code-complete local**; CPC claim deferred · commit `980bb4f` |
 | **T2** Invite list + accept loop | **GREEN** | `GET /v1/orgs/:orgId/invites` · `POST /v1/invites/accept` · create returns raw `token` once · web settings/invites · OpenAPI · vitest identity+org.guard **17/17 PASS** |
-| **T3** Inngest in `dev:local` + chunks smoke | **GREEN** | `scripts/dev-local.ps1` starts/stops Inngest (`-u http://127.0.0.1:3001/api/inngest`); stub `APP_ENV`/`EMBEDDINGS_ALLOW_STUB`; smoke stub reindex → `knowledge_chunks` count **1** (not Gemini quality) · [local-host](./local-host.md) |
+| **T3** Inngest in `dev:local` + chunks smoke | **GREEN** | `scripts/dev-local.ps1` starts/stops Inngest (`-u http://127.0.0.1:3001/api/inngest` — *legacy*; current SoT `:4701` / Inngest `:4788`); stub `APP_ENV`/`EMBEDDINGS_ALLOW_STUB`; smoke stub reindex → `knowledge_chunks` count **1** (not Gemini quality) · [local-host](./local-host.md) |
 | **T4** Advisor aggregates + Zalo runbook | **GREEN** | Real catalog/sales aggregates from `products`/`product_variants`/`orders` (empty-state OK; no invented Meta ads); `zalo-oa-connect.md` + `phase2-operations.md` note worker `zalo-persist-inbound` shipped — remaining gap = full OAuth vs token paste |
 | **T5** CI Node 22 + L2 gate | **GREEN** | `node-version: 22` in `ci-api`/`ci-web`/`ci-isolation`/`scheduled-qa` (matches `engines.node >=22` + `.nvmrc`); this gate section |
 
@@ -695,7 +701,7 @@ Do **not** invent Meta credentials. Owner must:
 | Task | Status | Evidence |
 |------|--------|----------|
 | **T1** Land code-first SoT + L3 plan + ledger | **GREEN** | SoT `2026-07-26-completion-priority-code-first.md` + path-to-100 / remaining / completion-step-by-step; plan `2026-07-26-sdd-l3-gate-a.md`; this ledger · parent `main` clean after copy |
-| **T2** A1 local walkthrough smoke post-L2 | **GREEN** | Non-Meta §12.1 re-smoke: invite create+accept · product · stock · draft→confirm · export CSV 200 · advisor suggest · stub Inngest → `knowledge_chunks` > 0 (org count 1; local total ≥ 3). Meta 2/4 **BLOCKED OK**. Inbox live SKIP (empty org; prior unit PASS). Ops note: orphan AI on `:8000` without stub caused transient `502 GEMINI…` — killed spawn child + restarted AI with stub. Walkthrough [p0-staging-walkthrough-12-1](./p0-staging-walkthrough-12-1.md) updated |
+| **T2** A1 local walkthrough smoke post-L2 | **GREEN** | Non-Meta §12.1 re-smoke: invite create+accept · product · stock · draft→confirm · export CSV 200 · advisor suggest · stub Inngest → `knowledge_chunks` > 0 (org count 1; local total ≥ 3). Meta 2/4 **BLOCKED OK**. Inbox live SKIP (empty org; prior unit PASS). Ops note: orphan AI on `:8000` (*legacy*; current SoT AI **:4702**) without stub caused transient `502 GEMINI…` — killed spawn child + restarted AI with stub. Walkthrough [p0-staging-walkthrough-12-1](./p0-staging-walkthrough-12-1.md) updated |
 | **T3** A2 minimal local e2e smoke | **GREEN** | `scripts/local-e2e-smoke.mjs` + `pnpm test:e2e:local` — health→signup→org→invite accept→catalog→stock→draft→confirm→export CSV; fails if `/health` down · [local-host](./local-host.md) |
 | **T4** A3 ESLint real OR remove unused + typecheck | **GREEN** | Removed unused root `eslint` + empty `eslint.config.js`; `lint`/`typecheck` = `tsc --noEmit` on api/web/authz-types/db (turbo 4 pkgs, no silent skip); `pnpm lint` + `pnpm typecheck` GREEN; README documents scope |
 | **T5** A4 isolation + A5 OpenAPI honesty + Gate A + STOP | **GREEN** | A4: removed `it.skip`; `cross-tenant.rls.spec.ts` migration proof + Docker Data API (memberships/entitlements/feature_flags UPDATE denied; cross-tenant SELECT empty); `pnpm test:isolation` **8/8 pass · 0 skip**; CI starts Supabase. A5: `packages/api-client` marked **DEPRECATED/STUB**; SoT client = `apps/web/src/lib/api-client.ts`; invite paths already in OpenAPI (L2) — no drift claim. Gate A section below |
@@ -745,3 +751,88 @@ Do **not** invent Meta credentials. Owner must:
 | **CPC / E100** | Still **deferred** — do not claim 100% |
 
 **Controller STOP (L3).** Wave L3 **CLOSED**. Progress **DONE**. **Tiếp theo ngay** = optional polish **OR** Pha B when owner wants commercial. Do not invent Meta/Render credentials. Do not claim CPC / E100 / tổng 100%.
+
+## Wave P0 / Gate A re-verify 2026-07-27
+
+**SDD plan:** [2026-07-27-sdd-p0-post-audit.md](../superpowers/plans/2026-07-27-sdd-p0-post-audit.md) · **Branch:** `cursor/p0-post-audit` · **PR:** [#31](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/31) · **SoT ports:** `config/local-ports.json` → web **4700** · api **4701** · ai **4702** · inngest **4788** · supabase **54721**
+
+**Date:** 2026-07-27 · **Evidence commit:** `016672b` (parent `527c1e7`)
+
+### Stack health (locked ports)
+
+| URL | Result |
+|-----|--------|
+| `http://127.0.0.1:4700/` | **200** |
+| `http://127.0.0.1:4701/health` | **200** `{"status":"ok"}` |
+| `http://127.0.0.1:4702/health` | **200** `{"status":"ok"}` |
+| `http://127.0.0.1:54721/auth/v1/health` | **200** (GoTrue) after `npx supabase stop` + `start` on locked ports |
+
+**Ops note (port lock):** Before re-bind, Docker Kong for `omni-commerce` was still on legacy `:54321` while `config.toml` / status reported `:54721`. Host process **AgentsRoom.exe** held `127.0.0.1:54721` (404 on auth) — stopped to free SoT port, then Supabase Kong rebound `0.0.0.0:54721`. Stale shell `SUPABASE_URL=http://127.0.0.1:54321` overrode repo `.env` in e2e — fixed in `scripts/local-e2e-smoke.mjs` (prefer repo `.env` + `local-ports.json`).
+
+### Gate A commands
+
+| Command | Result |
+|---------|--------|
+| `pnpm --filter @omni/api test` | **GREEN** — 50 files · **185** tests passed |
+| `uv run pytest` (`apps/ai`) | **GREEN** — **37** passed (2 deprecation warnings) |
+| `pnpm test:isolation` | **GREEN** — 3 files · **8** passed · **0** skipped |
+| `pnpm test:e2e:local` | **GREEN** — health→auth→org→invite→catalog→stock→draft→confirm→export CSV (API `:4701` · Supabase `:54721`) |
+| `pnpm lint` | **GREEN** — turbo 5/5 successful (4 pkgs lint + authz-types build) |
+| `pnpm typecheck` | **GREEN** — turbo 5/5 successful |
+
+### Gate A checklist (re-verify)
+
+| Checklist | Status |
+|-----------|--------|
+| API unit tests | **YES** — 185/185 |
+| AI pytest | **YES** — 37/37 |
+| Isolation (**0 skip**) | **YES** — 8/8 |
+| Local e2e smoke | **YES** |
+| lint / typecheck | **YES** |
+| Meta / Zalo / e-invoice live | **BLOCKED OK** — not required for Gate A / Wave P0.1 |
+| CPC / E100 / tổng 100% | **NOT claimed** |
+
+**P0.1 Gate A regression = GREEN** on locked ports. Meta still **BLOCKED OK**. CPC thương mại / E100 / tổng intended remain **not 100%**.
+
+| Blocker / next | When |
+|----------------|------|
+| **Next (Wave P0)** | Task 3 docs ports drift · Task 4 optional A6/A7 + Gate P0 close |
+| **Pha B** | Owner-only — Render / Meta commercial |
+| **AgentsRoom vs :54721** | Keep AgentsRoom off `:54721` when running Omni local Supabase |
+
+**Controller STOP (P0.1).** Regression evidence recorded. Do not claim CPC / E100 / tổng 100%. Do not start Pha B without owner.
+
+## Wave P0 CLOSED 2026-07-27 — eng local sạch = YES (commercial deferred)
+
+**SDD plan:** [2026-07-27-sdd-p0-post-audit.md](../superpowers/plans/2026-07-27-sdd-p0-post-audit.md) · **Branch:** `cursor/p0-post-audit` · **PR:** [#31](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/31) · **SoT:** [completion-priority-post-audit](../superpowers/plans/2026-07-27-completion-priority-post-audit.md) · **Ports:** `config/local-ports.json` (4700 / 4701 / 4702 / 4788 / 54721)
+
+**Date:** 2026-07-27
+
+### Gate P0 checklist
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| **P0.1** Gate A regression | **GREEN** | [Wave P0 / Gate A re-verify](#wave-p0--gate-a-re-verify-2026-07-27) — API 185 · AI 37 · isolation 8/0 skip · e2e · lint · typecheck · commit `016672b` |
+| **P0.2** Docs ports SoT | **GREEN** | SoT banners + legacy `:3000`/`:54321` labels · commit `113d926` |
+| **P0.3 A6** Offline SW `/m` | **AMBER_OK** | Network-only `apps/web/public/sw.js` accepted for Gate P0 — offline `/m` **not required** to close eng local sạch (Plan H mobile already GREEN/AMBER). No SW rewrite in this wave. |
+| **P0.3 A7** Zalo R2.4 | **deferred** | `cpc-checklist.md` R2.4 stays **`undecided`** — owner must choose `REQUIRED` \| `AMBER_OK` at **Pha B step B5** before CPC claim. **No forged signature.** |
+| Stack ports SoT | **YES** | Web `:4700` · API `:4701` · AI `:4702` · Inngest `:4788` · Supabase `:54721` |
+
+### Honest maturity (do **not** invent 100%)
+
+| Đích | ~% sau Gate P0 | Claim |
+|------|----------------|-------|
+| **Eng / Gate P0** (local sạch) | **YES** | Wave success = Gate P0 only |
+| **CPC thương mại** | ~**38%** | **NOT 100%** |
+| **E100** | ~**22%+** | **NOT 100%** |
+| **Tổng intended** | ~**55%** | **NOT 100%** |
+
+**Gate P0 eng local sạch = YES.** Commercial path remains deferred.
+
+| Next | When |
+|------|------|
+| **Pha B** (B1 Render Starter ×3 → …) | **Only when owner wants to sell** — **BLOCKED owner** until then |
+| **B5** R2.4–R2.6 Decision | Before CPC claim — owner fills REQUIRED \| AMBER_OK |
+| **CPC / E100 / tổng** | Still **not** claimable |
+
+**Controller STOP (Wave P0).** Do not start Pha B / Render / Meta without owner. Do not claim CPC / E100 / tổng 100%.

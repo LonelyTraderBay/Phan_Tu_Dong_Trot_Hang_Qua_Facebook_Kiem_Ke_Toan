@@ -203,7 +203,7 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 
 ## Tóm tắt một trang — làm gì **tiếp theo ngay**
 
-Evidence: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · **SoT ưu tiên code-first:** [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md)
+Evidence: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · **▶ SoT ưu tiên sau audit:** [2026-07-27-completion-priority-post-audit.md](./2026-07-27-completion-priority-post-audit.md) · Gate A lịch sử: [code-first](./2026-07-26-completion-priority-code-first.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md)
 
 **~% thật:** eng Gate A READY · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
 
@@ -213,7 +213,7 @@ DONE    L1 + L2 + L3 ★ Gate A Code local READY (A1–A5/A8)
 THEN    (chỉ khi muốn bán) Pha B CPC → Pha C E100
 ```
 
-Chi tiết từng bước: [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md). Gate A evidence: [r0-r3 § L3 Gate A](../../ops/r0-r3-execution-evidence.md#wave-l3-gate-a-2026-07-26--code-local-ready--yes-commercial-deferred).
+Chi tiết từng bước: [2026-07-27-completion-priority-post-audit.md](./2026-07-27-completion-priority-post-audit.md). Gate A evidence: [r0-r3 § L3 Gate A](../../ops/r0-r3-execution-evidence.md#wave-l3-gate-a-2026-07-26--code-local-ready--yes-commercial-deferred).
 
 ---
 
@@ -221,7 +221,8 @@ Chi tiết từng bước: [2026-07-26-completion-priority-code-first.md](./2026
 
 | Tài liệu | Path |
 |----------|------|
-| **Checklist code-first** | [completion-priority-code-first](./2026-07-26-completion-priority-code-first.md) |
+| **Checklist sau audit (SoT)** | [completion-priority-post-audit](./2026-07-27-completion-priority-post-audit.md) |
+| Checklist code-first (Gate A) | [completion-priority-code-first](./2026-07-26-completion-priority-code-first.md) |
 | SoT ưu tiên gốc | [path-to-completion-priority](./2026-07-24-path-to-completion-priority.md) |
 | Wave L1 | [sdd-l1-local-first](./2026-07-26-sdd-l1-local-first.md) |
 | Wave L2 | [sdd-l2-code-complete](./2026-07-26-sdd-l2-code-complete.md) |

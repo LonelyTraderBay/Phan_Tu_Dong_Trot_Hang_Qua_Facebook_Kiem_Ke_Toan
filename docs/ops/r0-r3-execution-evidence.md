@@ -11,7 +11,7 @@
 | R0.1 Migrations on remote staging | **GREEN** | Recreated staging `omni-commerce-staging` ref `tjsmpcgkeoglemptuymu` (old refs removed); `supabase db push` **29** migrations incl. resume `20260727220000` (E2 T2) + e-invoice `20260727230000_einvoice_http_sandbox_provider.sql` (E2 T5, 2026-07-25); `migration list` local=remote **29/29**; verified `public.resume_inbox_conversation` RPC | Prior staging/prod refs deleted |
 | R0.2 Always-on staging hosts | **BLOCKED** | **E5 Task 2 (2026-07-26 Re-probe R0.2):** `RENDER_API_KEY` still **ABSENT** (env + parent `.env*` + parent `.local-secrets/*` + GH secrets — presence probe only; no `rnd_` / apiKey hit). Free→Starter API upgrade **SKIPPED**. Latest GHA keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) `healthy_count=3/3` = **AMBER reachability only** (api ~43s / ai ~22s / web ~52s cold-start before HTTP 200 — free-tier sleep + keep-warm ≠ always-on). **Not GREEN.** Prior E4: [30182626561](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30182626561). Owner clicks: [Upgrade to always-on](./deploy-staging-render.md#upgrade-to-always-on-owner) · [E5 Task 2 section](#wave-e5-task-2--r02-render-always-on-re-probe-2026-07-26) | **BLOCKED (owner):** Billing payment + Free→Starter ×3; GREEN only with post-upgrade no-cold-start proof |
 | R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3** ([walkthrough](./p0-staging-walkthrough-12-1.md)): 2 PASS · 3 PASS (partial) · 2 BLOCKED (Meta); confirm GREEN after warehouse migration `20260727210000`; health 3/3; `pnpm test:isolation` 6 pass · 1 skip | Staging repeat + Meta OAuth/DM + knowledge reindex for GREEN |
-| R0.4 Meta App Review submit | **BLOCKED** | **E4 Task 3 (2026-07-26 Re-attempt R0.4):** Prep pack still complete. Parent `.env` / `.env.staging.local` (values never printed): `META_APP_ID` len=7 placeholderish; `META_APP_SECRET` len=7 placeholderish; `META_VERIFY_TOKEN` len=32 placeholderish=false (local only; hash-equal across both files); `META_REDIRECT_URI` = local `127.0.0.1` (not staging). Local legal/API curl **timeout ~15s**. GHA keep-warm [30182626561](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30182626561) `healthy_count=3/3` (web `/` HTTP 200) = AMBER host reachability only — **no direct `/legal/*` proof**. Webhook GET **SKIPPED**. **No Meta dashboard submit.** R0.2 still **BLOCKED** (webhook reliability prerequisite). · [E4 Task 3 section](#wave-e4-task-3--r04-meta-app-review-re-attempt-2026-07-26) · [prep pack](./p0-meta-app-review-submit.md) | **BLOCKED (owner):** real `META_*` on `omni-api-staging` + Meta dashboard submit; needs R0.2 always-on |
+| R0.4 Meta App Review submit | **BLOCKED** | **E5 Task 3 (2026-07-26 Re-probe R0.4):** Prep pack still complete. Parent `.env` / `.env.staging.local` (values never printed): `META_APP_ID` len=7 placeholderish; `META_APP_SECRET` len=7 placeholderish; `META_VERIFY_TOKEN` len=32 placeholderish=false (local only; hash-equal across both files); `META_REDIRECT_URI` = local `127.0.0.1` (not staging). Legal/webhook probes **SKIPPED** (creds not real — no Meta dashboard path). GHA keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) `healthy_count=3/3` = AMBER host reachability only — **no direct `/legal/*` proof**. **No Meta dashboard submit.** R0.2 still **BLOCKED** (webhook reliability prerequisite). · [E5 Task 3 section](#wave-e5-task-3--r04-meta-app-review-re-probe-2026-07-26) · [prep pack](./p0-meta-app-review-submit.md) | **BLOCKED (owner):** real `META_*` on `omni-api-staging` + Meta dashboard submit; needs R0.2 always-on |
 | R0.5 Scheduled QA | **GREEN** | [run 30139904845](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30139904845) — isolation + eval success (workflow_dispatch 2026-07-25) | — |
 
 ## R1 — Plan E paid/live
@@ -96,7 +96,7 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 | R0.1 | Migrations | **GREEN** | Task 5 / E2 T2+T5 | CI + staging `tjsmpcgkeoglemptuymu` (29 incl. resume `20260727220000` + http_sandbox `20260727230000`) |
 | R0.2 | Always-on staging | **BLOCKED** | E3 Task 2 | No `RENDER_API_KEY` / payment; keep-warm ≠ always-on; owner: Starter ×3 |
 | R0.3 | §12.1 walkthrough | **AMBER** | Task 3 (E0.3) | Local: 2 PASS · 3 partial · 2 BLOCKED (Meta); criterion 5 confirm PASS post-warehouse fix |
-| R0.4 | Meta App Review | **BLOCKED** | E4 Task 3 | Re-attempt R0.4: placeholders + no Meta login; prep pack refreshed; not Submitted |
+| R0.4 | Meta App Review | **BLOCKED** | E5 Task 3 | Re-probe R0.4: placeholders + no Meta login; prep pack refreshed; not Submitted |
 | R0.5 | Scheduled QA | **GREEN** | — (pre-done) | Actions run 30139904845 |
 
 **Gate R0 verdict: AMBER (not GREEN).** Engineering prep for Tasks 1–3 is complete; owner blockers remain.
@@ -484,3 +484,55 @@ From [deploy-staging-render.md § Upgrade to always-on (owner)](./deploy-staging
 | 6 | Post-upgrade external proof: stable HTTP 200 on api `/health`, ai `/health`, web `/` with **no** 30–90s cold-start after idle — then mark R0.2 **GREEN** |
 
 **Not claimed:** R0.2 GREEN · always-on · Starter plan on any of the three services.
+
+## Wave E5 Task 3 — R0.4 Meta App Review re-probe (2026-07-26)
+
+**SDD plan:** [2026-07-26-sdd-e5-owner-path.md](../superpowers/plans/2026-07-26-sdd-e5-owner-path.md) · **Branch:** `cursor/e5-owner-path` · **Attempt:** R0.4 re-probe
+
+### Verdict: **BLOCKED** (not Submitted / not Approved)
+
+Agent cannot log into Meta App Dashboard. Parent `META_APP_ID` / `META_APP_SECRET` remain placeholderish (len=7). R0.2 always-on remains **BLOCKED** (E5 Task 2) — webhook reliability prerequisite for App Review.
+
+### Probes (secret values never printed)
+
+| Source | Key | present | len | placeholderish |
+|--------|-----|---------|-----|----------------|
+| Parent `.env` | `META_APP_ID` | yes | 7 | **true** |
+| Parent `.env` | `META_APP_SECRET` | yes | 7 | **true** |
+| Parent `.env` | `META_VERIFY_TOKEN` | yes | 32 | **false** (local only — not proof on Render) |
+| Parent `.env` | `META_REDIRECT_URI` | yes | 48 | local `127.0.0.1` (≠ staging) |
+| Parent `.env.staging.local` | same four keys | same lens / same placeholderish flags; `VERIFY_TOKEN` hash-equal to `.env` | | |
+| `.env.example` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | yes | 24 / 28 / 37 | **true** (known placeholders) |
+| `render.yaml` | `META_APP_ID` / `SECRET` / `VERIFY_TOKEN` | `sync: false` | — | dashboard-only |
+| `render.yaml` | `META_REDIRECT_URI` | pinned staging callback | — | correct staging value |
+
+No credentials invented. No secret values printed or committed.
+
+### Public / reachability checks
+
+| Path | Result | Interpretation |
+|------|--------|----------------|
+| Legal URL / webhook GET | **SKIPPED** | Creds placeholderish — plan gate requires real Meta creds before public verify / submit |
+| GHA keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) | `healthy_count=3/3` (api/ai/web HTTP 200; web hits `/` only) | **AMBER** free-tier reachability only — not legal-page proof; not R0.2 GREEN |
+| R0.2 always-on | **BLOCKED** (E5 Task 2) | Webhook may cold-start during App Review |
+
+Prep pack status rows refreshed: [p0-meta-app-review-submit.md](./p0-meta-app-review-submit.md).
+
+### Owner next clicks (exact path from prep pack)
+
+Do **not** invent Meta credentials. Owner must:
+
+| # | Action |
+|---|--------|
+| 1 | Complete [R0.2 always-on](./deploy-staging-render.md#upgrade-to-always-on-owner) — `omni-api-staging` Starter **minimum** (webhook must not cold-start during review) |
+| 2 | Create/select Meta Business app → copy **App ID** + **App Secret** |
+| 3 | Render `omni-api-staging` env: set real `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` (8+ chars) — https://dashboard.render.com/web/srv-d9i2sjbeo5us7394purg |
+| 4 | Meta App → Webhooks: callback `https://omni-api-staging-cs2w.onrender.com/v1/webhooks/meta` + verify token + Page `messages` |
+| 5 | Meta App → Facebook Login: Valid OAuth Redirect URIs = `https://omni-web-staging.onrender.com/settings/channels/callback` |
+| 6 | Meta App → Settings → Basic: Privacy `…/legal/privacy` + Terms `…/legal/terms` |
+| 7 | Test Page + IG Professional + testers ([checklist §6](../meta-app-review-checklist.md#6-test-users--assets)) |
+| 8 | Screencast + use-case text ([checklist §2](../meta-app-review-checklist.md#2-permissions-to-request-phase-1)); permissions: `pages_show_list`, `pages_messaging`, `instagram_basic`, `instagram_manage_messages`, `pages_read_engagement` |
+| 9 | Submit App Review → Permissions and Features (Advanced Access) — **do not** switch app to Live until approved |
+| 10 | Update this evidence R0.4 with **Submitted at** date only (not Approved until Meta approves) |
+
+**Not claimed:** Submitted · Approved · R0.4 GREEN · webhook verify 200 · legal pages 200 from this agent host.

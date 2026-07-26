@@ -2,6 +2,9 @@
 
 Full local stack: Supabase (Docker) + API + Web + AI on this machine.
 
+**Port lock (anti-collision):** [`local-ports.md`](./local-ports.md) · SoT `config/local-ports.json`  
+Omni uses **4700 / 4701 / 4702 / 4788 / 54721+** — not the common `3000/3001/8000/54321` block.
+
 > **Default for coding / SDD (2026-07-26):** Local-first is the default development surface. Render staging payment / Starter and Meta App Review are **deferred** until owner wants to **claim CPC thương mại** (Gate R0 live) — see [L1 plan](../superpowers/plans/2026-07-26-sdd-l1-local-first.md) and [completion-step-by-step](../superpowers/plans/2026-07-25-completion-step-by-step.md).
 
 ## Prerequisites
@@ -17,18 +20,22 @@ npx supabase start
 npx supabase status -o env
 ```
 
-If port 54322 is busy, stop the other project first:
+If Omni Supabase ports (`54721`+) conflict, stop the other stack — do **not** change Omni ports ad-hoc; edit `config/local-ports.json` + `supabase/config.toml` together.
 
 ```powershell
-npx supabase stop --project-id api
+npx supabase stop --project-id omni-commerce
 npx supabase start
 ```
 
 ## Point apps at local Supabase
 
+```powershell
+pnpm run ports:sync
+```
+
 `.env`, `apps/web/.env.local`, `apps/ai/.env` must use:
 
-- `SUPABASE_URL=http://127.0.0.1:54321`
+- `SUPABASE_URL=http://127.0.0.1:54721` (locked)
 - local anon / service_role keys from `supabase status`
 
 ## Start / stop apps
@@ -39,22 +46,22 @@ pnpm run dev:local:stop
 ```
 
 `dev:local` starts **API + Web + AI + Inngest Dev Server** (separate process).  
-Inngest CLI: `npx --yes inngest-cli@latest dev -u http://127.0.0.1:3001/api/inngest`  
+Inngest CLI (locked): `npx --yes inngest-cli@latest dev -u http://127.0.0.1:4701/api/inngest -p 4788`  
 Skip one service: `scripts/dev-local.ps1 -NoInngest` (also `-NoApi` / `-NoWeb` / `-NoAi`).
 
 AI process gets `APP_ENV=local` and `EMBEDDINGS_ALLOW_STUB=1` when unset so stub embeddings work without Gemini.
 
-## URLs
+## URLs (locked — [local-ports.md](./local-ports.md))
 
 | Service | URL |
 |---------|-----|
-| Web | http://127.0.0.1:3000 |
-| API | http://127.0.0.1:3001/health |
-| AI | http://127.0.0.1:8000/health |
-| Inngest Dev UI | http://127.0.0.1:8288 |
-| Supabase API | http://127.0.0.1:54321 |
-| Studio | http://127.0.0.1:54323 |
-| Mailpit | http://127.0.0.1:54324 |
+| Web | http://127.0.0.1:4700 |
+| API | http://127.0.0.1:4701/health |
+| AI | http://127.0.0.1:4702/health |
+| Inngest Dev UI | http://127.0.0.1:4788 |
+| Supabase API | http://127.0.0.1:54721 |
+| Studio | http://127.0.0.1:54723 |
+| Mailpit | http://127.0.0.1:54724 |
 
 ### L1 Task 2 stack verify (2026-07-26)
 
@@ -153,15 +160,15 @@ One command proves the non-Meta happy path against a running local stack (no Pla
 **Prerequisites**
 
 1. Docker Desktop up; local Supabase (`npx supabase start`)
-2. `.env` at repo root (or worktree) with `SUPABASE_URL=http://127.0.0.1:54321` + local `SUPABASE_ANON_KEY` (optional `SUPABASE_SERVICE_ROLE_KEY` if signup needs admin confirm)
-3. Apps up: `pnpm run dev:local` — API must answer `GET http://127.0.0.1:3001/health` → `{"status":"ok"}` (script **fails clearly** if health is down)
+2. `.env` at repo root (or worktree) with `SUPABASE_URL=http://127.0.0.1:54721` + local `SUPABASE_ANON_KEY` (`pnpm run ports:sync`)
+3. Apps up: `pnpm run dev:local` — API must answer `GET http://127.0.0.1:4701/health` → `{"status":"ok"}` (script **fails clearly** if health is down)
 
 **Run**
 
 ```powershell
 pnpm run test:e2e:local
 # or: node scripts/local-e2e-smoke.mjs
-# optional: $env:API_BASE_URL = "http://127.0.0.1:3001"
+# optional: $env:API_BASE_URL = "http://127.0.0.1:4701"
 ```
 
 **Covers:** health → signup owner+cskh → `POST /v1/orgs` → invite create+accept → catalog product → inventory adjust → draft order → confirm → `GET /v1/orders/export?format=csv`.

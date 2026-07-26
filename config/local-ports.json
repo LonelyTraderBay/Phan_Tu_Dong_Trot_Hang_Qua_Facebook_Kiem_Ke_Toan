@@ -1,0 +1,30 @@
+{
+  "$schema_comment": "LOCKED local ports for Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan (omni-commerce). Do not reuse 3000/3001/8000/54321 — those collide with other projects on this machine.",
+  "projectId": "omni-commerce",
+  "host": "127.0.0.1",
+  "apps": {
+    "web": 4700,
+    "api": 4701,
+    "ai": 4702,
+    "inngest": 4788
+  },
+  "supabase": {
+    "api": 54721,
+    "db": 54722,
+    "studio": 54723,
+    "inbucket": 54724,
+    "analytics": 54727
+  },
+  "urls": {
+    "web": "http://127.0.0.1:4700",
+    "api": "http://127.0.0.1:4701",
+    "apiHealth": "http://127.0.0.1:4701/health",
+    "ai": "http://127.0.0.1:4702",
+    "aiHealth": "http://127.0.0.1:4702/health",
+    "inngest": "http://127.0.0.1:4788",
+    "inngestServe": "http://127.0.0.1:4701/api/inngest",
+    "supabase": "http://127.0.0.1:54721",
+    "studio": "http://127.0.0.1:54723",
+    "mailpit": "http://127.0.0.1:54724"
+  }
+}

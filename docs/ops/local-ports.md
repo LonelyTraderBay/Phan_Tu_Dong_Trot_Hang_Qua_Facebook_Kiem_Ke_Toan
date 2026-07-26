@@ -1,0 +1,54 @@
+# Local ports — Omni Commerce (locked)
+
+**SoT:** [`config/local-ports.json`](../../config/local-ports.json)
+
+Dải cổng **cố định** cho repo `Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan` để không trùng dự án khác trên cùng máy (Next mặc định `:3000`, FastAPI `:8000`, Supabase mặc định `:54321`, …).
+
+## Bảng cổng
+
+| Vai trò | Cổng | URL |
+|---------|-----:|-----|
+| Web (Next) | **4700** | http://127.0.0.1:4700 |
+| API (Nest) | **4701** | http://127.0.0.1:4701 |
+| AI (FastAPI) | **4702** | http://127.0.0.1:4702 |
+| Inngest Dev UI | **4788** | http://127.0.0.1:4788 |
+| Supabase API (Kong) | **54721** | http://127.0.0.1:54721 |
+| Supabase DB | **54722** | (Postgres) |
+| Studio | **54723** | http://127.0.0.1:54723 |
+| Mailpit | **54724** | http://127.0.0.1:54724 |
+| Analytics | **54727** | — |
+
+## Đồng bộ env
+
+```powershell
+pnpm run ports:sync
+```
+
+Cập nhật `PORT` / `*_URL` trong `.env`, `apps/web/.env.local`, `apps/ai/.env`, `.env.example` theo JSON (không đụng secret khác).
+
+## Khởi động / dừng
+
+```powershell
+# Lần đầu hoặc sau khi đổi cổng Supabase:
+npx supabase stop
+npx supabase start
+
+pnpm run ports:sync
+pnpm run dev:local:stop   # dọn cổng Omni + PID cũ
+pnpm run dev:local        # fail nếu cổng app bị chiếm
+```
+
+`dev:local` đọc `config/local-ports.json`, set `PORT` / URL cho process con, Inngest `-p 4788`.  
+`dev:local:stop` kill theo PID file **và** theo cổng locked (tránh Inngest orphan).
+
+## Đổi cổng
+
+1. Sửa `config/local-ports.json`
+2. Sửa `supabase/config.toml` (`[api]`/`[db]`/`[studio]`/`[inbucket]`/`[analytics]`) cho khớp
+3. Sửa `apps/web` `package.json` script `dev -p …` cho khớp (fallback khi không qua `dev:local`)
+4. `pnpm run ports:sync`
+5. `npx supabase stop` → `npx supabase start` → `pnpm run dev:local`
+
+## CI
+
+Isolation workflow dùng `SUPABASE_URL=http://127.0.0.1:54721` (khớp `config.toml` khi `supabase start` trên runner).

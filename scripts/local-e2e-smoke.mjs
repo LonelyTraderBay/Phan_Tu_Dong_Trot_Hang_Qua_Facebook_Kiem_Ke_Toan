@@ -4,7 +4,7 @@
  * Happy path: health → signup → org → invite accept → catalog → stock →
  * draft → confirm → export CSV.
  *
- * Prerequisites: Docker Supabase + `pnpm run dev:local` (API :3001).
+ * Prerequisites: Docker Supabase + `pnpm run dev:local` (API from config/local-ports.json).
  * Env: SUPABASE_URL + SUPABASE_ANON_KEY (parent `.env` or process env).
  */
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
@@ -16,10 +16,24 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const PARENT = resolve(ROOT, '../..');
 
-const API_BASE = (process.env.API_BASE_URL ?? 'http://127.0.0.1:3001').replace(
-  /\/$/,
-  '',
-);
+function loadLockedApiBase() {
+  const portsPath = resolve(ROOT, 'config/local-ports.json');
+  if (existsSync(portsPath)) {
+    try {
+      const ports = JSON.parse(readFileSync(portsPath, 'utf8'));
+      if (ports?.urls?.api) return String(ports.urls.api).replace(/\/$/, '');
+    } catch {
+      /* fall through */
+    }
+  }
+  return 'http://127.0.0.1:4701';
+}
+
+const API_BASE = (
+  process.env.API_BASE_URL ??
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  loadLockedApiBase()
+).replace(/\/$/, '');
 const stamp = Date.now().toString(36);
 const suffix = randomBytes(3).toString('hex');
 

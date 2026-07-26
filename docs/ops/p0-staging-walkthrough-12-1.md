@@ -31,7 +31,7 @@
 |-------|-------|
 | Date | 2026-07-26 |
 | Operator | L3-task-2 (A1 local walkthrough smoke post-L2) |
-| Commit SHA | _(this commit on `cursor/l3-gate-a`)_ |
+| Commit SHA | `487409d` on `cursor/l3-gate-a` (L3 Task 2 smoke) |
 | Environment | **Local** stack (`docs/ops/local-host.md`); Docker Supabase + api/web/ai + Inngest on `127.0.0.1`; staging §12.1 repeat deferred until CPC claim / R0.3b |
 | Blockers | Meta OAuth/DM (criteria 2, 4) — **BLOCKED OK** locally; staging always-on + owner `META_*` for full GREEN (CPC claim only). Chunks = eng stub (not Gemini quality) |
 

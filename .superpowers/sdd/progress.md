@@ -5,13 +5,13 @@
 **Worktree:** `.worktrees/e5-sdd`  
 **Base:** `main` @ `9e5976f` (PR #24 merge)  
 **PR:** [#25](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/25) (draft)  
-**Wave status:** **IN PROGRESS** (Task 1 DONE — await T2–T5)
+**Wave status:** **IN PROGRESS** (Task 1–2 DONE — await T3–T5)
 
 | Task | Title | Status | Notes |
 |------|-------|--------|-------|
 | 0 | Write SDD plan | **DONE** | Plan committed this wave |
 | 1 | Open E5 branch + plan + draft PR | **DONE** | Worktree `.worktrees/e5-sdd`; draft [PR #25](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/25); SHA `538e436` |
-| 2 | Re-probe R0.2 Render always-on | **PENDING** | Presence `RENDER_API_KEY` / keep-warm AMBER only; BLOCKED or GREEN |
+| 2 | Re-probe R0.2 Render always-on | **BLOCKED** | `RENDER_API_KEY` ABSENT; Free→Starter SKIPPED; keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) 3/3 = AMBER ≠ GREEN; owner clicks [deploy-staging-render](../../docs/ops/deploy-staging-render.md#upgrade-to-always-on-owner) |
 | 3 | Re-probe R0.4 Meta App Review | **PENDING** | `META_*` placeholder check; BLOCKED or Submitted |
 | 4 | Eng parallel I5 subprocessors notify process | **PENDING** | Runbook/template under docs/; I5 eng ready + legal AMBER — **not** full GREEN |
 | 5 | E5 gate docs + STOP | **PENDING** | Update path-to-100 / completion-step-by-step; eng cannot hit 100% without owner R0.2+R0.4 |
@@ -27,8 +27,8 @@
 
 ## Controllers
 
-- Wave E5 **IN PROGRESS** — Task 1 **DONE**; next: Task 2 R0.2 re-probe
-- Owner critical path (unchanged until re-probe): (1) R0.2 payment → Starter ×3; (2) R0.4 real META_* + App Review submit
+- Wave E5 **IN PROGRESS** — Task 1 **DONE**; Task 2 **BLOCKED** (R0.2); next: Task 3 R0.4 re-probe
+- Owner critical path (unchanged): (1) R0.2 payment → Starter ×3; (2) R0.4 real META_* + App Review submit
 - Prior: Wave E4 CLOSED / STOP @ `9e5976f` (PR #24); R0.2/R0.4 still BLOCKED; I8 dry-run AMBER
 - Honest % baseline (post-E4): eng ~95%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **NOT 100%**
 - Further eng SDD **cannot** reach 100% without owner R0.2 + R0.4

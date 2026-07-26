@@ -1,10 +1,10 @@
 # Kế hoạch chi tiết còn lại — từng bước theo thứ tự ưu tiên tới hoàn thiện
 
-**Date:** 2026-07-25 (cập nhật 2026-07-26 — **local-first** / Wave L1)  
-**Baseline:** `main` @ `51f5370`  
-**SoT tổng:** [path-to-completion-priority](./2026-07-24-path-to-completion-priority.md) · [path-to-100](./2026-07-25-path-to-100-percent.md) · [cpc-checklist](./cpc-checklist.md) · [L1 plan](./2026-07-26-sdd-l1-local-first.md)
+**Date:** 2026-07-25 (cập nhật 2026-07-26 — **L2 code-complete local**; L1 CLOSED)  
+**Baseline:** `main` @ `5fea338`  
+**SoT tổng:** [path-to-completion-priority](./2026-07-24-path-to-completion-priority.md) · [path-to-100](./2026-07-25-path-to-100-percent.md) · [cpc-checklist](./cpc-checklist.md) · [L1 plan](./2026-07-26-sdd-l1-local-first.md) · [L2 plan](./2026-07-26-sdd-l2-code-complete.md)
 
-> Engineering path **A→I scaffolding** đã trên `main`. **NOW = Pha Local** (Docker / `dev:local`). Render + Meta staging chỉ khi **claim CPC thương mại**. Không làm Epoch 5 trước khi xong E100 (trừ khi chủ đích thay đổi).
+> Engineering path **A→I scaffolding** đã trên `main`. **NOW = Wave L2 code-complete local**. Render + Meta staging chỉ khi **claim CPC thương mại**. Không làm Epoch 5 trước khi xong E100 (trừ khi chủ đích thay đổi).
 
 ---
 
@@ -21,16 +21,17 @@ DONE     Pilot A–D
 DONE     F + G + H code  → CPC engineering
 AMBER    E paid/live + P0 live + F/G/H live ambers
 DONE     Wave L1 local-first eng (stack · stub · E0.4 notes · gate)
-▶ NEXT   (optional) tiếp tục eng local  OR  (khi claim CPC) Wave R0 → R2
+▶ NEXT   Wave L2 code-complete local (invites · Inngest · advisor · CI)
+OR       (khi claim CPC) Wave R0 → R2
 THEN     Wave R3        Plan I live/compliance → claim E100
 OPTIONAL Epoch 5
 ```
 
-**Quy tắc:** Local-first · Không claim CPC trước R0–R2 · Không claim E100 trước I1–I8 · Render payment **không** “tiếp theo ngay”.
+**Quy tắc:** Code-complete local trước · Không claim CPC trước R0–R2 · Không claim E100 trước I1–I8 · Render payment **không** “tiếp theo ngay”.
 
 ---
 
-## Wave L1 / E0 leftover — Local eng (**NOW**)
+## Wave L1 / E0 leftover — Local eng (**CLOSED**)
 
 | Ưu tiên | Bước | Việc | Xong khi |
 |--------:|------|------|----------|
@@ -38,7 +39,18 @@ OPTIONAL Epoch 5
 | **E0.3** | Walkthrough local | Non-Meta §12.1 refresh | Meta rows BLOCKED OK |
 | **E0.4** | Stub notes | Local-phase: `undecided` OK; Meta-only often intends `AMBER_OK` (no forged signature); **must** REQUIRED/AMBER_OK trước CPC | [cpc-checklist § Stub](./cpc-checklist.md#stub-decisions-owner) |
 
-**Playbook:** [local-host.md](../../ops/local-host.md) · [L1 SDD](./2026-07-26-sdd-l1-local-first.md)
+## Wave L2 — Code-complete local (**NOW**)
+
+| Ưu tiên | Bước | Việc | Xong khi |
+|--------:|------|------|----------|
+| **L2.T2** | Invites | List + accept + raw token once | Multi-user local loop |
+| **L2.T3** | Inngest | Bundle into `dev:local` + stub chunks smoke | Smoke proven/documented |
+| **L2.T4** | Advisor / Zalo | Real aggregates; runbook drift refresh | No hardcoded stub notes blocking |
+| **L2.T5** | Tooling | CI Node 22 + L2 gate | Gate honest; CPC deferred |
+
+Chi tiết: [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-complete.md).
+
+**Playbook:** [local-host.md](../../ops/local-host.md) · [L1 SDD](./2026-07-26-sdd-l1-local-first.md) · [L2 SDD](./2026-07-26-sdd-l2-code-complete.md)
 
 ---
 
@@ -175,6 +187,7 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 | R0.4 Meta App Review | **BLOCKED / deferred** | Khi claim CPC |
 | E2–E5 eng | **CLOSED** | PR #22–#25; CPC/E100 vẫn không 100% |
 | Wave L1 local-first | **CLOSED** | Tasks 1–5 DONE (`2026-07-26`); eng local advanced; CPC claim deferred — [L1 gate](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred) |
+| Wave L2 code-complete local | **IN PROGRESS** | Plan + invites loop → Inngest → advisor → CI/gate — [L2 plan](./2026-07-26-sdd-l2-code-complete.md) |
 | R1–R2 live | **AMBER** | Billing / carrier / COD live — khi claim CPC |
 | R3 E100 | **BLOCKED** | Sau CPC thương mại |
 
@@ -189,13 +202,13 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 
 ## Tóm tắt một trang — làm gì **tiếp theo ngay**
 
-Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md) · **thực thi:** [completion-step-by-step](./2026-07-25-completion-step-by-step.md) · **L1:** [sdd-l1-local-first](./2026-07-26-sdd-l1-local-first.md) · **L1 gate:** [evidence § Wave L1](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred)
+Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md) · **thực thi:** [completion-step-by-step](./2026-07-25-completion-step-by-step.md) · **L2:** [sdd-l2-code-complete](./2026-07-26-sdd-l2-code-complete.md) · **L1 gate:** [evidence § Wave L1](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred)
 
 **~% thật:** eng ~96%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
 
 ```
 DONE    Wave L1 (SoT · stack · stub embeddings · E0.4 notes · gate)
-▶ NOW   (optional) tiếp tục eng local trên Docker + dev:local
+▶ NOW   Wave L2 code-complete local (invites · Inngest · advisor · CI)
 OR      (khi sẵn sàng claim CPC) Owner: R0.2 payment → Starter ×3
 THEN    (khi claim CPC) Owner: R0.4 real META_* + App Review submit
 THEN    R0.3b staging → Gate R0 → E0.4 decide → R1 → R2 → CPC → R3 → E100 → TỔNG 100%
@@ -211,6 +224,7 @@ Chi tiết Bước: [2026-07-25-completion-step-by-step.md](./2026-07-25-complet
 |----------|------|
 | SoT ưu tiên gốc | [path-to-completion-priority](./2026-07-24-path-to-completion-priority.md) |
 | Wave L1 | [sdd-l1-local-first](./2026-07-26-sdd-l1-local-first.md) |
+| Wave L2 | [sdd-l2-code-complete](./2026-07-26-sdd-l2-code-complete.md) |
 | CPC checklist | [cpc-checklist](./cpc-checklist.md) |
 | Plan E evidence | [plan-e-dod-evidence](./plan-e-dod-evidence.md) |
 | Plan I playbook | [plan-i-priority-execution](./2026-07-24-plan-i-priority-execution.md) |

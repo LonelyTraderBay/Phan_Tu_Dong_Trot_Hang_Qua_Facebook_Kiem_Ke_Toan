@@ -1,7 +1,7 @@
 # Kế hoạch chi tiết — từng bước tới **100%** hoàn thiện
 
-**Date:** 2026-07-25 (cập nhật 2026-07-26 — **local-first** / Wave L1)  
-**SoT song song:** [remaining-completion-priority](./2026-07-25-remaining-completion-priority.md) · [cpc-checklist](./cpc-checklist.md) · [L1 plan](./2026-07-26-sdd-l1-local-first.md)  
+**Date:** 2026-07-25 (cập nhật 2026-07-26 — **L2 code-complete local**; L1 CLOSED)  
+**SoT song song:** [remaining-completion-priority](./2026-07-25-remaining-completion-priority.md) · [cpc-checklist](./cpc-checklist.md) · [L1 plan](./2026-07-26-sdd-l1-local-first.md) · [L2 plan](./2026-07-26-sdd-l2-code-complete.md)  
 **Checklist thực thi từng bước (owner+eng):** [completion-step-by-step](./2026-07-25-completion-step-by-step.md)
 
 ## Định nghĩa 100%
@@ -142,7 +142,7 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 | Tuần | Focus | % đích gần |
 |-----:|-------|------------|
-| **Ngay** | **Pha Local:** E0.2 · E0.4 notes · walkthrough non-Meta (Wave L1) | eng↑ local |
+| **Ngay** | **Wave L2:** code-complete local (invites · Inngest · advisor · CI) | eng↑ local |
 | **Khi claim CPC** | R0.2 Render Starter · R0.4 META_* · R0.3b staging | Gate R0 |
 | **+1–2** | R1.0–R1.6 + R3.0 kick-off vendor | Gate R1 |
 | **+2–3** | R2.1–R2.3 → R2.7 | **★ CPC 100%** |
@@ -162,12 +162,12 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 ## Việc **tiếp theo ngay** (thứ tự cứng)
 
-**Post-L1 (2026-07-26):** Wave **L1 CLOSED** — local-first eng advanced ([gate](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred)). ~% thật: eng ~96%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%.
+**Wave L2 (2026-07-26):** **NOW = L2 code-complete local** ([plan](./2026-07-26-sdd-l2-code-complete.md)). L1 CLOSED. CPC claim **deferred**. ~% thật: eng ~96%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%.
 
 **Thực thi chi tiết:** [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md).
 
 ```
-▶ NOW   (optional) tiếp tục eng local trên Docker + dev:local — không cần Render
+▶ NOW   Wave L2: code-complete local (invites · Inngest · advisor · CI) — không cần Render
 OR      (khi sẵn sàng claim CPC) Owner: R0.2 Render Starter ×3
 THEN    (khi claim CPC) Owner: R0.4 real META_* + App Review submit
 THEN    R0.3b staging §12.1 → Gate R0
@@ -176,7 +176,7 @@ THEN    R1 paid → R2.1–2.3 → R2.7 → CPC thương mại
 THEN    R3 I1–I8 → E100 → TỔNG 100%
 ```
 
-CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại — eng local không thay Gate R0. L1 gate: [r0-r3-execution-evidence § Wave L1](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred). Prior E5: [§ Wave E5](../../ops/r0-r3-execution-evidence.md#wave-e5-sdd-gate-2026-07-26--eng-closed--owner-stop).
+CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại — eng local không thay Gate R0. L2 plan: [sdd-l2-code-complete](./2026-07-26-sdd-l2-code-complete.md). L1 gate: [evidence § Wave L1](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred).
 
 ---
 
@@ -186,6 +186,7 @@ CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại — eng local 
 |----------|------|
 | **Checklist thực thi từng bước** | [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md) |
 | Wave L1 local-first | [2026-07-26-sdd-l1-local-first.md](./2026-07-26-sdd-l1-local-first.md) |
+| Wave L2 code-complete local | [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-complete.md) |
 | SoT R0–R3 chi tiết | [2026-07-25-remaining-completion-priority.md](./2026-07-25-remaining-completion-priority.md) |
 | CPC checklist | [cpc-checklist.md](./cpc-checklist.md) |
 | Evidence live | `docs/ops/r0-r3-execution-evidence.md` |

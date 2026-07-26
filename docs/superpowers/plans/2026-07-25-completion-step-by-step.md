@@ -1,8 +1,8 @@
 # Kế hoạch thực thi từng bước — hoàn thiện tới 100%
 
-**Date:** 2026-07-25 (cập nhật 2026-07-26 — **local-first** / Wave L1; E5 CLOSED PR #25)  
-**Baseline:** `main` @ `51f5370` (E5 gate / PR #25 MERGED) · Wave L1 `cursor/l1-local-first` — Pha Local trước; Render/Meta **không** “tiếp theo ngay”  
-**SoT liên quan:** [path-to-100](./2026-07-25-path-to-100-percent.md) · [remaining-priority](./2026-07-25-remaining-completion-priority.md) · [L1 plan](./2026-07-26-sdd-l1-local-first.md) · [cpc-checklist](./cpc-checklist.md) · [evidence](../../ops/r0-r3-execution-evidence.md)
+**Date:** 2026-07-25 (cập nhật 2026-07-26 — **L2 code-complete local**; L1 CLOSED; E5 CLOSED PR #25)  
+**Baseline:** `main` @ `5fea338` (L1 / PR #26 MERGED) · Wave L2 `cursor/l2-code-complete` — code-complete local trước; Render/Meta **không** “tiếp theo ngay”  
+**SoT liên quan:** [path-to-100](./2026-07-25-path-to-100-percent.md) · [remaining-priority](./2026-07-25-remaining-completion-priority.md) · [L1 plan](./2026-07-26-sdd-l1-local-first.md) · [L2 plan](./2026-07-26-sdd-l2-code-complete.md) · [cpc-checklist](./cpc-checklist.md) · [evidence](../../ops/r0-r3-execution-evidence.md)
 
 ---
 
@@ -52,9 +52,9 @@ TỔNG 100%  =  CPC thương mại GREEN  +  E100 GREEN
 ## 2. Bản đồ ưu tiên (thứ tự cứng)
 
 ```
-▶ NOW = Post-L1 (local eng optional · CPC claim deferred)
-    · Wave L1 CLOSED: SoT · stack PASS · stub embeddings · E0.4 notes · gate
-    · Tiếp tục feature/polish local trên Docker + dev:local (không cần Render)
+▶ NOW = Wave L2 (code-complete local · CPC claim deferred)
+    · L1 CLOSED · L2: invites loop · Inngest in dev:local · advisor aggregates · CI Node 22
+    · Finish & harden eng trên Docker + dev:local (không cần Render)
 
 ── Pha CPC claim (chỉ khi muốn claim CPC thương mại) — KHÔNG “tiếp theo ngay” ──
   BƯỚC 1–2   Owner: R0.2 Render Starter ×3
@@ -67,7 +67,7 @@ TỔNG 100%  =  CPC thương mại GREEN  +  E100 GREEN
   BƯỚC 17–25 Cả hai: R3 I1–I8 → ★ E100 100% → ★ TỔNG 100%
 ```
 
-**Playbook local:** [local-host.md](../../ops/local-host.md) · [L1 SDD](./2026-07-26-sdd-l1-local-first.md)
+**Playbook local:** [local-host.md](../../ops/local-host.md) · [L1 SDD](./2026-07-26-sdd-l1-local-first.md) · [L2 SDD](./2026-07-26-sdd-l2-code-complete.md)
 
 ---
 
@@ -84,6 +84,18 @@ Mỗi bước: **Ai** · **Làm gì** · **Playbook** · **Xong khi** · **Ghi e
 | L1.T3 / E0.2 | `GEMINI_API_KEY` → chunks > 0 **hoặc** stub embeddings khi key trống | Eng | **DONE** stub local path; **không** claim live LLM quality |
 | L1.T4 / E0.4 | Ghi local-phase notes: R2.4–R2.6 **có thể** `undecided` khi eng local; khuyến nghị intent `AMBER_OK` Meta-only (không invent chữ ký) | Eng+Owner note | **DONE** [cpc-checklist § Stub](./cpc-checklist.md#stub-decisions-owner); **phải** `REQUIRED`/`AMBER_OK` trước CPC claim |
 | L1.T5 | Gate L1 | Eng | **DONE / CLOSED** — eng local advanced; CPC deferred |
+
+### Pha Local — Code-complete (Wave L2 — **NOW**)
+
+| Ưu tiên | Việc | Ai | Xong khi |
+|--------:|------|-----|----------|
+| L2.T1 | Plan + SoT code-first + ledger | Eng | Plan + “tiếp theo ngay” = L2; CPC deferred |
+| L2.T2 | Invite list + accept loop (raw token once) | Eng | Create → list → accept → membership local |
+| L2.T3 | Inngest in `dev:local` + knowledge_chunks smoke (stub) | Eng | Smoke path documented/proven |
+| L2.T4 | Advisor real aggregates + Zalo runbook refresh | Eng | No hardcoded stub notes blocking local |
+| L2.T5 | CI Node 22 + L2 gate | Eng | Gate honest; CPC still deferred |
+
+Chi tiết: [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-complete.md).
 
 ---
 
@@ -325,7 +337,7 @@ Mỗi bước: **Ai** · **Làm gì** · **Playbook** · **Xong khi** · **Ghi e
 
 | Tuần | Focus | Output / % |
 |-----:|-------|------------|
-| **Ngay (Tuần 0)** | **Pha Local:** E0.2 · E0.4 notes · walkthrough non-Meta · Wave L1 | Eng local↑ |
+| **Ngay (Tuần 0)** | **Wave L2:** code-complete local (invites · Inngest · advisor · CI) | Eng local↑ |
 | **Khi claim CPC** | Bước 1–2 Render Starter; Bước 3–4 Meta | Mở R0.2 / R0.4 |
 | **+1** | Bước 4 submit + Bước 5 walkthrough staging | **★ Gate R0** |
 | **+1–2** | Bước 6–12 R1 + R3.0 vendor kick-off | **★ Gate R1** |
@@ -407,3 +419,4 @@ Sau L1: tiếp tục local eng **hoặc** owner mở Render/Meta khi muốn clai
 | Plan I | [2026-07-24-plan-i-priority-execution.md](./2026-07-24-plan-i-priority-execution.md) |
 | Local host | [local-host.md](../../ops/local-host.md) |
 | Wave L1 (local-first) | [2026-07-26-sdd-l1-local-first.md](./2026-07-26-sdd-l1-local-first.md) |
+| Wave L2 (code-complete local) | [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-complete.md) |

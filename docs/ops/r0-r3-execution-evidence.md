@@ -639,3 +639,19 @@ Do **not** invent Meta credentials. Owner must:
 | **R3 → E100** | After CPC thương mại |
 
 **Controller STOP (L1).** Wave L1 CLOSED. Continue later local eng waves **or** wait until owner starts CPC claim path. Do not invent Meta/Render credentials. Do not claim CPC / E100 / tổng 100%.
+
+## Wave L2 progress ledger (2026-07-26) — code-complete local; commercial deferred
+
+**SDD plan:** [2026-07-26-sdd-l2-code-complete.md](../superpowers/plans/2026-07-26-sdd-l2-code-complete.md) · **Branch:** `cursor/l2-code-complete` · **Worktree:** `.worktrees/l2-code` · **Base:** `main` @ `5fea338` (PR #26 MERGED)
+
+| Task | Status | Evidence |
+|------|--------|----------|
+| **T1** Plan + SoT code-first + ledger | **GREEN** | Plan `2026-07-26-sdd-l2-code-complete.md`; path-to-100 / completion-step-by-step / remaining “tiếp theo ngay” = **NOW = L2 code-complete local**; CPC claim deferred |
+| **T2** Invite list + accept loop | **PENDING** | — |
+| **T3** Inngest in `dev:local` + chunks smoke | **PENDING** | — |
+| **T4** Advisor aggregates + Zalo runbook | **PENDING** | — |
+| **T5** CI Node 22 + L2 gate | **PENDING** | — |
+
+**Constraints (active):** No Render payment · Meta may stay BLOCKED · No CPC / E100 / tổng 100% claim.
+
+**Next:** Task 2 — invite list + accept (P0).

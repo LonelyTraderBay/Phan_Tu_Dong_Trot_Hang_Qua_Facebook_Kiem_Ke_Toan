@@ -37,7 +37,7 @@ const API_BASE = (
 const stamp = Date.now().toString(36);
 const suffix = randomBytes(3).toString('hex');
 
-function loadEnvFile(path) {
+function loadEnvFile(path, { overwrite = false } = {}) {
   if (!existsSync(path)) return;
   for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
     const trimmed = line.trim();
@@ -52,17 +52,30 @@ function loadEnvFile(path) {
     ) {
       val = val.slice(1, -1);
     }
-    if (process.env[key] === undefined) process.env[key] = val;
+    if (overwrite || process.env[key] === undefined) process.env[key] = val;
   }
 }
 
-for (const path of [
-  resolve(ROOT, '.env'),
-  resolve(PARENT, '.env'),
-  resolve(ROOT, 'apps/api/.env'),
-]) {
+function loadLockedSupabaseBase() {
+  const portsPath = resolve(ROOT, 'config/local-ports.json');
+  if (existsSync(portsPath)) {
+    try {
+      const ports = JSON.parse(readFileSync(portsPath, 'utf8'));
+      if (ports?.urls?.supabase) return String(ports.urls.supabase).replace(/\/$/, '');
+    } catch {
+      /* fall through */
+    }
+  }
+  return '';
+}
+
+// Repo `.env` (ports:sync) wins over stale shell SUPABASE_URL (e.g. legacy :54321).
+loadEnvFile(resolve(ROOT, '.env'), { overwrite: true });
+for (const path of [resolve(PARENT, '.env'), resolve(ROOT, 'apps/api/.env')]) {
   loadEnvFile(path);
 }
+const lockedSupabase = loadLockedSupabaseBase();
+if (lockedSupabase) process.env.SUPABASE_URL = lockedSupabase;
 
 const SUPABASE_URL = (process.env.SUPABASE_URL ?? '').replace(/\/$/, '');
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
@@ -198,7 +211,7 @@ async function authSignIn(email, password) {
 }
 
 async function main() {
-  console.log(`local-e2e-smoke → API ${API_BASE}`);
+  console.log(`local-e2e-smoke → API ${API_BASE} · Supabase ${SUPABASE_URL}`);
 
   let health;
   try {

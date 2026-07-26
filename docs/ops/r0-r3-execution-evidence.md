@@ -745,3 +745,53 @@ Do **not** invent Meta credentials. Owner must:
 | **CPC / E100** | Still **deferred** — do not claim 100% |
 
 **Controller STOP (L3).** Wave L3 **CLOSED**. Progress **DONE**. **Tiếp theo ngay** = optional polish **OR** Pha B when owner wants commercial. Do not invent Meta/Render credentials. Do not claim CPC / E100 / tổng 100%.
+
+## Wave P0 / Gate A re-verify 2026-07-27
+
+**SDD plan:** [2026-07-27-sdd-p0-post-audit.md](../superpowers/plans/2026-07-27-sdd-p0-post-audit.md) · **Branch:** `cursor/p0-post-audit` · **PR:** [#31](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/31) · **SoT ports:** `config/local-ports.json` → web **4700** · api **4701** · ai **4702** · inngest **4788** · supabase **54721**
+
+**Date:** 2026-07-27 · **Pre-commit HEAD:** `527c1e7` (evidence commit SHA recorded in plan Task 2 after push)
+
+### Stack health (locked ports)
+
+| URL | Result |
+|-----|--------|
+| `http://127.0.0.1:4700/` | **200** |
+| `http://127.0.0.1:4701/health` | **200** `{"status":"ok"}` |
+| `http://127.0.0.1:4702/health` | **200** `{"status":"ok"}` |
+| `http://127.0.0.1:54721/auth/v1/health` | **200** (GoTrue) after `npx supabase stop` + `start` on locked ports |
+
+**Ops note (port lock):** Before re-bind, Docker Kong for `omni-commerce` was still on legacy `:54321` while `config.toml` / status reported `:54721`. Host process **AgentsRoom.exe** held `127.0.0.1:54721` (404 on auth) — stopped to free SoT port, then Supabase Kong rebound `0.0.0.0:54721`. Stale shell `SUPABASE_URL=http://127.0.0.1:54321` overrode repo `.env` in e2e — fixed in `scripts/local-e2e-smoke.mjs` (prefer repo `.env` + `local-ports.json`).
+
+### Gate A commands
+
+| Command | Result |
+|---------|--------|
+| `pnpm --filter @omni/api test` | **GREEN** — 50 files · **185** tests passed |
+| `uv run pytest` (`apps/ai`) | **GREEN** — **37** passed (2 deprecation warnings) |
+| `pnpm test:isolation` | **GREEN** — 3 files · **8** passed · **0** skipped |
+| `pnpm test:e2e:local` | **GREEN** — health→auth→org→invite→catalog→stock→draft→confirm→export CSV (API `:4701` · Supabase `:54721`) |
+| `pnpm lint` | **GREEN** — turbo 5/5 successful (4 pkgs lint + authz-types build) |
+| `pnpm typecheck` | **GREEN** — turbo 5/5 successful |
+
+### Gate A checklist (re-verify)
+
+| Checklist | Status |
+|-----------|--------|
+| API unit tests | **YES** — 185/185 |
+| AI pytest | **YES** — 37/37 |
+| Isolation (**0 skip**) | **YES** — 8/8 |
+| Local e2e smoke | **YES** |
+| lint / typecheck | **YES** |
+| Meta / Zalo / e-invoice live | **BLOCKED OK** — not required for Gate A / Wave P0.1 |
+| CPC / E100 / tổng 100% | **NOT claimed** |
+
+**P0.1 Gate A regression = GREEN** on locked ports. Meta still **BLOCKED OK**. CPC thương mại / E100 / tổng intended remain **not 100%**.
+
+| Blocker / next | When |
+|----------------|------|
+| **Next (Wave P0)** | Task 3 docs ports drift · Task 4 optional A6/A7 + Gate P0 close |
+| **Pha B** | Owner-only — Render / Meta commercial |
+| **AgentsRoom vs :54721** | Keep AgentsRoom off `:54721` when running Omni local Supabase |
+
+**Controller STOP (P0.1).** Regression evidence recorded. Do not claim CPC / E100 / tổng 100%. Do not start Pha B without owner.

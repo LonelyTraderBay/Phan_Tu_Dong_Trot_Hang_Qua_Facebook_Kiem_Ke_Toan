@@ -175,12 +175,12 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 
 ## Tóm tắt một trang — làm gì **tiếp theo ngay**
 
-Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md)
+Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md) · **thực thi từng bước:** [completion-step-by-step](./2026-07-25-completion-step-by-step.md)
 
 **~% thật:** eng ~95%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
 
 ```
-DONE   E0+E1+E2 eng (PR #22 MERGED e45bdc6); E3 eng CLOSED (PR #23); SBOM enforce I7 eng GREEN/AMBER
+DONE   E0+E1+E2+E3 eng (PR #22/#23 MERGED); SBOM I7 eng GREEN/AMBER; staging 29/29
 ▶ STOP Owner: R0.2 payment → Starter ×3
 ▶ STOP Owner: R0.4 real META_* + App Review submit
 THEN   R0.3b staging §12.1 → Gate R0
@@ -189,6 +189,7 @@ THEN   R2.1–2.3 live → R2.7 → CPC thương mại
 THEN   R3 I1–I8 → E100 → TỔNG 100%
 ```
 
+Chi tiết Bước 1→26: [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md).  
 **Eng SDD STOP** until owner unblocks. Wave E3 gate: [r0-r3-execution-evidence § E3](../../ops/r0-r3-execution-evidence.md#wave-e3-sdd-gate-2026-07-25--eng-closed--owner-stop).
 
 ---

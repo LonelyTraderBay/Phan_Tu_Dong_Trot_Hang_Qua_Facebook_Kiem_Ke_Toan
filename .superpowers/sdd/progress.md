@@ -1,19 +1,19 @@
-# SDD Progress Ledger — Wave E3 (R0 owner path + eng parallel)
+# SDD Progress Ledger — Wave E4 (owner path re-attempt + eng parallel)
 
-**Plan:** `docs/superpowers/plans/2026-07-25-sdd-e3-r0-owner-path.md`  
-**Branch:** `cursor/e3-r0-owner-path`  
-**Worktree:** `.worktrees/e3-sdd`  
-**Base:** `main` @ `e45bdc6` (PR #22 merge)  
-**Wave status:** **CLOSED / STOP** (2026-07-25)
+**Plan:** `docs/superpowers/plans/2026-07-26-sdd-e4-owner-path.md`  
+**Branch:** `cursor/e4-owner-path`  
+**Worktree:** `.worktrees/e4-sdd`  
+**Base:** `main` @ `0221a4c` (PR #23 merge)  
+**Wave status:** **IN PROGRESS** (Task 1 landing)
 
 | Task | Title | Status | Notes |
 |------|-------|--------|-------|
 | 0 | Write SDD plan | **DONE** | Plan committed this wave |
-| 1 | Merge PR #22 → main + E3 branch | **DONE** | Merged `e45bdc6`; worktree + branch created |
-| 2 | Attempt R0.2 Render Starter ×3 | **BLOCKED** | `RENDER_API_KEY` ABSENT; no payment invent; keep-warm 3/3 ≠ GREEN; owner: Billing + Starter ×3 |
-| 3 | Attempt R0.4 Meta | **BLOCKED** | APP_ID/SECRET len=7 placeholderish; VERIFY_TOKEN len=32 local-only; legal/API local timeout; keep-warm 3/3 ≠ submit; no Meta dashboard; R0.2 prereq |
-| 4 | R3.7 SBOM enforce on release tags | **DONE** | Fail-closed on empty SBOM for `v*`/release; artifact + attach if release exists; I7 eng GREEN / process AMBER |
-| 5 | E3 gate docs + STOP | **DONE** | Gate section + path-to-100 / remaining “tiếp theo ngay”; honest % NOT 100%; controller STOP |
+| 1 | Land completion-step-by-step + link SoT | **DONE** | Checklist + path-to-100 / remaining links; draft PR |
+| 2 | Re-attempt R0.2 Render Starter ×3 | **PENDING** | PASS only with Starter proof; else BLOCKED |
+| 3 | Re-attempt R0.4 Meta | **PENDING** | Submit only if real META_*; else BLOCKED |
+| 4 | Eng parallel I8 access review dry-run | **PENDING** | Runbook exists → I8 (not I4 fallback) |
+| 5 | E4 gate docs + STOP | **PENDING** | Update path-to-100 tiếp theo ngay; no 100% claim |
 
 ## Constraints reminder
 
@@ -23,7 +23,7 @@
 
 ## Controllers
 
-- **Wave E3 CLOSED / STOP** — eng path exhausted for this wave
-- Owner next: R0.2 payment → Starter ×3; R0.4 real META_* + App Review submit
+- **Wave E4 IN PROGRESS** — Task 1 landed; Tasks 2–5 next
+- Owner critical path: R0.2 payment → Starter ×3; R0.4 real META_* + App Review submit
+- Eng parallel: I8 dry-run per `docs/runbooks/platform-admin-access-review.md`
 - Then: R0.3b → Gate R0 → R1 paid → R2 live → CPC → R3 → E100
-- Resume eng SDD only when owner unblocks or provides keys

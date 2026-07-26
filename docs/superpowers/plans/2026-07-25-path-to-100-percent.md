@@ -1,7 +1,8 @@
 # Kế hoạch chi tiết — từng bước tới **100%** hoàn thiện
 
 **Date:** 2026-07-25
-**SoT song song:** [remaining-completion-priority](./2026-07-25-remaining-completion-priority.md) · [cpc-checklist](./cpc-checklist.md)
+**SoT song song:** [remaining-completion-priority](./2026-07-25-remaining-completion-priority.md) · [cpc-checklist](./cpc-checklist.md)  
+**Checklist thực thi từng bước (owner+eng):** [completion-step-by-step](./2026-07-25-completion-step-by-step.md)
 
 ## Định nghĩa 100%
 
@@ -156,7 +157,9 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 ## Việc **tiếp theo ngay** (thứ tự cứng)
 
-**SDD Wave E3 eng CLOSED / STOP (2026-07-25):** Tasks 1–5 done on `cursor/e3-r0-owner-path` (PR #23). PR #22 MERGED (`e45bdc6`). R0.2/R0.4 **BLOCKED** (owner). SBOM enforce landed (I7 eng GREEN/AMBER). Controller waits on owner — **không** claim CPC/E100/tổng 100% (~38% / ~22%+ / ~55%).
+**SDD Wave E3 eng CLOSED / STOP (2026-07-25):** PR #22 MERGED (`e45bdc6`) · PR #23 MERGED (`0221a4c`). R0.2/R0.4 **BLOCKED** (owner). I7 SBOM eng enforce GREEN/AMBER. **không** claim CPC/E100/tổng 100% (~38% / ~22%+ / ~55%).
+
+**Thực thi chi tiết từng bước:** [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md) (Bước 1→26 + TODO owner).
 
 ```
 1. Owner: R0.2 payment → Render Starter ×3 (api/ai/web-staging)
@@ -165,7 +168,6 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 4. Owner: R1 paid (Pro/PITR/always-on/LLM/billing) sau Gate R0
 5. Cả hai: R2.1→R2.3 live → R2.7 → CPC thương mại
 6. Cả hai: R3 I1–I8 (SOC2/pen-test/SSO/SLA) → E100 → TỔNG 100%
-(note) E3 eng closed; I7 SBOM enforce eng GREEN (org tag process AMBER)
 (song song OK) Owner: GEMINI_API_KEY → E0.2; E0.4 stub decisions trước R2 claim
 ```
 
@@ -177,6 +179,7 @@ Eng SDD **STOP** until owner unblocks. Evidence: [r0-r3-execution-evidence § Wa
 
 | Tài liệu | Path |
 |----------|------|
+| **Checklist thực thi từng bước** | [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md) |
 | SoT R0–R3 chi tiết | [2026-07-25-remaining-completion-priority.md](./2026-07-25-remaining-completion-priority.md) |
 | CPC checklist | [cpc-checklist.md](./cpc-checklist.md) |
 | Evidence live | `docs/ops/r0-r3-execution-evidence.md` |

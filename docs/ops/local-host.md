@@ -146,6 +146,26 @@ Expect `> 0` with stub vectors. **Do not** claim Gemini retrieval / CPC quality 
 
 If `POST .../reindex` returns `502 {"detail":"GEMINI_API_KEY is required for embeddings"}` while logs claim stub: check for a **zombie** Python/uvicorn still bound to `:8000` (`Get-NetTCPConnection -LocalPort 8000`; kill orphan `multiprocessing.spawn` children), then restart AI only.
 
+### L3 Task 3 — A2 local e2e smoke (API script)
+
+One command proves the non-Meta happy path against a running local stack (no Playwright, no Meta, no Render).
+
+**Prerequisites**
+
+1. Docker Desktop up; local Supabase (`npx supabase start`)
+2. `.env` at repo root (or worktree) with `SUPABASE_URL=http://127.0.0.1:54321` + local `SUPABASE_ANON_KEY` (optional `SUPABASE_SERVICE_ROLE_KEY` if signup needs admin confirm)
+3. Apps up: `pnpm run dev:local` — API must answer `GET http://127.0.0.1:3001/health` → `{"status":"ok"}` (script **fails clearly** if health is down)
+
+**Run**
+
+```powershell
+pnpm run test:e2e:local
+# or: node scripts/local-e2e-smoke.mjs
+# optional: $env:API_BASE_URL = "http://127.0.0.1:3001"
+```
+
+**Covers:** health → signup owner+cskh → `POST /v1/orgs` → invite create+accept → catalog product → inventory adjust → draft order → confirm → `GET /v1/orders/export?format=csv`.
+
 ### Prior E0.2 note (2026-07-25 · sdd-task-2)
 
 | Step | Result |

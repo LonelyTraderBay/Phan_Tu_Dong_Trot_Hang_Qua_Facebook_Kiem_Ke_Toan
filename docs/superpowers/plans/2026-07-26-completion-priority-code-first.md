@@ -201,8 +201,8 @@ Mỗi bước: **Ưu tiên** · **Ai** · **Làm gì** · **Xong khi** · **Evid
 ### Pha A — làm ngay (không cần thẻ / Meta)
 
 ```
-[ ] A1  pnpm run dev:local → smoke walkthrough non-Meta (invite accept + confirm + chunks)
-[ ] A2  Thêm e2e smoke local (Playwright hoặc API script)
+[x] A1  pnpm run dev:local → smoke walkthrough non-Meta (invite accept + confirm + chunks)
+[x] A2  Thêm e2e smoke local (Playwright hoặc API script)
 [ ] A3  ESLint/typecheck monorepo xanh
 [ ] A4  Isolation: hết skip hoặc proof thay thế
 [ ] A5  OpenAPI/api-client drift đóng

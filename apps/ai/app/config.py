@@ -7,6 +7,12 @@ class Settings(BaseSettings):
     core_base_url: str = "http://127.0.0.1:3001"
     ai_model_allowlist: str = "gemini-2.0-flash,advisor-stub"
     ai_relevance_min_similarity: float = Field(default=0.75, ge=0.0, le=1.0)
+    # APP_ENV=local (default) allows stub embeddings when GEMINI_API_KEY empty.
+    # Production must set APP_ENV=production (or NODE_ENV=production) — stub refused.
+    app_env: str = "local"
+    node_env: str | None = None
+    # Explicit opt-in for stub when APP_ENV is not localish; ignored in production.
+    embeddings_allow_stub: bool = False
     gemini_api_key: str | None = None
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"

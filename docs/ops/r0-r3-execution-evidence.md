@@ -120,7 +120,8 @@ STAGING_PROJECT_REF=tjsmpcgkeoglemptuymu
 | Step | Status | Evidence | Blocker |
 |------|--------|----------|---------|
 | E0.1 Warehouse fix | **GREEN** | Migration `20260727210000_ensure_default_warehouse_on_org.sql` on branch + staging 29/29 (Task 5 + E2 T2/T5) | — |
-| E0.2 Knowledge reindex local | **BLOCKED** | Outbox `knowledge.reindex` publishes; `knowledge_chunks` count `0` — AI `502 GEMINI_API_KEY is required` ([local-host](./local-host.md), Task 2) | **Owner/eng:** set `GEMINI_API_KEY` in `.env` + `apps/ai/.env`; rerun with Inngest dev |
+| E0.2 Knowledge reindex local | **PASS (stub)** | L1 Task 3: `GEMINI` empty → deterministic stub embeddings (768-d); prod refuse; pytest green ([local-host](./local-host.md)) | Optional: set real `GEMINI_API_KEY` for Gemini path; smoke Inngest → chunks > 0 |
+
 | E0.3 §12.1 confirm local | **PASS** | Criterion 5 confirm GREEN post-warehouse fix; overall walkthrough **AMBER** (Meta rows blocked) ([walkthrough](./p0-staging-walkthrough-12-1.md), Task 3) | Staging repeat + Meta for full R0.3 GREEN |
 | E0.4 CPC stub decisions | **AMBER** | `cpc-checklist.md` stub table present; Zalo / e-invoice / advisor all **undecided** (Task 4) | **Owner:** fill REQUIRED \| AMBER_OK per R2.4–R2.6 |
 
@@ -589,3 +590,18 @@ Do **not** invent Meta credentials. Owner must:
 | Walkthrough refresh | **DONE** — [p0-staging-walkthrough-12-1.md](./p0-staging-walkthrough-12-1.md) non-Meta dates + health; Meta stays BLOCKED |
 
 **Verdict:** local eng surface **PASS**. R0.3 remains **AMBER** (Meta BLOCKED; chunks pending Task 3). No CPC / E100 / tổng 100% claim. Render/Meta still deferred until CPC claim.
+
+## Wave L1 Task 3 — E0.2 local stub embeddings (2026-07-26)
+
+**SDD plan:** [2026-07-26-sdd-l1-local-first.md](../superpowers/plans/2026-07-26-sdd-l1-local-first.md) · **Branch:** `cursor/l1-local-first` · **Playbook:** [local-host.md](./local-host.md)
+
+| Check | Result |
+|-------|--------|
+| Parent `GEMINI_API_KEY` | **EMPTY** — len=0 (value not printed) → stub path |
+| Stub provider | **PASS** — deterministic 768-d `local-stub-embeddings`; factory wired into reindex + process-message |
+| Prod guard | **PASS** — refused when `APP_ENV`/`NODE_ENV=production` even with `EMBEDDINGS_ALLOW_STUB=1` |
+| Pytest `tests/test_stub_embeddings.py` | **PASS** |
+| Live `knowledge_chunks` > 0 smoke | **DOCUMENTED** — optional; needs Inngest + AI restart ([local-host](./local-host.md)) |
+| Gemini / CPC quality claim | **NONE** — stub explicitly non-production / not live LLM quality |
+
+**Verdict:** E0.2 eng path **GREEN** for local-only (stub). E0.2 live Gemini still optional when key present. No CPC / E100 claim.

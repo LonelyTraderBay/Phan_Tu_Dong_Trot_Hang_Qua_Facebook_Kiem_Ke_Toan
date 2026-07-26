@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.config import settings
 from app.domain.orchestrator import ProcessMessageOrchestrator
 from app.infra.core import CoreKnowledgeClient
-from app.infra.embeddings.gemini import GeminiEmbeddingProvider
+from app.infra.embeddings.factory import create_embedding_provider
 from app.infra.llm.gemini import GeminiLlmProvider
 from app.infra.llm.openai import OpenAiLlmProvider
 from app.infra.llm.provider import FailoverLlmProvider
@@ -19,7 +19,7 @@ primary_llm = GeminiLlmProvider()
 secondary_llm = OpenAiLlmProvider() if settings.openai_api_key else None
 
 orchestrator = ProcessMessageOrchestrator(
-    embedding_provider=GeminiEmbeddingProvider(),
+    embedding_provider=create_embedding_provider(),
     retriever=CoreKnowledgeClient(),
     llm_provider=FailoverLlmProvider(primary_llm, secondary_llm),
     quota_client=CoreKnowledgeClient(),

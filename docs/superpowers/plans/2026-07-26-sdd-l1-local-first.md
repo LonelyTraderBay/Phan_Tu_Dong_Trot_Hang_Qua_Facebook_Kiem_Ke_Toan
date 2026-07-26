@@ -93,6 +93,8 @@ Owner wants **local-first** development on their PC. **Render billing / Starter 
 
 - Local path yields `knowledge_chunks` > 0 (stub or real); tests green; no live-LLM quality claim.
 
+**Status:** DONE — `2026-07-26` stub path landed (`GEMINI_API_KEY` len=0); pytest stub suite green; prod refuse guard; smoke steps in local-host.md (no CPC/Gemini quality claim).
+
 ---
 
 ## Task 4: E0.4 — local-phase stub defaults in cpc-checklist

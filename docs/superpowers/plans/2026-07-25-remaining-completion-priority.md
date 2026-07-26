@@ -174,7 +174,7 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 | R0.3 §12.1 walkthrough | **AMBER** | Local non-Meta; Meta BLOCKED OK; refresh trong L1 |
 | R0.4 Meta App Review | **BLOCKED / deferred** | Khi claim CPC |
 | E2–E5 eng | **CLOSED** | PR #22–#25; CPC/E100 vẫn không 100% |
-| Wave L1 local-first | **IN PROGRESS** | Task 1–2 DONE (SoT + local stack health PASS `2026-07-26`); Task 3–5 next |
+| Wave L1 local-first | **IN PROGRESS** | Task 1–3 DONE (SoT + stack health + stub embeddings `2026-07-26`); Task 4–5 next |
 | R1–R2 live | **AMBER** | Billing / carrier / COD live — khi claim CPC |
 | R3 E100 | **BLOCKED** | Sau CPC thương mại |
 

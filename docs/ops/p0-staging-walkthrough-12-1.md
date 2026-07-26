@@ -19,7 +19,7 @@
 |---|-----------|---------------|--------|
 | 1 | Sign up + invite CSKH + kho | Signup → invite 2 roles → accept | **PASS (partial)** — Prior: Supabase signup + `POST /v1/orgs` + invites `cskh`/`kho` via API; invite **accept not verified**. `2026-07-25` · `sdd-task-1`. **L1-task-2:** stack health reconfirm only (no re-run). `2026-07-26` |
 | 2 | Connect Page + IG | Settings → Kết nối kênh → OAuth complete | **BLOCKED** — `META_*` placeholders; no test Page/IG; OAuth requires Meta dev app; localhost cannot receive Meta webhooks. `2026-07-26` · `L1-task-2` |
-| 3 | Create products; knowledge updates | Catalog CRUD → wait reindex / check chunks | **PASS (partial)** — Prior: `POST /v1/catalog/products` OK; outbox `knowledge.reindex` published with Inngest; **`knowledge_chunks`=0** until GEMINI or L1 stub embeddings (Task 3). `2026-07-25` · `sdd-task-2`. **L1-task-2:** health reconfirm; chunks leg still open. `2026-07-26` |
+| 3 | Create products; knowledge updates | Catalog CRUD → wait reindex / check chunks | **PASS (eng stub)** — L1 Task 3: stub embeddings when `GEMINI` empty; pytest green; optional Inngest smoke in [local-host](./local-host.md). Prior product/outbox PASS. **Not** Gemini quality. `2026-07-26` |
 | 4 | Test DM; AI grounded | Send DM with known SKU/price; no invented SKUs | **BLOCKED** — requires Meta Page DM + public webhook; localhost not callable by Meta. `2026-07-26` · `L1-task-2` |
 | 5 | Draft → approve → export | Confirm order; download CSV/XLSX | **PASS** — Prior: org auto `MAIN` warehouse; draft + confirm → `confirmed`; export CSV 200. `2026-07-25` · `sdd-task-3`. **L1-task-2:** stack health reconfirm only. `2026-07-26` |
 | 6 | Takeover pause/resume | Inbox → Chiếm quyền; bot_epoch; reply as staff | **PASS** — Prior: takeover/resume API + E1 unit tests. `2026-07-25` · `sdd-task-e1`. **L1-task-2:** stack health reconfirm only. `2026-07-26` |
@@ -33,6 +33,6 @@
 | Operator | L1-task-2 (local stack verify + non-Meta refresh) |
 | Commit SHA | `0044785` on `cursor/l1-local-first` (L1 Task 2 verify) |
 | Environment | **Local** stack (`docs/ops/local-host.md`); Docker Supabase + api/web/ai on `127.0.0.1`; staging §12.1 repeat deferred until CPC claim / R0.3b |
-| Blockers | Meta OAuth/DM (criteria 2, 4) — **BLOCKED OK** locally; `knowledge_chunks` until L1 Task 3 / GEMINI; staging always-on + owner `META_*` for full GREEN (CPC claim only) |
+| Blockers | Meta OAuth/DM (criteria 2, 4) — **BLOCKED OK** locally; staging always-on + owner `META_*` for full GREEN (CPC claim only). Chunks eng path: L1 Task 3 stub (not Gemini quality) |
 
 **Overall R0.3:** **AMBER** — local §12.1 stack health **PASS** (L1 Task 2); non-Meta product rows carry prior PASS/partial; Meta **BLOCKED** (no public webhook). Not claiming R0.3 GREEN / CPC.

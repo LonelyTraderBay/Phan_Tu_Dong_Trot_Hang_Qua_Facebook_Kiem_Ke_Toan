@@ -106,7 +106,7 @@ Owner wants **code-complete / local perfection** on PC first. Commercial / Rende
 
 - Advisor notes reflect real aggregates locally; runbook current.
 
-**Status:** PENDING
+**Status:** DONE — `2026-07-26` real catalog/sales aggregates from products/variants/orders; Zalo runbook notes `zalo-persist-inbound` shipped (gap = OAuth vs token paste).
 
 ---
 

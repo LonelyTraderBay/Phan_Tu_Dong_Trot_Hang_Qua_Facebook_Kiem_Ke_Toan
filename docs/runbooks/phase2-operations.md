@@ -34,9 +34,10 @@ Use this checklist before and during a Phase 2 pilot ops shift. Record the org, 
 
 ## Zalo
 
-- Connect Zalo OA with an existing access token in **Settings -> Channels**.
+- Connect Zalo OA with an existing access token in **Settings -> Channels** (token paste; full OAuth still deferred).
 - If `ZALO_WEBHOOK_SECRET` is configured, verify inbound calls include the matching header.
-- Current production status is AMBER until full Zalo OAuth and message persistence worker are implemented.
+- Webhook intake enqueues `zalo/inbound.received`; worker `zalo-persist-inbound` persists inbound messages when Inngest is running.
+- Remaining AMBER: full Zalo OAuth + live OA credentials in the target environment (not missing persistence worker).
 
 ## Billing
 

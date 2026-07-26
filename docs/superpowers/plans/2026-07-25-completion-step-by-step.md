@@ -82,7 +82,7 @@ Mỗi bước: **Ai** · **Làm gì** · **Playbook** · **Xong khi** · **Ghi e
 | L1.T2 | Verify stack: Supabase Docker + api/web/ai health | Eng | `/health` 200; evidence ngắn |
 | L1.T2 | Refresh walkthrough §12.1 **non-Meta** | Eng | Criteria không-Meta PASS/partial; Meta rows **BLOCKED** OK local |
 | L1.T3 / E0.2 | `GEMINI_API_KEY` → chunks > 0 **hoặc** stub embeddings khi key trống | Eng | `knowledge_chunks` > 0 local; **không** claim live LLM quality |
-| L1.T4 / E0.4 | Ghi local-phase default cho R2.4–R2.6 (`undecided` hoặc khuyến nghị `AMBER_OK` local-only) | Eng+Owner note | Notes trong `cpc-checklist`; **phải decide trước CPC claim** |
+| L1.T4 / E0.4 | Ghi local-phase notes: R2.4–R2.6 **có thể** `undecided` khi eng local; khuyến nghị intent `AMBER_OK` Meta-only (không invent chữ ký) | Eng+Owner note | [cpc-checklist § Stub decisions](./cpc-checklist.md#stub-decisions-owner); **phải** `REQUIRED`/`AMBER_OK` trước CPC claim |
 | L1.T5 | Gate L1 | Eng | Eng local advanced; CPC vẫn deferred |
 
 ---

@@ -112,6 +112,8 @@ Owner wants **local-first** development on their PC. **Render billing / Starter 
 
 - Checklist notes updated; CPC claim still blocked on undecided/AMBER until owner decides for commercial.
 
+**Status:** DONE — `2026-07-26` local-phase notes in `cpc-checklist.md`; R2.4–R2.6 remain `undecided` (no forged owner signature); **must** `REQUIRED`/`AMBER_OK` before CPC claim.
+
 ---
 
 ## Task 5: L1 gate — eng local advanced; CPC deferred

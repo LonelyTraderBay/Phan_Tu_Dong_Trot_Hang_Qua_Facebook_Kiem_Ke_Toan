@@ -36,7 +36,7 @@ OPTIONAL Epoch 5
 |--------:|------|------|----------|
 | **E0.2** | Knowledge reindex | GEMINI → chunks > 0 **hoặc** stub embeddings khi key trống | `knowledge_chunks` > 0 local; non-prod stub marked |
 | **E0.3** | Walkthrough local | Non-Meta §12.1 refresh | Meta rows BLOCKED OK |
-| **E0.4** | Stub notes | Local-phase `undecided` / khuyến nghị `AMBER_OK`; decide trước CPC | Notes trong `cpc-checklist.md` |
+| **E0.4** | Stub notes | Local-phase: `undecided` OK; Meta-only often intends `AMBER_OK` (no forged signature); **must** REQUIRED/AMBER_OK trước CPC | [cpc-checklist § Stub](./cpc-checklist.md#stub-decisions-owner) |
 
 **Playbook:** [local-host.md](../../ops/local-host.md) · [L1 SDD](./2026-07-26-sdd-l1-local-first.md)
 

@@ -57,7 +57,7 @@ NOW ~55% tổng (CPC ~38% · E100 ~22% · eng ~95%)
 | **E0.1** | Merge warehouse fix | PR → `main`; migration local | Confirm order không còn 500 — **DONE** |
 | **E0.2** | Local Inngest + embed | GEMINI → chunks > 0 **hoặc** stub embeddings khi key trống (non-prod) | Criterion reindex PASS local; **không** claim live LLM quality |
 | **E0.3** | §12.1 local đầy đủ | Walkthrough không-Meta PASS; Meta rows **BLOCKED** OK local | File walkthrough cập nhật |
-| **E0.4** | Stub notes local-phase | Local: `undecided` hoặc khuyến nghị `AMBER_OK`; **must decide** trước CPC claim | Ghi trong `cpc-checklist.md` |
+| **E0.4** | Stub notes local-phase | Local: R2.4–R2.6 **may** stay `undecided`; recommend Meta-only `AMBER_OK` intent (no forged signature); **must** be `REQUIRED`/`AMBER_OK` trước CPC claim | [cpc-checklist § Stub decisions](./cpc-checklist.md#stub-decisions-owner) |
 
 **Gate L1 (local):** Stack health + E0.2 local path + walkthrough non-Meta refresh + E0.4 notes.  
 **Không** = Gate R0 / CPC.

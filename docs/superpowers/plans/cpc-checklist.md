@@ -33,11 +33,30 @@
 R2.4–R2.6 may be **REQUIRED** (must go GREEN) or **AMBER_OK** (defer with explicit
 owner acceptance). Fill **Owner date** when decided.
 
+### Local-first phase (Wave L1 / E0.4) — eng notes
+
+During **local eng** (Docker / `dev:local`), R2.4 / R2.5 / R2.6 **may remain
+`undecided`**. That is OK for coding and SDD on PC.
+
+**Before claiming CPC thương mại**, every row **must** be `REQUIRED` or
+`AMBER_OK` (owner-signed Decision + Owner date). Do **not** invent an owner
+signature or force Decision values without owner choice — leave cells
+`undecided` until the owner decides.
+
+**Recommended intent (not a decision):** Meta-only shops often intend
+`AMBER_OK` for R2.4 (Zalo) and may also intend `AMBER_OK` for R2.5 / R2.6 if
+invoicing/advisor stay outside or stubbed. Document intent in Notes only;
+Decision stays `undecided` until owner fills it.
+
+Cross-link: [completion-step-by-step § Pha Local / E0.4](./2026-07-25-completion-step-by-step.md) ·
+[path-to-100 § E0.4](./2026-07-25-path-to-100-percent.md) ·
+[L1 plan Task 4](./2026-07-26-sdd-l1-local-first.md).
+
 | Item | Decision | Owner date | Notes |
 |------|----------|------------|-------|
-| R2.4 Zalo OA | undecided | | OAuth/token + inbound worker vs Meta-only |
-| R2.5 E-invoice | undecided | | Real provider sandbox vs invoicing outside system |
-| R2.6 Advisor | undecided | | Live LLM/eval vs stub acceptable |
+| R2.4 Zalo OA | undecided | | OAuth/token + inbound worker vs Meta-only · local-phase OK undecided; **must** REQUIRED/AMBER_OK before CPC claim |
+| R2.5 E-invoice | undecided | | Real provider sandbox vs invoicing outside system · local-phase OK undecided; **must** REQUIRED/AMBER_OK before CPC claim |
+| R2.6 Advisor | undecided | | Live LLM/eval vs stub acceptable · local-phase OK undecided; **must** REQUIRED/AMBER_OK before CPC claim |
 
 Allowed values: `REQUIRED` · `AMBER_OK` · `undecided`
 

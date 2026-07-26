@@ -4,12 +4,12 @@
 **Branch:** `cursor/l1-local-first`  
 **Worktree:** `.worktrees/l1-local`  
 **Base:** `main` @ `51f5370` (PR #25 merge / E5 gate)  
-**PR:** _(draft — set after open)_  
+**PR:** [#26](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/26) (draft)  
 **Wave status:** **IN PROGRESS** (Task 1 DONE)
 
 | Task | Title | Status | Notes |
 |------|-------|--------|-------|
-| 1 | SoT local-first reorder + plan + draft PR | **DONE** | Plan + SoT (§2 Pha Local NOW; Render under CPC claim only); this ledger |
+| 1 | SoT local-first reorder + plan + draft PR | **DONE** | Worktree `.worktrees/l1-local`; draft [PR #26](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/26); SHA `66b63c7`; SoT Pha Local NOW |
 | 2 | Verify local stack + non-Meta walkthrough refresh | **PENDING** | Docker + api/web/ai health; Meta BLOCKED OK |
 | 3 | E0.2 GEMINI chunks **or** local stub embeddings | **PENDING** | Stub when `GEMINI_API_KEY` empty; non-prod; no live LLM quality claim |
 | 4 | E0.4 local-phase stub notes in cpc-checklist | **PENDING** | `undecided` / recommend `AMBER_OK` local-only; must decide before CPC claim |

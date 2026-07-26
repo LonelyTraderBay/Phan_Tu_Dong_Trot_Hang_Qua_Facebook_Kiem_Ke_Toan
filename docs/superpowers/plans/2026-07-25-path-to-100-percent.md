@@ -162,17 +162,18 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 ## Việc **tiếp theo ngay** (thứ tự cứng)
 
-**Post-L2 (2026-07-26):** Wave **L2 CLOSED** @ `e2105a6` ([gate](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred)). **Chính sách:** code local hoàn thiện trước → thương mại sau. ~% thật: eng ~97%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%.
+**Post-L3 (2026-07-26):** Wave **L3 CLOSED** — **Gate A Code local READY = YES** ([gate](../../ops/r0-r3-execution-evidence.md#wave-l3-gate-a-2026-07-26--code-local-ready--yes-commercial-deferred)). **Chính sách:** code local xong → thương mại chỉ khi owner muốn bán. ~% thật: eng Gate A READY · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
 
-**NOW = Wave L3** ([plan](./2026-07-26-sdd-l3-gate-a.md)) — Pha A → **Gate A Code local READY**. Checklist: [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md).
+**NOW = post–Gate A** — optional polish **hoặc** Pha B khi owner muốn commercial. Checklist: [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md).
 
 ```
-▶ NOW   Wave L3 / Pha A: A1 smoke → A2 e2e → A3 lint → A4 RLS → A5 OpenAPI → ★ Gate A
-THEN    (chỉ khi Gate A + muốn bán) Pha B: Render → Meta → R0 → R1 → R2 → CPC
+DONE    L1 + L2 + L3 ★ Gate A Code local READY
+▶ NOW   (optional) A6/A7 polish  OR  idle
+THEN    (chỉ khi owner muốn bán) Pha B: Render → Meta → R0 → R1 → R2 → CPC
 THEN    Pha C: Plan I → E100 → TỔNG 100%
 ```
 
-CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại — eng local không thay Gate R0. L2 gate: [evidence § Wave L2](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred). L1 gate: [evidence § Wave L1](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred).
+CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại — Gate A **không** thay Gate R0. L3 gate: [evidence § Wave L3 Gate A](../../ops/r0-r3-execution-evidence.md#wave-l3-gate-a-2026-07-26--code-local-ready--yes-commercial-deferred).
 
 ---
 

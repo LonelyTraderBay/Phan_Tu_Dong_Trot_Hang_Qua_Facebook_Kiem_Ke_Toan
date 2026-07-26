@@ -205,15 +205,15 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 
 Evidence: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · **SoT ưu tiên code-first:** [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md)
 
-**~% thật:** eng ~97%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%.
+**~% thật:** eng Gate A READY · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
 
 ```
-DONE    L1 + L2 @ e2105a6 (invites · Inngest · advisor · stub embeddings · CI Node 22)
-▶ NOW   Wave L3 / Pha A: A1 smoke → A2 e2e → A3 lint → A4 RLS → A5 OpenAPI → ★ Gate A
-THEN    (sau Gate A + muốn bán) Pha B CPC → Pha C E100
+DONE    L1 + L2 + L3 ★ Gate A Code local READY (A1–A5/A8)
+▶ NOW   (optional) polish A6/A7  OR  idle until owner wants commercial
+THEN    (chỉ khi muốn bán) Pha B CPC → Pha C E100
 ```
 
-Chi tiết từng bước: [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md).
+Chi tiết từng bước: [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md). Gate A evidence: [r0-r3 § L3 Gate A](../../ops/r0-r3-execution-evidence.md#wave-l3-gate-a-2026-07-26--code-local-ready--yes-commercial-deferred).
 
 ---
 

@@ -382,16 +382,16 @@ Chi tiết: [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-comple
 
 ## 8. Việc **tiếp theo ngay** (copy vào TODO)
 
-**Policy:** local-first — **không** Render payment default “tiếp theo ngay”. Wave **L1 CLOSED** · Wave **L2 CLOSED** ([gate](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred)). Eng code-complete local **advanced**. ~% thật: eng ~97%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%. CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại.
+**Policy:** local-first — **không** Render payment default “tiếp theo ngay”. Wave **L1 CLOSED** · **L2 CLOSED** · **L3 CLOSED** — **Gate A Code local READY = YES** ([gate](../../ops/r0-r3-execution-evidence.md#wave-l3-gate-a-2026-07-26--code-local-ready--yes-commercial-deferred)). ~% thật: eng Gate A READY · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%. CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại.
 
 ```
-▶ Post-L2 (DONE)
-[x] 1. L2.T1–T5: invites · Inngest · advisor aggregates · CI Node 22 · gate
-[x] 2. L2 gate: eng code-complete local advanced; CPC deferred
+▶ Post-Gate A (DONE)
+[x] 1. L3.T1–T5: A1 smoke · A2 e2e · A3 lint · A4 RLS · A5 api-client honesty · Gate A
+[x] 2. Gate A Code local READY = YES; commercial deferred
 
-▶ Tiếp theo (owner chọn; default = local)
-[ ] A. (default) tiếp tục eng local / hardening trên Docker + dev:local
-[ ] B. (khi sẵn sàng claim CPC) mở khối Render/Meta bên dưới
+▶ Tiếp theo (owner chọn)
+[ ] A. (optional) polish A6 offline SW / A7 Zalo decision
+[ ] B. (khi sẵn sàng claim CPC) mở khối Render/Meta bên dưới — Pha B
 
 ── Khi muốn claim CPC thương mại (deferred) ──
 [ ] R1. Render Billing → Add payment method
@@ -402,7 +402,7 @@ Chi tiết: [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-comple
 [ ] R6. Owner E0.4: set REQUIRED/AMBER_OK cho R2.4–R2.6 (hết undecided)
 ```
 
-Sau L2: tiếp tục local eng **hoặc** owner mở Render/Meta khi muốn claim CPC — **owner chọn**; default = local.
+Sau Gate A: optional polish **hoặc** owner mở Render/Meta khi muốn claim CPC — **owner chọn**.
 
 ---
 

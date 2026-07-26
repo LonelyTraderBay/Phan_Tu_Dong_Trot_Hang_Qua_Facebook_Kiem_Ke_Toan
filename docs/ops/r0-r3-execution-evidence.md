@@ -698,6 +698,50 @@ Do **not** invent Meta credentials. Owner must:
 | **T2** A1 local walkthrough smoke post-L2 | **GREEN** | Non-Meta §12.1 re-smoke: invite create+accept · product · stock · draft→confirm · export CSV 200 · advisor suggest · stub Inngest → `knowledge_chunks` > 0 (org count 1; local total ≥ 3). Meta 2/4 **BLOCKED OK**. Inbox live SKIP (empty org; prior unit PASS). Ops note: orphan AI on `:8000` without stub caused transient `502 GEMINI…` — killed spawn child + restarted AI with stub. Walkthrough [p0-staging-walkthrough-12-1](./p0-staging-walkthrough-12-1.md) updated |
 | **T3** A2 minimal local e2e smoke | **GREEN** | `scripts/local-e2e-smoke.mjs` + `pnpm test:e2e:local` — health→signup→org→invite accept→catalog→stock→draft→confirm→export CSV; fails if `/health` down · [local-host](./local-host.md) |
 | **T4** A3 ESLint real OR remove unused + typecheck | **GREEN** | Removed unused root `eslint` + empty `eslint.config.js`; `lint`/`typecheck` = `tsc --noEmit` on api/web/authz-types/db (turbo 4 pkgs, no silent skip); `pnpm lint` + `pnpm typecheck` GREEN; README documents scope |
-| **T5** A4 isolation + A5 OpenAPI honesty + Gate A + STOP | **PENDING** | Gate A evidence; CPC/E100 still deferred |
+| **T5** A4 isolation + A5 OpenAPI honesty + Gate A + STOP | **GREEN** | A4: removed `it.skip`; `cross-tenant.rls.spec.ts` migration proof + Docker Data API (memberships/entitlements/feature_flags UPDATE denied; cross-tenant SELECT empty); `pnpm test:isolation` **8/8 pass · 0 skip**; CI starts Supabase. A5: `packages/api-client` marked **DEPRECATED/STUB**; SoT client = `apps/web/src/lib/api-client.ts`; invite paths already in OpenAPI (L2) — no drift claim. Gate A section below |
 
 **Constraints (active):** Local only · No Render payment · Meta BLOCKED OK · Gate A = wave success · No CPC / E100 / tổng 100% claim · “100%” this wave = **Gate A Code local READY** only.
+
+## Wave L3 Gate A (2026-07-26) — Code local READY = YES; commercial deferred
+
+**SDD plan:** [2026-07-26-sdd-l3-gate-a.md](../superpowers/plans/2026-07-26-sdd-l3-gate-a.md) · **Branch:** `cursor/l3-gate-a` · **Worktree:** `.worktrees/l3-code` · **PR:** [#28](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/28) · **SoT:** [completion-priority-code-first](../superpowers/plans/2026-07-26-completion-priority-code-first.md)
+
+| Task | Status | Evidence |
+|------|--------|----------|
+| **T1** Land code-first SoT + L3 plan + ledger | **GREEN** | SoT + plan + ledger · parent `main` clean after copy |
+| **T2** A1 local walkthrough smoke | **GREEN** | Non-Meta §12.1 re-smoke PASS; Meta **BLOCKED OK** · [walkthrough](./p0-staging-walkthrough-12-1.md) |
+| **T3** A2 minimal local e2e smoke | **GREEN** | `pnpm test:e2e:local` / `scripts/local-e2e-smoke.mjs` |
+| **T4** A3 lint/typecheck honesty | **GREEN** | Unused eslint removed; monorepo `lint`/`typecheck` = tsc GREEN |
+| **T5** A4 isolation + A5 client honesty + Gate A | **GREEN** | Isolation **8/8 · 0 skip**; api-client README deprecated/honest; this section |
+
+### Gate A checklist (code-first § A8)
+
+| Checklist | Status |
+|-----------|--------|
+| `pnpm --filter api test` xanh (prior / regression) | **YES** (baseline kept; not re-run this task) |
+| `uv run pytest` (apps/ai) xanh (prior / regression) | **YES** (baseline kept; not re-run this task) |
+| `pnpm test:isolation` xanh (**0 skip**) | **YES** — 8 passed / 0 skipped |
+| Walkthrough non-Meta A1 PASS | **YES** (T2) |
+| A2 e2e smoke xanh | **YES** (T3) |
+| A3 lint/typecheck xanh | **YES** (T4) |
+| No P0 open (invite/confirm/knowledge) | **YES** (L2 + T2 smoke) |
+| Meta/Zalo/e-invoice live | **Not required** for Gate A |
+
+**Gate A Code local READY = YES.**
+
+### Honest maturity (do **not** invent 100%)
+
+| Đích | ~% sau Gate A | Còn thiếu |
+|------|---------------|-----------|
+| **Eng path / Gate A** | **READY** (local) | Optional polish (A6 offline SW · A7 Zalo decision) — not blockers |
+| **CPC thương mại** | ~**38%** | **NOT 100%** — Render Starter · Meta App Review · Gate R0 → R1 → R2 → CPC |
+| **E100** | ~**22%**+ | **NOT 100%** — Plan I / SOC2 / pen-test / SSO / SLA |
+| **Tổng intended** | ~**55%** | CPC **và** E100 — **NOT 100%** |
+
+| Blocker / next | When |
+|----------------|------|
+| **Next (default)** | Optional local polish **OR** idle until owner wants commercial |
+| **Pha B (commercial)** | **Only when owner wants to sell** — Render payment → Meta → R0… |
+| **CPC / E100** | Still **deferred** — do not claim 100% |
+
+**Controller STOP (L3).** Wave L3 **CLOSED**. Progress **DONE**. **Tiếp theo ngay** = optional polish **OR** Pha B when owner wants commercial. Do not invent Meta/Render credentials. Do not claim CPC / E100 / tổng 100%.

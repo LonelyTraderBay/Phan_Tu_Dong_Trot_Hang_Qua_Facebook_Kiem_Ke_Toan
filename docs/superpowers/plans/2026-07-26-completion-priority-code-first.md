@@ -42,24 +42,19 @@ Nhưng thứ tự làm việc:  A → rồi mới B → rồi C
 | ✓ | L2 advisor aggregates thật (catalog/sales) | PR #27 |
 | ✓ | L2 Zalo runbook (worker shipped) | PR #27 |
 | ✓ | L2 CI Node 22 | PR #27 |
-| ✓ | Regression baseline | API 185 · AI 37 · isolation 6 pass |
+| ✓ | Regression baseline | API 185 · AI 37 · isolation **8 pass · 0 skip** (L3-T5) |
 
 ---
 
 ## 2. Bản đồ ưu tiên (thứ tự cứng)
 
 ```
-▶ PHA A — Code hoàn thiện trên PC (L3…)     ← LÀM NGAY
-    A1  Smoke tay §12.1 non-Meta sau L2
-    A2  Playwright/e2e smoke tối thiểu (signup→invite→catalog→confirm→export)
-    A3  ESLint thật (hoặc bỏ dep rỗng) + typecheck packages đều
-    A4  Isolation RLS: bỏ skip hoặc thay proof thật
-    A5  OpenAPI/codegen api-client (hoặc xóa package claim)
-    A6  Offline SW /m (nếu muốn H mobile local “đủ”)
-    A7  Zalo OAuth code path (tuỳ — hoặc AMBER_OK Meta-only)
-    A8  Gate A: “Code local READY” checklist xanh
+★ PHA A — Gate A Code local READY (L3 CLOSED 2026-07-26)
+    [x] A1–A5 + A8
+    [ ] A6 offline SW (optional)
+    [ ] A7 Zalo decision (optional)
 
-── PHA B — Thương mại (CHỈ KHI A xong & owner muốn) ──
+── PHA B — Thương mại (CHỈ KHI owner muốn bán) ──
     B1  Render Starter ×3 staging
     B2  META_* + App Review submit
     B3  Walkthrough staging → Gate R0
@@ -204,12 +199,14 @@ Mỗi bước: **Ưu tiên** · **Ai** · **Làm gì** · **Xong khi** · **Evid
 [x] A1  pnpm run dev:local → smoke walkthrough non-Meta (invite accept + confirm + chunks)
 [x] A2  Thêm e2e smoke local (Playwright hoặc API script)
 [x] A3  ESLint/typecheck monorepo xanh
-[ ] A4  Isolation: hết skip hoặc proof thay thế
-[ ] A5  OpenAPI/api-client drift đóng
+[x] A4  Isolation: hết skip — Docker RLS E2E + migration proof (8/8 · 0 skip)
+[x] A5  OpenAPI/api-client honesty — package stub deprecated; SoT = apps/web api-client
 [ ] A6  (tuỳ) offline SW
 [ ] A7  (tuỳ) Zalo OAuth hoặc ghi AMBER_OK sớm
-[ ] A8  Tick Gate A “Code local READY”
+[x] A8  Tick Gate A “Code local READY” = YES (commercial still deferred)
 ```
+
+**★ Gate A đạt (2026-07-26).** Tiếp theo: optional A6/A7 polish **hoặc** Pha B khi owner muốn bán.
 
 ### Pha B — chỉ khi Gate A xong & muốn bán
 

@@ -23,7 +23,7 @@
 | 4 | Test DM; AI grounded | Send DM with known SKU/price; no invented SKUs | **BLOCKED** — requires Meta Page DM + public webhook; localhost not callable by Meta. `2026-07-26` · `L3-task-2` |
 | 5 | Draft → approve → export | Confirm order; download CSV/XLSX | **PASS** — `2026-07-26` · `L3-task-2`: stock adjust → draft order → confirm → `status=confirmed`; `GET /v1/orders/export?format=csv` HTTP 200. |
 | 6 | Takeover pause/resume | Inbox → Chiếm quyền; bot_epoch; reply as staff | **PASS (prior)** — API + E1 unit tests (`2026-07-25` · `sdd-task-e1`). `L3-task-2`: live inbox SKIP (no conversations in new smoke org); not re-blocked. |
-| 7 | No cross-tenant data | Second org; confirm isolation (also `pnpm test:isolation`) | **PASS (prior)** — `pnpm test:isolation` 6 passed, 1 skipped (`2026-07-25`). `L3-task-2`: stack health reconfirm only (A4 may tighten skips later). |
+| 7 | No cross-tenant data | Second org; confirm isolation (also `pnpm test:isolation`) | **PASS (L3-T5)** — `pnpm test:isolation` **8 passed · 0 skipped** (OrgGuard + Docker RLS Data API + migration proof). |
 
 ## Sign-off
 

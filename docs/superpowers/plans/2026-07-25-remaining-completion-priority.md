@@ -156,14 +156,15 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 | Local full stack (Docker Supabase + api/web/ai) | **GREEN** | `docs/ops/local-host.md` · `pnpm run dev:local` |
 | R0.1 migrate CI + remote staging | **GREEN** | Staging `tjsmpcgkeoglemptuymu` **29** migrations (warehouse + resume + http_sandbox) |
 | R0.5 Scheduled QA | **GREEN** | Actions run 30139904845 |
-| R0.2 Always-on staging (Render) | **BLOCKED** | E4 re-attempt: no `RENDER_API_KEY` / payment; Free + keep-warm ≠ always-on |
+| R0.2 Always-on staging (Render) | **BLOCKED** | E5 re-probe: no `RENDER_API_KEY` / payment; Free + keep-warm ≠ always-on |
 | R0.3 §12.1 walkthrough | **AMBER** | **Local R0.3a+E0.3 done** (2 PASS · 3 partial · 2 BLOCKED Meta); E0.1 warehouse fix GREEN — criterion 5 confirm PASS local post-`20260727210000`; lặp staging sau R0.2+R0.4 |
-| R0.4 Meta App Review | **BLOCKED** | E4 re-attempt: placeholder `META_*`; prep pack ready; owner: real creds + submit |
+| R0.4 Meta App Review | **BLOCKED** | E5 re-probe: placeholder `META_*`; prep pack ready; owner: real creds + submit |
 | E2 eng (resume/http_sandbox/billing gate) | **GREEN (eng)** | PR #22 MERGED `e45bdc6`; staging 29/29; **CPC/E100 vẫn không 100%** |
 | E3 eng (R0 attempts + SBOM enforce) | **CLOSED / STOP** | PR #23; R0.2/R0.4 BLOCKED; I7 eng GREEN/AMBER |
 | E4 eng (R0 re-attempt + I8 dry-run) | **CLOSED / STOP** | PR #24; R0.2/R0.4 still BLOCKED; I8 dry-run AMBER ≠ quarterly GREEN |
+| E5 eng (R0 re-probe + I5 notify process) | **CLOSED / STOP** | PR #25; R0.2/R0.4 still BLOCKED; I5 notify eng GREEN/AMBER (legal AMBER) — **not** E100 |
 | R1–R2 live | **AMBER** | Billing / carrier / COD live — owner path |
-| R3 E100 | **BLOCKED** | Sau CPC thương mại (I7 eng enforce landed; I8 dry-run AMBER) |
+| R3 E100 | **BLOCKED** | Sau CPC thương mại (I5 eng process landed; I7 eng enforce; I8 dry-run AMBER) |
 
 **Hai làn chạy song song (khuyến nghị):**
 
@@ -180,18 +181,20 @@ Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md)
 
 **~% thật:** eng ~95%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
 
+**Hard STOP:** further eng-only SDD waves without owner R0.2 + R0.4 will **not** advance CPC/E100 to 100%.
+
 ```
-DONE   E0+E1+E2+E3 eng (PR #22/#23 MERGED); E4 CLOSED / STOP (PR #24); I8 dry-run AMBER; staging 29/29
+DONE   E0+E1+E2+E3 eng (PR #22/#23 MERGED); E4 CLOSED (PR #24); E5 CLOSED / STOP (PR #25); I5 notify eng GREEN/AMBER; I8 dry-run AMBER; staging 29/29
 ▶ STOP Owner: R0.2 payment → Starter ×3
 ▶ STOP Owner: R0.4 real META_* + App Review submit
 THEN   R0.3b staging §12.1 → Gate R0
 THEN   R1 paid (Pro/PITR/always-on/LLM/billing)
 THEN   R2.1–2.3 live → R2.7 → CPC thương mại
-THEN   R3 I1–I8 (incl. I8 quarterly signed) → E100 → TỔNG 100%
+THEN   R3 I1–I8 (incl. I5 legal + I8 quarterly signed) → E100 → TỔNG 100%
 ```
 
 Chi tiết Bước 1→26: [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md).  
-**Eng SDD STOP** (Wave E4 CLOSED) until owner unblocks. Wave E4 gate: [r0-r3-execution-evidence § E4](../../ops/r0-r3-execution-evidence.md#wave-e4-sdd-gate-2026-07-26--eng-closed--owner-stop).
+**Eng SDD STOP** (Wave E5 CLOSED) until owner unblocks. Wave E5 gate: [r0-r3-execution-evidence § E5](../../ops/r0-r3-execution-evidence.md#wave-e5-sdd-gate-2026-07-26--eng-closed--owner-stop).
 
 ---
 

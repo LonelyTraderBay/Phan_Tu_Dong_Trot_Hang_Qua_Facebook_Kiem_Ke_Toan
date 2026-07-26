@@ -1,7 +1,7 @@
 # P0.2 — Meta App Review submit pack
 
 **Checklist chi tiết:** [docs/meta-app-review-checklist.md](../meta-app-review-checklist.md)
-**Staging hosts:** [r0-r3-execution-evidence.md](./r0-r3-execution-evidence.md#render-staging-services) · SDD Task 3 prep `2026-07-25` · **E3 Attempt R0.4** `2026-07-25` · **E4 Re-attempt R0.4** `2026-07-26`
+**Staging hosts:** [r0-r3-execution-evidence.md](./r0-r3-execution-evidence.md#render-staging-services) · SDD Task 3 prep `2026-07-25` · **E3 Attempt R0.4** `2026-07-25` · **E4 Re-attempt R0.4** `2026-07-26` · **E5 Re-probe R0.4** `2026-07-26`
 
 ## Staging URLs (fill Meta dashboard from this table)
 
@@ -37,9 +37,9 @@ Confirm names against [Meta permissions reference](https://developers.facebook.c
 
 | # | Item | Staging target | Status |
 |---|------|----------------|--------|
-| 1 | Legal pages public (no auth) | Privacy + Terms URLs above | **UNVERIFIED** — E4 R0.4 local curl **timeout ~15s** on `/legal/privacy` + `/legal/terms`. GHA keep-warm [30182626561](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30182626561) `healthy_count=3/3` (web `/` HTTP 200) = host reachability when warm — **no direct `/legal/*` proof** |
-| 2 | API always-on for webhook | `omni-api-staging` on Render Starter | **BLOCKED** — R0.2 still BLOCKED (E4 Task 2; free tier sleeps; keep-warm ≠ always-on) ([R0.2 owner upgrade](./deploy-staging-render.md#upgrade-to-always-on-owner)) |
-| 3 | Webhook GET verify (challenge 200) | `GET /v1/webhooks/meta?hub.mode=subscribe&hub.verify_token=<META_VERIFY_TOKEN>&hub.challenge=test` | **SKIPPED / BLOCKED** — local API TLS/timeout; webhook probe not run. Parent `.env` / `.env.staging.local`: `META_VERIFY_TOKEN` len=32 placeholderish=**false** (local only — Render env unknown). Needs warm always-on API + same token on `omni-api-staging` |
+| 1 | Legal pages public (no auth) | Privacy + Terms URLs above | **UNVERIFIED** — E5 R0.4 skipped direct `/legal/*` probe (creds not real). GHA keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) `healthy_count=3/3` (web `/` HTTP 200) = host reachability when warm — **no direct `/legal/*` proof** |
+| 2 | API always-on for webhook | `omni-api-staging` on Render Starter | **BLOCKED** — R0.2 still BLOCKED (E5 Task 2; free tier sleeps; keep-warm ≠ always-on) ([R0.2 owner upgrade](./deploy-staging-render.md#upgrade-to-always-on-owner)) |
+| 3 | Webhook GET verify (challenge 200) | `GET /v1/webhooks/meta?hub.mode=subscribe&hub.verify_token=<META_VERIFY_TOKEN>&hub.challenge=test` | **SKIPPED / BLOCKED** — no real Meta path without dashboard + Render env. Parent `.env` / `.env.staging.local`: `META_VERIFY_TOKEN` len=32 placeholderish=**false** (local only — Render env unknown). Needs warm always-on API + same token on `omni-api-staging` |
 | 4 | Webhook POST `X-Hub-Signature-256` | Same callback URL | **BLOCKED** — `META_APP_SECRET` placeholderish (parent len=7) |
 | 5 | OAuth connect flow | Settings → Kết nối kênh → callback above | **BLOCKED** — `META_APP_ID` / `META_APP_SECRET` placeholderish (parent len=7); local `META_REDIRECT_URI` is `127.0.0.1` (not staging). `render.yaml` pins staging callback correctly |
 | 6 | Subprocessors reviewed | [docs/legal/subprocessors.md](../legal/subprocessors.md) | Owner review before submit |
@@ -65,10 +65,11 @@ Confirm names against [Meta permissions reference](https://developers.facebook.c
 | Prep pack | **COMPLETE** (SDD Task 3, 2026-07-25) |
 | E3 Attempt R0.4 | **BLOCKED** (2026-07-25) — see [E3 Task 3 evidence](./r0-r3-execution-evidence.md#wave-e3-task-3--r04-meta-app-review-attempt-2026-07-25) |
 | E4 Re-attempt R0.4 | **BLOCKED** (2026-07-26) — see [E4 Task 3 evidence](./r0-r3-execution-evidence.md#wave-e4-task-3--r04-meta-app-review-re-attempt-2026-07-26) |
+| E5 Re-probe R0.4 | **BLOCKED** (2026-07-26) — see [E5 Task 3 evidence](./r0-r3-execution-evidence.md#wave-e5-task-3--r04-meta-app-review-re-probe-2026-07-26) |
 | Submitted at | **NOT RUN** — no Meta dashboard login; do not claim Submitted/Approved |
 | Review status | *(blank — not submitted)* |
 | R0.4 gate | **BLOCKED** |
-| Notes | Parent env unchanged vs E3: `META_APP_ID`/`META_APP_SECRET` len=7 placeholderish; `META_VERIFY_TOKEN` len=32 not placeholderish (local only). R0.2 always-on remains prerequisite for webhook reliability during review. Agent cannot submit App Review. |
+| Notes | Parent env unchanged vs E4: `META_APP_ID`/`META_APP_SECRET` len=7 placeholderish; `META_VERIFY_TOKEN` len=32 not placeholderish (local only; hash-equal across `.env` / `.env.staging.local`). R0.2 always-on remains prerequisite for webhook reliability during review. Agent cannot submit App Review. |
 
 ## Owner next actions (single path)
 

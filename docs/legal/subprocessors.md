@@ -18,11 +18,12 @@
 
 - Token Meta: AES-256-GCM trên Core; không gửi browser.  
 - LLM: Core ghi `ai_runs`; kill switches `kill_ai_all` / `kill_ai_outbound`.  
-- Thêm/bớt subprocessor material → cập nhật file này + thông báo khách pilot.
+- Thêm/bớt subprocessor material → cập nhật file này + thông báo khách pilot theo [runbook thông báo](../runbooks/subprocessors-change-notify.md) (eng process ready; legal/owner approve vẫn AMBER).
 
 ## Liên kết
 
 - [DPA mẫu](./dpa-template.md)  
 - [Privacy (app)](../../apps/web/src/app/legal/privacy/page.tsx)  
 - [Subprocessors public page](../../apps/web/src/app/legal/subprocessors/page.tsx)
+- [Subprocessors change — customer notification](../runbooks/subprocessors-change-notify.md)
 - [PDPA delete runbook](../runbooks/pdpa-delete.md)

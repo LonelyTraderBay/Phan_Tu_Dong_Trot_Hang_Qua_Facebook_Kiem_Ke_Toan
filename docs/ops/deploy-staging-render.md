@@ -1,19 +1,19 @@
-# Deploy staging â€” Render (ADR 0001)
+# Deploy staging — Render (ADR 0001)
 
 ## Project linkage
 
 | App | Render service | Live URL | Supabase |
 |-----|----------------|----------|----------|
 | `apps/api` | `omni-api-staging` | https://omni-api-staging-cs2w.onrender.com | `tjsmpcgkeoglemptuymu` |
-| `apps/ai` | `omni-ai-staging` | https://omni-ai-staging.onrender.com | â€” |
+| `apps/ai` | `omni-ai-staging` | https://omni-ai-staging.onrender.com | — |
 | `apps/web` | `omni-web-staging` | https://omni-web-staging.onrender.com | same staging project |
 
-Blueprint file: [`render.yaml`](../../render.yaml) (currently **free** plan â€” sleeps; upgrade to **starter** when payment added).
+Blueprint file: [`render.yaml`](../../render.yaml) (currently **free** plan — sleeps; upgrade to **starter** when payment added).
 
 ## One-shot (Dashboard)
 
 1. Open https://dashboard.render.com/blueprints  
-2. **New Blueprint Instance** â†’ connect GitHub repo `LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan`  
+2. **New Blueprint Instance** → connect GitHub repo `LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan`  
 3. Branch `main`, path `render.yaml`  
 4. Fill `sync: false` env vars (see below)  
 5. **Deploy Blueprint**
@@ -59,7 +59,7 @@ curl -sS -o /dev/null -w "%{http_code}\n" https://<web>/
 
 | Field | Value |
 |-------|-------|
-| Blueprint committed | YES â€” `render.yaml` |
+| Blueprint committed | YES — `render.yaml` |
 | Live services | **LIVE (free)** — api/ai/web; API Nest started on Node 22 (`49cc493`) |
 | Supabase staging | `tjsmpcgkeoglemptuymu` migrated |
 

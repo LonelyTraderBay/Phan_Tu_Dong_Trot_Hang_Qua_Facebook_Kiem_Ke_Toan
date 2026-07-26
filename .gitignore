@@ -3,6 +3,8 @@ node_modules/
 .superpowers/
 .env
 .env.local
+.env.staging
+.env.staging.local
 .turbo/
 dist/
 .next/
@@ -11,12 +13,6 @@ __pycache__/
 .pytest_cache/
 coverage/
 supabase/.temp/
-.env.staging
-.env.staging.local
-
-.env.staging.local
-.env.staging
-
 .local-secrets/
 
 # local supabase CLI branch marker

@@ -18,7 +18,7 @@ supabase db reset   # if needed
 pnpm test:isolation
 ```
 
-Env (optional — defaults to local demo keys on `http://127.0.0.1:54321`):
+Env (optional — defaults to local demo keys on `http://127.0.0.1:54721`, see `config/local-ports.json`):
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`

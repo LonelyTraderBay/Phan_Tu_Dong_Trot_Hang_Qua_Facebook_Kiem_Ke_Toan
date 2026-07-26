@@ -4,10 +4,11 @@ Monorepo for the web app, core API, AI service, and Supabase database used by th
 
 ## Apps
 
-- `apps/web`: Next.js web application, default port `3000`.
-- `apps/api`: NestJS core API, default port `3001`.
-- `apps/ai`: FastAPI AI service, default port `8000`.
-- `supabase`: local database config, migrations, and development seed.
+- `apps/web`: Next.js web application — locked port **`4700`**.
+- `apps/api`: NestJS core API — locked port **`4701`**.
+- `apps/ai`: FastAPI AI service — locked port **`4702`**.
+- `supabase`: local database — locked API **`54721`** (+ db/studio/mailpit; see `config/local-ports.json`).
+- Port lock (avoid collisions with other repos): [`docs/ops/local-ports.md`](docs/ops/local-ports.md).
 
 ## Prerequisites
 
@@ -77,15 +78,18 @@ AI:
 
 ```powershell
 Copy-Item .env apps/ai/.env -Force
-cd apps/ai
-uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+# Preferred one-shot (uses locked ports from config/local-ports.json):
+pnpm run ports:sync
+pnpm run dev:local
 ```
 
-Health checks:
+Health checks (locked):
 
-- Web: `http://127.0.0.1:3000`
-- API: `http://127.0.0.1:3001/health` and `http://127.0.0.1:3001/ready`
-- AI: `http://127.0.0.1:8000/health`
+- Web: `http://127.0.0.1:4700`
+- API: `http://127.0.0.1:4701/health` and `http://127.0.0.1:4701/ready`
+- AI: `http://127.0.0.1:4702/health`
+- Inngest: `http://127.0.0.1:4788`
+- Supabase: `http://127.0.0.1:54721`
 
 ## Quality checks
 
@@ -107,34 +111,31 @@ python tests/eval/run_stub.py
 Requires Docker, Supabase, API, AI, web, and Inngest dev services:
 
 ```powershell
-supabase start
-supabase db reset
-pnpm --dir apps/api dev
-Push-Location apps/ai
-uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
-Pop-Location
-pnpm --dir apps/web dev
-npx inngest-cli@latest dev -u http://localhost:3001/api/inngest
+npx supabase start
+npx supabase db reset
+pnpm run ports:sync
+pnpm run dev:local
+# or manually: API :4701 · AI :4702 · Web :4700 · Inngest :4788
 ```
 
 Then probe API `/health` and `/ready`, AI `/health`, web shell, `GET /internal/v1/ai/health` with `X-Service-Key`, and insert a `platform.noop` outbox row to confirm Inngest receives it.
 
 ## Meta webhook (local)
 
-1. Chạy api: `pnpm --filter @omni/api dev`
-2. Tunnel: `cloudflared tunnel --url http://127.0.0.1:3001` (hoặc ngrok)
+1. Chạy api: `pnpm run dev:local` (API **:4701**)
+2. Tunnel: `cloudflared tunnel --url http://127.0.0.1:4701` (hoặc ngrok)
 3. Meta Webhook Callback URL: `https://<tunnel>/v1/webhooks/meta`
 4. Verify token = `META_VERIFY_TOKEN`
 
 OAuth redirect (Facebook Login) dùng web app, không qua tunnel API:
 
-- `META_REDIRECT_URI=http://127.0.0.1:3000/settings/channels/callback`
+- `META_REDIRECT_URI=http://127.0.0.1:4700/settings/channels/callback`
 - Trong Meta App → Facebook Login → Valid OAuth Redirect URIs: cùng giá trị trên.
 
-Chạy Inngest dev khi test luồng webhook → persist:
+Chạy Inngest (đã gồm trong `dev:local`):
 
 ```powershell
-npx inngest-cli@latest dev -u http://localhost:3001/api/inngest
+npx inngest-cli@latest dev -u http://127.0.0.1:4701/api/inngest -p 4788
 ```
 
 Xem thêm runbook: [docs/runbooks/meta-down.md](./docs/runbooks/meta-down.md).

@@ -10,6 +10,7 @@
     "test:isolation": "pnpm --filter @omni/authz-types build && pnpm --dir apps/api exec vitest run --root ../../tests/isolation cross-tenant",
     "test:eval": "uv run --directory apps/ai python ../../tests/eval/run_stub.py",
     "test:e2e:local": "node scripts/local-e2e-smoke.mjs",
+    "ports:sync": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-local-env-ports.ps1",
     "dev": "turbo run dev --parallel",
     "dev:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-local.ps1",
     "dev:local:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-local.ps1 -Stop"

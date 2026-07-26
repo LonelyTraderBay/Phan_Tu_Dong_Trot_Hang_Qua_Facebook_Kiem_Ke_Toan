@@ -4,39 +4,71 @@ param(
   [switch]$NoApi,
   [switch]$NoAi,
   [switch]$NoInngest,
-  [switch]$Stop
+  [switch]$Stop,
+  [switch]$SkipPortCheck
 )
 
 $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $Root
+. (Join-Path $PSScriptRoot "Get-OmniLocalPorts.ps1")
+$Ports = Get-OmniLocalPorts -RepoRoot $Root
+$HostName = [string]$Ports.host
+$PortWeb = [int]$Ports.apps.web
+$PortApi = [int]$Ports.apps.api
+$PortAi = [int]$Ports.apps.ai
+$PortInngest = [int]$Ports.apps.inngest
+$UrlWeb = "http://${HostName}:${PortWeb}"
+$UrlApi = "http://${HostName}:${PortApi}"
+$UrlAi = "http://${HostName}:${PortAi}"
+$UrlInngest = "http://${HostName}:${PortInngest}"
+$UrlInngestServe = "${UrlApi}/api/inngest"
+
 $PidFile = Join-Path $Root ".local-secrets\dev-pids.json"
 New-Item -ItemType Directory -Force -Path (Join-Path $Root ".local-secrets") | Out-Null
 
-function Stop-LocalStack {
-  if (-not (Test-Path $PidFile)) {
-    Write-Host "No PID file."
-    return
+function Stop-ByPort([int]$Port, [string]$Label) {
+  $hits = @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue)
+  foreach ($h in $hits) {
+    $procId = $h.OwningProcess
+    if (-not $procId) { continue }
+    try {
+      & taskkill /PID $procId /T /F 2>$null | Out-Null
+      Write-Host ("Stopped {0} on :{1} (pid {2})" -f $Label, $Port, $procId)
+    } catch {
+      Write-Host ("Skip stop {0} :{1}: {2}" -f $Label, $Port, $_.Exception.Message)
+    }
   }
-  $saved = Get-Content $PidFile -Raw | ConvertFrom-Json
-  foreach ($name in @("api", "web", "ai", "inngest")) {
-    $id = $saved.$name
-    if ($id) {
-      try {
-        # Kill process tree (npx/node children for Inngest)
-        & taskkill /PID $id /T /F 2>$null | Out-Null
-        Write-Host ("Stopped {0} (pid {1})" -f $name, $id)
-      } catch {
+}
+
+function Stop-LocalStack {
+  if (Test-Path $PidFile) {
+    $saved = Get-Content $PidFile -Raw | ConvertFrom-Json
+    foreach ($name in @("api", "web", "ai", "inngest")) {
+      $id = $saved.$name
+      if ($id) {
         try {
-          Stop-Process -Id $id -Force -ErrorAction Stop
+          & taskkill /PID $id /T /F 2>$null | Out-Null
           Write-Host ("Stopped {0} (pid {1})" -f $name, $id)
         } catch {
-          Write-Host ("Skip {0}: {1}" -f $name, $_.Exception.Message)
+          try {
+            Stop-Process -Id $id -Force -ErrorAction Stop
+            Write-Host ("Stopped {0} (pid {1})" -f $name, $id)
+          } catch {
+            Write-Host ("Skip {0}: {1}" -f $name, $_.Exception.Message)
+          }
         }
       }
     }
+    Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
+  } else {
+    Write-Host "No PID file — cleaning by locked Omni ports..."
   }
-  Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
+  # Always clear locked app ports (orphans / duplicate Inngest)
+  Stop-ByPort -Port $PortWeb -Label "web"
+  Stop-ByPort -Port $PortApi -Label "api"
+  Stop-ByPort -Port $PortAi -Label "ai"
+  Stop-ByPort -Port $PortInngest -Label "inngest"
 }
 
 if ($Stop) {
@@ -44,16 +76,21 @@ if ($Stop) {
   exit 0
 }
 
+Write-Host ("Omni locked ports → web:{0} api:{1} ai:{2} inngest:{3} (see config/local-ports.json)" -f `
+  $PortWeb, $PortApi, $PortAi, $PortInngest)
+
+if (-not $SkipPortCheck) {
+  Assert-OmniAppPortsFree -Ports $Ports
+}
+
 $EnvFile = Join-Path $Root ".env"
 if (-not (Test-Path $EnvFile)) {
-  # Linked worktrees often omit ignored .env — fall back to canonical repo root
-  # (.worktrees/<name> → ../.. = repo root).
   $parentEnv = Join-Path $Root "..\..\.env"
   if (Test-Path $parentEnv) {
     $EnvFile = (Resolve-Path $parentEnv).Path
     Write-Host ("Using parent .env: {0}" -f $EnvFile)
   } else {
-    throw "Missing .env. Create it from .env.example or .local-secrets first."
+    throw "Missing .env. Create from .env.example, then: pnpm run ports:sync"
   }
 }
 
@@ -97,8 +134,6 @@ if (-not (Test-Path $npxCmd)) {
 }
 if (-not $npxCmd -and -not $NoInngest) { throw "npx.cmd not found (needed for Inngest CLI)" }
 
-# Local stub embeddings when GEMINI empty: APP_ENV=local (AI default) or EMBEDDINGS_ALLOW_STUB=1.
-# Ensure process env so uvicorn sees stub path without requiring apps/ai/.env edits.
 if (-not $env:APP_ENV -or $env:APP_ENV.Trim() -eq "") {
   $env:APP_ENV = "local"
 }
@@ -106,49 +141,60 @@ if (-not $env:EMBEDDINGS_ALLOW_STUB -or $env:EMBEDDINGS_ALLOW_STUB.Trim() -eq ""
   $env:EMBEDDINGS_ALLOW_STUB = "1"
 }
 
+# Force process env to locked ports (overrides stale .env for child processes)
+$env:PORT = "$PortApi"
+$env:AI_BASE_URL = $UrlAi
+$env:CORE_BASE_URL = $UrlApi
+$env:NEXT_PUBLIC_API_BASE_URL = $UrlApi
+$env:NEXT_PUBLIC_SUPABASE_URL = $Ports.urls.supabase
+
 if (-not $NoApi) {
   $p = Start-Process -FilePath $pnpmCmd -ArgumentList @("--dir", "apps/api", "dev") `
     -WorkingDirectory $Root -PassThru -WindowStyle Hidden `
     -RedirectStandardOutput (Join-Path $logDir "api.out.log") `
     -RedirectStandardError (Join-Path $logDir "api.err.log")
   $pids.api = $p.Id
-  Write-Host ("API  pid {0}  -> http://127.0.0.1:3001/health" -f $p.Id)
+  Write-Host ("API  pid {0}  -> {1}/health" -f $p.Id, $UrlApi)
 }
 
 if (-not $NoAi) {
-  $p = Start-Process -FilePath $uvExe -ArgumentList @("run", "uvicorn", "app.main:app", "--reload", "--host", "127.0.0.1", "--port", "8000") `
+  $p = Start-Process -FilePath $uvExe -ArgumentList @(
+      "run", "uvicorn", "app.main:app", "--reload",
+      "--host", $HostName, "--port", "$PortAi"
+    ) `
     -WorkingDirectory (Join-Path $Root "apps\ai") -PassThru -WindowStyle Hidden `
     -RedirectStandardOutput (Join-Path $logDir "ai.out.log") `
     -RedirectStandardError (Join-Path $logDir "ai.err.log")
   $pids.ai = $p.Id
-  Write-Host ("AI   pid {0}  -> http://127.0.0.1:8000/health (APP_ENV={1}, stub={2})" -f $p.Id, $env:APP_ENV, $env:EMBEDDINGS_ALLOW_STUB)
+  Write-Host ("AI   pid {0}  -> {1}/health (APP_ENV={2}, stub={3})" -f $p.Id, $UrlAi, $env:APP_ENV, $env:EMBEDDINGS_ALLOW_STUB)
 }
 
 if (-not $NoWeb) {
-  $p = Start-Process -FilePath $pnpmCmd -ArgumentList @("--dir", "apps/web", "dev") `
+  $p = Start-Process -FilePath $pnpmCmd -ArgumentList @(
+      "--dir", "apps/web", "exec", "next", "dev",
+      "-H", $HostName, "-p", "$PortWeb"
+    ) `
     -WorkingDirectory $Root -PassThru -WindowStyle Hidden `
     -RedirectStandardOutput (Join-Path $logDir "web.out.log") `
     -RedirectStandardError (Join-Path $logDir "web.err.log")
   $pids.web = $p.Id
-  Write-Host ("Web  pid {0}  -> http://127.0.0.1:3000" -f $p.Id)
+  Write-Host ("Web  pid {0}  -> {1}" -f $p.Id, $UrlWeb)
 }
 
-# Inngest Dev Server — polls API serve endpoint for knowledge.reindex / outbox jobs.
-# Prefer starting after API so sync can succeed promptly; CLI retries if API still booting.
 if (-not $NoInngest) {
   $inngestArgs = @(
     "--yes",
     "inngest-cli@latest",
     "dev",
-    "-u",
-    "http://127.0.0.1:3001/api/inngest"
+    "-u", $UrlInngestServe,
+    "-p", "$PortInngest"
   )
   $p = Start-Process -FilePath $npxCmd -ArgumentList $inngestArgs `
     -WorkingDirectory $Root -PassThru -WindowStyle Hidden `
     -RedirectStandardOutput (Join-Path $logDir "inngest.out.log") `
     -RedirectStandardError (Join-Path $logDir "inngest.err.log")
   $pids.inngest = $p.Id
-  Write-Host ("Inngest pid {0}  -> http://127.0.0.1:8288 (app http://127.0.0.1:3001/api/inngest)" -f $p.Id)
+  Write-Host ("Inngest pid {0}  -> {1} (serve {2})" -f $p.Id, $UrlInngest, $UrlInngestServe)
 }
 
 $pids | ConvertTo-Json | Set-Content $PidFile -Encoding utf8
@@ -167,13 +213,14 @@ function Probe([string]$url) {
   }
 }
 
-Write-Host ("API : {0}" -f (Probe "http://127.0.0.1:3001/health"))
-Write-Host ("AI  : {0}" -f (Probe "http://127.0.0.1:8000/health"))
-Write-Host ("Web : {0}" -f (Probe "http://127.0.0.1:3000/"))
+Write-Host ("API : {0}" -f (Probe "${UrlApi}/health"))
+Write-Host ("AI  : {0}" -f (Probe "${UrlAi}/health"))
+Write-Host ("Web : {0}" -f (Probe "${UrlWeb}/"))
 if (-not $NoInngest) {
-  Write-Host ("Inngest UI : {0}" -f (Probe "http://127.0.0.1:8288"))
+  Write-Host ("Inngest UI : {0}" -f (Probe $UrlInngest))
 }
 Write-Host ""
+Write-Host "Port lock: config\local-ports.json | Sync env: pnpm run ports:sync"
 Write-Host "Logs: .local-secrets\logs\"
 Write-Host "Stop:  pnpm run dev:local:stop"
-Write-Host "Chunks smoke: create product -> wait -> docker exec supabase_db_omni-commerce psql -U postgres -d postgres -t -c `"select count(*) from knowledge_chunks;`""
+Write-Host ("Chunks smoke: create product -> docker exec supabase_db_omni-commerce psql -U postgres -d postgres -t -c `"select count(*) from knowledge_chunks;`"")

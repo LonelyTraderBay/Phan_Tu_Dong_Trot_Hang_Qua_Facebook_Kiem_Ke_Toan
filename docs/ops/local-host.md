@@ -134,6 +134,18 @@ docker exec supabase_db_omni-commerce psql -U postgres -d postgres -t -c "select
 
 Expect `> 0` with stub vectors. **Do not** claim Gemini retrieval / CPC quality from stub chunks.
 
+### L3 Task 2 — walkthrough smoke reconfirm (2026-07-26)
+
+| Check | Result |
+|-------|--------|
+| Stack (api/web/ai/Inngest/Supabase) | **PASS** — health 200s; Inngest `:8288` |
+| Invite create + accept | **PASS** — cskh + kho memberships via `POST /v1/invites/accept` |
+| Draft → confirm + export CSV | **PASS** — `confirmed`; export HTTP 200 |
+| Product → `knowledge_chunks` > 0 (stub) | **PASS** — after clearing orphan AI on `:8000` (spawn child kept old Gemini-only process); restart AI with `APP_ENV=local` + `EMBEDDINGS_ALLOW_STUB=1` |
+| Meta OAuth / DM | **BLOCKED** — localhost (expected) |
+
+If `POST .../reindex` returns `502 {"detail":"GEMINI_API_KEY is required for embeddings"}` while logs claim stub: check for a **zombie** Python/uvicorn still bound to `:8000` (`Get-NetTCPConnection -LocalPort 8000`; kill orphan `multiprocessing.spawn` children), then restart AI only.
+
 ### Prior E0.2 note (2026-07-25 · sdd-task-2)
 
 | Step | Result |

@@ -536,3 +536,39 @@ Do **not** invent Meta credentials. Owner must:
 | 10 | Update this evidence R0.4 with **Submitted at** date only (not Approved until Meta approves) |
 
 **Not claimed:** Submitted · Approved · R0.4 GREEN · webhook verify 200 · legal pages 200 from this agent host.
+
+## Wave E5 SDD gate (2026-07-26) — eng CLOSED / owner STOP
+
+**SDD plan:** [2026-07-26-sdd-e5-owner-path.md](../superpowers/plans/2026-07-26-sdd-e5-owner-path.md) · **Branch:** `cursor/e5-owner-path` · **PR:** [#25](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/25) · **Base:** `main` @ `9e5976f` (PR #24 MERGED)
+
+| Task | Status | Evidence |
+|------|--------|----------|
+| **T1** Plan + branch + draft PR | **GREEN** | Plan `2026-07-26-sdd-e5-owner-path.md` + progress ledger; draft **PR #25** |
+| **T2** Re-probe R0.2 Render Starter ×3 | **BLOCKED** | `RENDER_API_KEY` ABSENT; Free→Starter SKIPPED; keep-warm [30196670571](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30196670571) 3/3 = AMBER ≠ always-on; [Task 2 section](#wave-e5-task-2--r02-render-always-on-re-probe-2026-07-26) |
+| **T3** Re-probe R0.4 Meta App Review | **BLOCKED** | Placeholderish `META_*` (APP_ID/SECRET len=7); no Meta dashboard submit; R0.2 prereq; [Task 3 section](#wave-e5-task-3--r04-meta-app-review-re-probe-2026-07-26) |
+| **T4** Eng parallel I5 notify process | **GREEN/AMBER** | Runbook [subprocessors-change-notify.md](../runbooks/subprocessors-change-notify.md); eng process template ready; **legal/owner approve still AMBER** — **not** I5 full GREEN; **not** E100 |
+| **T5** Gate + STOP | **GREEN** | This section; path-to-100 / remaining / step-by-step “tiếp theo ngay” = owner-only; **controller STOPS** |
+
+### Honest maturity (do **not** invent 100%)
+
+| Đích | ~% sau E5 eng | Còn thiếu (không phải eng SDD) |
+|------|---------------|--------------------------------|
+| **Eng path** | ~**95%**+ | E0.2 GEMINI local; E0.4 stub decisions; live R2 polish |
+| **CPC thương mại** | ~**38%** | **NOT 100%** — R0.2/R0.4 → R0.3b → Gate R0 → R1 paid → R2.1–2.3 live → R2.7 |
+| **E100** | ~**22%**+ | **NOT 100%** — R3 SOC2/pen-test/SSO/SLA + I5 legal approve + I8 quarterly signed |
+| **Tổng intended** | ~**55%** | CPC GREEN **và** E100 GREEN — **NOT 100%** |
+
+**Gate E5 verdict: eng CLOSED / STOP.** R0.2 and R0.4 remain **BLOCKED** after re-probe. I5 notify process is eng **GREEN/AMBER** (legal still AMBER). CPC thương mại and E100 remain **not** 100%.
+
+**Hard STOP:** further eng-only SDD waves **without** owner R0.2 + R0.4 will **not** advance CPC / E100 to 100%.
+
+| Blocker | Owner / vendor next action |
+|---------|----------------------------|
+| **R0.2** | Render payment → Starter × `omni-api/ai/web-staging` ([owner unblock](#r02-owner-unblock-always-on)) |
+| **R0.4** | Real `META_*` on API + App Review submit ([owner unblock](#r04-owner-unblock-meta-app-review)) |
+| **R0.3b** | Staging full §12.1 after R0.2 + R0.4 → Gate R0 |
+| **R1** | Paid (Pro/PITR/always-on prod / LLM / billing) after Gate R0 |
+| **R2** | Carrier/COD/returns live → CPC checklist |
+| **R3 / I5 / I8** | I5 legal approve notify + I8 quarterly signed + SOC2 / pen-test / SSO / SLA → E100 |
+
+**Controller STOP.** Wave E5 CLOSED. Resume eng SDD only when owner unblocks R0.2/R0.4 or provides keys. Do not invent Meta/Render/Supabase Pro credentials. Do not claim CPC / E100 / tổng 100%.

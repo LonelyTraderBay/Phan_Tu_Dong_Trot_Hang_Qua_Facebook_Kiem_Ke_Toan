@@ -642,7 +642,7 @@ Do **not** invent Meta credentials. Owner must:
 
 ## Wave L2 progress ledger (2026-07-26) — code-complete local; commercial deferred
 
-**SDD plan:** [2026-07-26-sdd-l2-code-complete.md](../superpowers/plans/2026-07-26-sdd-l2-code-complete.md) · **Branch:** `cursor/l2-code-complete` · **Worktree:** `.worktrees/l2-code` · **Base:** `main` @ `5fea338` (PR #26 MERGED)
+**SDD plan:** [2026-07-26-sdd-l2-code-complete.md](../superpowers/plans/2026-07-26-sdd-l2-code-complete.md) · **Branch:** `cursor/l2-code-complete` · **Worktree:** `.worktrees/l2-code` · **Base:** `main` @ `5fea338` (PR #26 MERGED) · **PR:** [#27](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/27) (draft)
 
 | Task | Status | Evidence |
 |------|--------|----------|

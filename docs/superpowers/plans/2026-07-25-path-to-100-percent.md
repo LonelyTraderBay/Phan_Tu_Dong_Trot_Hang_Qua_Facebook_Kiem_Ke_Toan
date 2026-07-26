@@ -162,18 +162,14 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 ## Việc **tiếp theo ngay** (thứ tự cứng)
 
-**Post-L2 (2026-07-26):** Wave **L2 CLOSED** ([gate](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred)). Eng code-complete local **advanced**. **Tiếp theo ngay** = continue local hardening **OR** (when ready) CPC claim — **owner chooses**; **default remains local**. ~% thật: eng ~97%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%.
+**Post-L2 (2026-07-26):** Wave **L2 CLOSED** @ `e2105a6` ([gate](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred)). **Chính sách:** code local hoàn thiện trước → thương mại sau. ~% thật: eng ~97%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%.
 
-**Thực thi chi tiết:** [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md).
+**NOW = Wave L3** ([plan](./2026-07-26-sdd-l3-gate-a.md)) — Pha A → **Gate A Code local READY**. Checklist: [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md).
 
 ```
-▶ NOW   (default) tiếp tục local hardening trên Docker + dev:local — không cần Render
-OR      (khi sẵn sàng claim CPC) Owner: R0.2 Render Starter ×3
-THEN    (khi claim CPC) Owner: R0.4 real META_* + App Review submit
-THEN    R0.3b staging §12.1 → Gate R0
-THEN    Owner E0.4: REQUIRED/AMBER_OK cho R2.4–R2.6 (không còn undecided)
-THEN    R1 paid → R2.1–2.3 → R2.7 → CPC thương mại
-THEN    R3 I1–I8 → E100 → TỔNG 100%
+▶ NOW   Wave L3 / Pha A: A1 smoke → A2 e2e → A3 lint → A4 RLS → A5 OpenAPI → ★ Gate A
+THEN    (chỉ khi Gate A + muốn bán) Pha B: Render → Meta → R0 → R1 → R2 → CPC
+THEN    Pha C: Plan I → E100 → TỔNG 100%
 ```
 
 CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại — eng local không thay Gate R0. L2 gate: [evidence § Wave L2](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred). L1 gate: [evidence § Wave L1](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred).
@@ -184,9 +180,11 @@ CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại — eng local 
 
 | Tài liệu | Path |
 |----------|------|
-| **Checklist thực thi từng bước** | [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md) |
+| **Checklist ưu tiên code-first (SoT)** | [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md) |
+| Checklist CPC claim (Render/Meta…) | [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md) |
 | Wave L1 local-first | [2026-07-26-sdd-l1-local-first.md](./2026-07-26-sdd-l1-local-first.md) |
 | Wave L2 code-complete local | [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-complete.md) |
+| Wave L3 Gate A (code local READY) | [2026-07-26-sdd-l3-gate-a.md](./2026-07-26-sdd-l3-gate-a.md) |
 | SoT R0–R3 chi tiết | [2026-07-25-remaining-completion-priority.md](./2026-07-25-remaining-completion-priority.md) |
 | CPC checklist | [cpc-checklist.md](./cpc-checklist.md) |
 | Evidence live | `docs/ops/r0-r3-execution-evidence.md` |

@@ -687,3 +687,17 @@ Do **not** invent Meta credentials. Owner must:
 | **R3 → E100** | After CPC thương mại |
 
 **Controller STOP (L2).** Wave L2 CLOSED. **Tiếp theo ngay** = continue local hardening **OR** (when ready) CPC claim — **owner chooses**; **default remains local**. Do not invent Meta/Render credentials. Do not claim CPC / E100 / tổng 100%.
+
+## Wave L3 progress ledger (2026-07-26) — Gate A Code local READY; commercial deferred
+
+**SDD plan:** [2026-07-26-sdd-l3-gate-a.md](../superpowers/plans/2026-07-26-sdd-l3-gate-a.md) · **Branch:** `cursor/l3-gate-a` · **Worktree:** `.worktrees/l3-code` · **Base:** `main` @ `e2105a6` (PR #27 MERGED) · **SoT:** [completion-priority-code-first](../superpowers/plans/2026-07-26-completion-priority-code-first.md)
+
+| Task | Status | Evidence |
+|------|--------|----------|
+| **T1** Land code-first SoT + L3 plan + ledger | **GREEN** | SoT `2026-07-26-completion-priority-code-first.md` + path-to-100 / remaining / completion-step-by-step; plan `2026-07-26-sdd-l3-gate-a.md`; this ledger · parent `main` clean after copy |
+| **T2** A1 local walkthrough smoke post-L2 | **PENDING** | invite accept · confirm · chunks>0; update walkthrough; Meta BLOCKED OK |
+| **T3** A2 minimal local e2e smoke | **PENDING** | Playwright or API script + `pnpm` script |
+| **T4** A3 ESLint real OR remove unused + typecheck | **PENDING** | packages typecheck green |
+| **T5** A4 isolation + A5 OpenAPI honesty + Gate A + STOP | **PENDING** | Gate A evidence; CPC/E100 still deferred |
+
+**Constraints (active):** Local only · No Render payment · Meta BLOCKED OK · Gate A = wave success · No CPC / E100 / tổng 100% claim · “100%” this wave = **Gate A Code local READY** only.

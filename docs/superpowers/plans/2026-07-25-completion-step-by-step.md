@@ -1,8 +1,11 @@
 # Kế hoạch thực thi từng bước — hoàn thiện tới 100%
 
-**Date:** 2026-07-25 (cập nhật 2026-07-26 — **L2 CLOSED**; code-complete local advanced; CPC deferred)  
-**Baseline:** `main` @ `5fea338` (L1 / PR #26 MERGED) · Wave L2 `cursor/l2-code-complete` CLOSED — Render/Meta **không** default “tiếp theo ngay”  
-**SoT liên quan:** [path-to-100](./2026-07-25-path-to-100-percent.md) · [remaining-priority](./2026-07-25-remaining-completion-priority.md) · [L1 plan](./2026-07-26-sdd-l1-local-first.md) · [L2 plan](./2026-07-26-sdd-l2-code-complete.md) · [L2 gate](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred) · [cpc-checklist](./cpc-checklist.md) · [evidence](../../ops/r0-r3-execution-evidence.md)
+**Date:** 2026-07-25 (cập nhật 2026-07-26 — **L2 CLOSED** @ `e2105a6`; code-first)  
+**Baseline:** `main` @ `e2105a6` (PR #27)  
+**SoT ưu tiên mới (code → thương mại):** [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md)  
+**SoT liên quan:** [path-to-100](./2026-07-25-path-to-100-percent.md) · [remaining-priority](./2026-07-25-remaining-completion-priority.md) · [L1](./2026-07-26-sdd-l1-local-first.md) · [L2](./2026-07-26-sdd-l2-code-complete.md) · [cpc-checklist](./cpc-checklist.md) · [evidence](../../ops/r0-r3-execution-evidence.md)
+
+> Tài liệu này giữ chi tiết **Pha CPC claim** (Render/Meta/R1/R2). Việc **làm ngay** = Pha A trong file code-first ở trên.
 
 ---
 
@@ -10,7 +13,7 @@
 
 | Đích | = 100% khi | Hiện tại (~%) | Ai đóng |
 |------|------------|---------------|---------|
-| **Eng path** | A→H không stub chặn bán + regression xanh | ~**95%+** | Eng gần xong |
+| **Eng path** | A→H không stub chặn bán + regression xanh | ~**97%+** | Eng — Pha A hardening |
 | **CPC thương mại** | Gate R0 + R1 + R2.1–2.3 + R2.7 GREEN | ~**38%** | Owner + Eng live |
 | **E100** | Plan I I1–I8 live/compliance GREEN | ~**22%+** | Owner + Legal + Vendor |
 | **Tổng** | CPC **và** E100 cùng GREEN | ~**55%** | = CPC + E100 |

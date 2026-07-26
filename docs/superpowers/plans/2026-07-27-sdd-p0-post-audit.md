@@ -112,5 +112,5 @@ Next = Pha B only when owner wants to sell (B1 Render Starter)
 |------|--------|---------------|
 | T1 SoT + plan | DONE | `527c1e7` · PR #31 |
 | T2 P0.1 regression | DONE | `016672b` · evidence § Wave P0 / Gate A re-verify 2026-07-27 · e2e port-lock fix |
-| T3 P0.2 docs drift | DONE | SoT banners + legacy labels; how-to → locked ports |
+| T3 P0.2 docs drift | DONE | `113d926` · SoT banners + legacy labels; how-to → locked ports |
 | T4 P0.3 + Gate P0 | PENDING | — |

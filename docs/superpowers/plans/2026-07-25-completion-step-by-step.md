@@ -1,7 +1,7 @@
 # Kế hoạch thực thi từng bước — hoàn thiện tới 100%
 
-**Date:** 2026-07-25 (cập nhật sau E3 + PR #22/#23 MERGED)  
-**Baseline:** `main` @ `0221a4c` (E3 gate)  
+**Date:** 2026-07-25 (cập nhật sau E4 CLOSED / STOP + draft PR #24)  
+**Baseline:** `main` @ `0221a4c` (E3 gate) · Wave E4 tip `cursor/e4-owner-path` → **PR #24** (eng STOP; R0.2/R0.4 still BLOCKED)  
 **SoT liên quan:** [path-to-100](./2026-07-25-path-to-100-percent.md) · [remaining-priority](./2026-07-25-remaining-completion-priority.md) · [cpc-checklist](./cpc-checklist.md) · [evidence](../../ops/r0-r3-execution-evidence.md)
 
 ---
@@ -42,8 +42,9 @@ TỔNG 100%  =  CPC thương mại GREEN  +  E100 GREEN
 | D7 | E2 http_sandbox e-invoice + billing entitlement gate proof | PR #22 |
 | D8 | E3 R0.2/R0.4 attempt + SBOM enforce (I7 eng) | PR #23 → `main` `@0221a4c` |
 | D9 | Local host playbook | `docs/ops/local-host.md` |
+| D10 | E4 R0.2/R0.4 re-attempt + I8 dry-run + gate STOP | PR #24 (`cursor/e4-owner-path`); R0 still BLOCKED; I8 AMBER |
 
-**Eng SDD đã STOP** — phần còn lại chủ yếu owner payment / Meta / vendor / live ops.
+**Eng SDD đã STOP** (Wave E4 CLOSED) — phần còn lại chủ yếu owner payment / Meta / vendor / live ops.
 
 ---
 
@@ -343,6 +344,8 @@ Mỗi bước: **Ai** · **Làm gì** · **Playbook** · **Xong khi** · **Ghi e
 ---
 
 ## 8. Việc **tiếp theo ngay** (copy vào TODO owner)
+
+**Wave E4 CLOSED / STOP (2026-07-26):** draft **PR #24**. R0.2/R0.4 re-attempt vẫn **BLOCKED**. I8 dry-run **AMBER** (không phải quarterly GREEN). ~% thật: eng ~95%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%. Gate: [r0-r3-execution-evidence § E4](../../ops/r0-r3-execution-evidence.md#wave-e4-sdd-gate-2026-07-26--eng-closed--owner-stop).
 
 ```
 [ ] 1. Render Billing → Add payment method

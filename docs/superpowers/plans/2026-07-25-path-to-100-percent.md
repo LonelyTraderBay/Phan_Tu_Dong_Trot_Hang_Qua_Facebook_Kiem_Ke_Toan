@@ -66,10 +66,10 @@ NOW ~55% tổng (CPC ~38% · E100 ~22% · eng ~95%)
 |--------:|------|-------------|--------|----------|
 | **R0.1** | Migrations | Staging + CI | **DONE** | — |
 | **R0.5** | Scheduled QA | Actions xanh | **DONE** | — |
-| **R0.2** | Always-on staging | Render payment → Starter × `omni-api/ai/web-staging` | **BLOCKED** (E3) | Health ổn định, không sleep; **không** dùng keep-warm làm GREEN |
+| **R0.2** | Always-on staging | Render payment → Starter × `omni-api/ai/web-staging` | **BLOCKED** (E4 re-attempt) | Health ổn định, không sleep; **không** dùng keep-warm làm GREEN |
 | **R0.3a** | Walkthrough local | `p0-staging-walkthrough-12-1.md` | AMBER/partial | Criteria không-Meta PASS |
 | **R0.3b** | Walkthrough staging | Lặp trên URL public sau R0.2 | AMBER | Full §12.1 (sau Meta) |
-| **R0.4** | Meta App Review | `META_*` thật; Terms/Privacy; webhook; submit | **BLOCKED** (E3) | **Submitted** (hoặc Approved) |
+| **R0.4** | Meta App Review | `META_*` thật; Terms/Privacy; webhook; submit | **BLOCKED** (E4 re-attempt) | **Submitted** (hoặc Approved) |
 
 **Gate R0:** R0.1 + R0.3 (staging đủ) + R0.4 submitted + R0.5.
 **Playbook:** `docs/ops/p0-staging-walkthrough-12-1.md` · `docs/ops/p0-meta-app-review-submit.md` · `docs/ops/deploy-staging-render.md`
@@ -157,7 +157,7 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 ## Việc **tiếp theo ngay** (thứ tự cứng)
 
-**SDD Wave E3 eng CLOSED / STOP (2026-07-25):** PR #22 MERGED (`e45bdc6`) · PR #23 MERGED (`0221a4c`). R0.2/R0.4 **BLOCKED** (owner). I7 SBOM eng enforce GREEN/AMBER. **không** claim CPC/E100/tổng 100% (~38% / ~22%+ / ~55%).
+**SDD Wave E4 eng CLOSED / STOP (2026-07-26):** draft **PR #24** (`cursor/e4-owner-path`). T1 completion-step-by-step landed · T2 R0.2 **BLOCKED** (re-attempt) · T3 R0.4 **BLOCKED** (re-attempt) · T4 I8 dry-run **AMBER** (not quarterly GREEN). **không** claim CPC/E100/tổng 100% (~38% / ~22%+ / ~55%).
 
 **Thực thi chi tiết từng bước:** [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md) (Bước 1→26 + TODO owner).
 
@@ -167,11 +167,11 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 3. Cả hai: R0.3b staging full §12.1 → Gate R0
 4. Owner: R1 paid (Pro/PITR/always-on/LLM/billing) sau Gate R0
 5. Cả hai: R2.1→R2.3 live → R2.7 → CPC thương mại
-6. Cả hai: R3 I1–I8 (SOC2/pen-test/SSO/SLA) → E100 → TỔNG 100%
+6. Cả hai: R3 I1–I8 (SOC2/pen-test/SSO/SLA + I8 quarterly signed) → E100 → TỔNG 100%
 (song song OK) Owner: GEMINI_API_KEY → E0.2; E0.4 stub decisions trước R2 claim
 ```
 
-Eng SDD **STOP** until owner unblocks. Evidence: [r0-r3-execution-evidence § Wave E3](../../ops/r0-r3-execution-evidence.md#wave-e3-sdd-gate-2026-07-25--eng-closed--owner-stop).
+Eng SDD **STOP** (Wave E4 CLOSED). Evidence: [r0-r3-execution-evidence § Wave E4](../../ops/r0-r3-execution-evidence.md#wave-e4-sdd-gate-2026-07-26--eng-closed--owner-stop).
 
 ---
 

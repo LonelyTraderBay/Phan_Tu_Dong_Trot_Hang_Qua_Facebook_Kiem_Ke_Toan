@@ -4,16 +4,17 @@
 **Branch:** `cursor/e4-owner-path`  
 **Worktree:** `.worktrees/e4-sdd`  
 **Base:** `main` @ `0221a4c` (PR #23 merge)  
-**Wave status:** **IN PROGRESS** (Tasks 2–3 BLOCKED — owner)
+**PR:** [#24](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/24)  
+**Wave status:** **CLOSED / STOP** (Task 5 DONE)
 
 | Task | Title | Status | Notes |
 |------|-------|--------|-------|
 | 0 | Write SDD plan | **DONE** | Plan committed this wave |
-| 1 | Land completion-step-by-step + link SoT | **DONE** | Checklist + path-to-100 / remaining links; draft PR |
+| 1 | Land completion-step-by-step + link SoT | **DONE** | Checklist + path-to-100 / remaining links; draft PR #24 |
 | 2 | Re-attempt R0.2 Render Starter ×3 | **BLOCKED** | `RENDER_API_KEY` ABSENT; Free→Starter SKIPPED; keep-warm [30182626561](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/actions/runs/30182626561) 3/3 = AMBER ≠ GREEN; owner: [always-on clicks](../../docs/ops/deploy-staging-render.md#upgrade-to-always-on-owner) |
 | 3 | Re-attempt R0.4 Meta | **BLOCKED** | Parent `META_APP_ID`/`SECRET` len=7 placeholderish; no Meta dashboard; R0.2 still BLOCKED (webhook prereq); [E4 Task 3 evidence](../../docs/ops/r0-r3-execution-evidence.md#wave-e4-task-3--r04-meta-app-review-re-attempt-2026-07-26) |
 | 4 | Eng parallel I8 access review dry-run | **DONE** | Dry-run 2026-07-26: local+staging REST OK; `platform_admins` count=0; biên bản `docs/ops/access-review-2026-07-26-dry-run.md`; I8 still **AMBER** (not live GREEN / not E100) |
-| 5 | E4 gate docs + STOP | **PENDING** | Update path-to-100 tiếp theo ngay; no 100% claim |
+| 5 | E4 gate docs + STOP | **DONE** | Wave E4 SDD gate in evidence; path-to-100 / remaining / step-by-step “tiếp theo ngay” = owner STOP; no 100% claim |
 
 ## Constraints reminder
 
@@ -24,7 +25,8 @@
 
 ## Controllers
 
-- **Wave E4 IN PROGRESS** — Tasks 2–3 **BLOCKED** (owner); Task 4 **DONE** (I8 eng dry-run AMBER); Task 5 next (gate + STOP)
-- Owner critical path: R0.2 payment → Starter ×3; R0.4 real META_* + App Review submit
+- **Wave E4 CLOSED / STOP** — Task 5 **DONE**; eng SDD controller STOPS
+- Owner critical path (next 2): (1) R0.2 payment → Starter ×3; (2) R0.4 real META_* + App Review submit
 - Eng parallel I8: dry-run evidence linked; live quarterly sign-off still needed for I8 GREEN
 - Then: R0.3b → Gate R0 → R1 paid → R2 live → CPC → R3 → E100
+- Honest %: eng ~95%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **NOT 100%**

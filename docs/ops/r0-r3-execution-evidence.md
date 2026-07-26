@@ -648,10 +648,10 @@ Do **not** invent Meta credentials. Owner must:
 |------|--------|----------|
 | **T1** Plan + SoT code-first + ledger | **GREEN** | Plan `2026-07-26-sdd-l2-code-complete.md`; path-to-100 / completion-step-by-step / remaining “tiếp theo ngay” = **NOW = L2 code-complete local**; CPC claim deferred · commit `980bb4f` |
 | **T2** Invite list + accept loop | **GREEN** | `GET /v1/orgs/:orgId/invites` · `POST /v1/invites/accept` · create returns raw `token` once · web settings/invites · OpenAPI · vitest identity+org.guard **17/17 PASS** |
-| **T3** Inngest in `dev:local` + chunks smoke | **PENDING** | — |
+| **T3** Inngest in `dev:local` + chunks smoke | **GREEN** | `scripts/dev-local.ps1` starts/stops Inngest (`-u http://127.0.0.1:3001/api/inngest`); stub `APP_ENV`/`EMBEDDINGS_ALLOW_STUB`; smoke stub reindex → `knowledge_chunks` count **1** (not Gemini quality) · [local-host](./local-host.md) |
 | **T4** Advisor aggregates + Zalo runbook | **PENDING** | — |
 | **T5** CI Node 22 + L2 gate | **PENDING** | — |
 
 **Constraints (active):** No Render payment · Meta may stay BLOCKED · No CPC / E100 / tổng 100% claim.
 
-**Next:** Task 3 — bundle Inngest into `dev:local` + knowledge_chunks smoke (stub).
+**Next:** Task 4 — advisor real aggregates + Zalo runbook drift.

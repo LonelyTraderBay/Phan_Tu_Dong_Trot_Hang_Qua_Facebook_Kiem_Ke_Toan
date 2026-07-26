@@ -88,7 +88,7 @@ Owner wants **code-complete / local perfection** on PC first. Commercial / Rende
 
 - Local smoke path clear; stub OK; no live-LLM quality claim.
 
-**Status:** PENDING
+**Status:** DONE — `2026-07-26` Inngest bundled in `dev:local` / stopped by `dev:local:stop`; stub env defaults; chunks verify commands in `local-host.md`.
 
 ---
 

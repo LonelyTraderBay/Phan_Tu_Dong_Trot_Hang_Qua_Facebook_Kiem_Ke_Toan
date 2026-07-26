@@ -16,7 +16,7 @@
 | I5 Public subprocessors | GREEN/AMBER | Public page `/legal/subprocessors`; source doc `docs/legal/subprocessors.md` updated with public URL. AMBER: legal/customer notification process still needs owner approval. |
 | I6 SLA template | AMBER | Template exists at `docs/legal/sla-template.md`. Legal approval and customer contract use are not complete. |
 | I7 SBOM | GREEN/AMBER | Eng enforce GREEN: `.github/workflows/sbom.yml` fails closed if `sbom.spdx.json` is missing/empty on `v*` tag pushes and published releases; uploads Syft SPDX artifact and attaches to GitHub Release when one exists for the tag. AMBER: org process must still cut every release with a `v*` tag so the workflow runs (no separate `release.yml` dependency). |
-| I8 Access review | AMBER | Runbook exists at `docs/runbooks/platform-admin-access-review.md`. First quarterly review evidence is not complete. |
+| I8 Access review | AMBER | Runbook exists at `docs/runbooks/platform-admin-access-review.md`. **Eng dry-run 2026-07-26:** local+staging REST reachable; `platform_admins` **count=0** both (ids empty); evidence `docs/ops/access-review-2026-07-26-dry-run.md` + Q3 template `docs/ops/access-review-2026-Q3.md`. **Not** quarterly live/signed GREEN; **not** E100. |
 
 ## Verification log
 
@@ -35,6 +35,7 @@
 - This commit starts Plan I and creates implementable scaffolding only.
 - SOC2 and pen-test remain AMBER because they require vendor/auditor execution and dated evidence.
 - SLA remains AMBER until legal/commercial approval.
+- I8 eng dry-run (SDD E4 Task 4, 2026-07-26) advanced query evidence only; quarterly signed biên bản still required for I8 GREEN.
 - E100 remains blocked on I1-I8 live/compliance completion.
 
 ## Verdict

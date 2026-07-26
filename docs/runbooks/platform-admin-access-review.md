@@ -1,7 +1,8 @@
 # Platform Admin Access Review
 
-**Status:** AMBER - runbook exists; first quarterly review evidence pending  
-**Scope:** `platform_admins`, ops endpoints, production secrets, and hosting/database admin consoles.
+**Status:** AMBER - runbook exists; eng dry-run 2026-07-26 done; first **live/signed** quarterly review still pending  
+**Scope:** `platform_admins`, ops endpoints, production secrets, and hosting/database admin consoles.  
+**Evidence:** [access-review-2026-07-26-dry-run.md](../ops/access-review-2026-07-26-dry-run.md) · [access-review-2026-Q3.md](../ops/access-review-2026-Q3.md)
 
 ## Cadence
 

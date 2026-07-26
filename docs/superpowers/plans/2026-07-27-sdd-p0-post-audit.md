@@ -94,16 +94,17 @@
 
 - Gate P0 checklist: P0.1+P0.2 GREEN; P0.3 honest; STOP says Pha B BLOCKED owner.
 
-**Status:** PENDING
+**Status:** DONE — A6 **AMBER_OK** (network-only `sw.js`; offline `/m` not required for Gate P0). A7 R2.4 left **`undecided`** (deferred to Pha B **B5**; no forged AMBER_OK). Gate P0 CLOSED in evidence. CPC ~38% / E100 ~22%+ / tổng ~55% — **NOT 100%**.
 
 ---
 
 ## Wave P0 STOP
 
 ```
-Gate P0 eng local sạch = YES (after T2–T4)
-CPC / E100 / tổng 100% = NOT claimed
-Next = Pha B only when owner wants to sell (B1 Render Starter)
+Gate P0 eng local sạch = YES
+CPC / E100 / tổng 100% = NOT claimed (~38% / ~22%+ / ~55%)
+Next = Pha B only when owner wants to sell (B1 Render Starter) — BLOCKED owner until then
+A7 R2.4 = undecided → decide at B5 before CPC claim
 ```
 
 ## Progress ledger
@@ -113,4 +114,4 @@ Next = Pha B only when owner wants to sell (B1 Render Starter)
 | T1 SoT + plan | DONE | `527c1e7` · PR #31 |
 | T2 P0.1 regression | DONE | `016672b` · evidence § Wave P0 / Gate A re-verify 2026-07-27 · e2e port-lock fix |
 | T3 P0.2 docs drift | DONE | `113d926` · SoT banners + legacy labels; how-to → locked ports |
-| T4 P0.3 + Gate P0 | PENDING | — |
+| T4 P0.3 + Gate P0 | DONE | A6 AMBER_OK · A7 deferred B5 · evidence § Wave P0 CLOSED 2026-07-27 |

@@ -801,3 +801,38 @@ Ports in this table (`:3000` / `:3001` / `:8000` / `:54321`) predate the Omni lo
 | **AgentsRoom vs :54721** | Keep AgentsRoom off `:54721` when running Omni local Supabase |
 
 **Controller STOP (P0.1).** Regression evidence recorded. Do not claim CPC / E100 / tổng 100%. Do not start Pha B without owner.
+
+## Wave P0 CLOSED 2026-07-27 — eng local sạch = YES (commercial deferred)
+
+**SDD plan:** [2026-07-27-sdd-p0-post-audit.md](../superpowers/plans/2026-07-27-sdd-p0-post-audit.md) · **Branch:** `cursor/p0-post-audit` · **PR:** [#31](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/31) · **SoT:** [completion-priority-post-audit](../superpowers/plans/2026-07-27-completion-priority-post-audit.md) · **Ports:** `config/local-ports.json` (4700 / 4701 / 4702 / 4788 / 54721)
+
+**Date:** 2026-07-27
+
+### Gate P0 checklist
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| **P0.1** Gate A regression | **GREEN** | [Wave P0 / Gate A re-verify](#wave-p0--gate-a-re-verify-2026-07-27) — API 185 · AI 37 · isolation 8/0 skip · e2e · lint · typecheck · commit `016672b` |
+| **P0.2** Docs ports SoT | **GREEN** | SoT banners + legacy `:3000`/`:54321` labels · commit `113d926` |
+| **P0.3 A6** Offline SW `/m` | **AMBER_OK** | Network-only `apps/web/public/sw.js` accepted for Gate P0 — offline `/m` **not required** to close eng local sạch (Plan H mobile already GREEN/AMBER). No SW rewrite in this wave. |
+| **P0.3 A7** Zalo R2.4 | **deferred** | `cpc-checklist.md` R2.4 stays **`undecided`** — owner must choose `REQUIRED` \| `AMBER_OK` at **Pha B step B5** before CPC claim. **No forged signature.** |
+| Stack ports SoT | **YES** | Web `:4700` · API `:4701` · AI `:4702` · Inngest `:4788` · Supabase `:54721` |
+
+### Honest maturity (do **not** invent 100%)
+
+| Đích | ~% sau Gate P0 | Claim |
+|------|----------------|-------|
+| **Eng / Gate P0** (local sạch) | **YES** | Wave success = Gate P0 only |
+| **CPC thương mại** | ~**38%** | **NOT 100%** |
+| **E100** | ~**22%+** | **NOT 100%** |
+| **Tổng intended** | ~**55%** | **NOT 100%** |
+
+**Gate P0 eng local sạch = YES.** Commercial path remains deferred.
+
+| Next | When |
+|------|------|
+| **Pha B** (B1 Render Starter ×3 → …) | **Only when owner wants to sell** — **BLOCKED owner** until then |
+| **B5** R2.4–R2.6 Decision | Before CPC claim — owner fills REQUIRED \| AMBER_OK |
+| **CPC / E100 / tổng** | Still **not** claimable |
+
+**Controller STOP (Wave P0).** Do not start Pha B / Render / Meta without owner. Do not claim CPC / E100 / tổng 100%.

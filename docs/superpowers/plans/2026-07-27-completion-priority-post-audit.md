@@ -10,7 +10,7 @@
 
 | # | Đích | = 100% khi | Hiện tại (sau audit) | Trạng thái |
 |---|------|------------|----------------------|------------|
-| **A** | Code / eng local | Gate A + không P0 local | ~**98%** | **READY** — L3 Gate A đóng; port lock sống; optional A6/A7 còn lại |
+| **A** | Code / eng local | Gate A + không P0 local | ~**98%**→**Gate P0 YES** | **READY** — Wave P0 CLOSED 2026-07-27; A6 AMBER_OK; A7 deferred B5 |
 | **B** | CPC thương mại | R0+R1+R2.1–2.3+R2.7 GREEN | ~**38%** | **BLOCKED owner** — Render/Meta/paid/live |
 | **C** | E100 | Plan I I1–I8 live/compliance | ~**22%+** | **BLOCKED vendor/legal** — scaffold có, live chưa |
 
@@ -141,32 +141,34 @@ pnpm typecheck
 | **Xong khi** | Người mới không mở nhầm `:3000` khi đọc SoT |
 | **Evidence** | PR docs |
 
-### P0.3a — A6 Offline SW (P2 · Eng · optional)
+### P0.3a — A6 Offline SW (P2 · Eng · optional) — **AMBER_OK 2026-07-27**
 
 | | |
 |--|--|
 | **Làm** | Cache shell `/m` tối thiểu trong `apps/web/public/sw.js` **hoặc** ghi AMBER_OK “không cần offline local” |
 | **Xong khi** | Offline reload `/m` cơ bản **hoặc** quyết định AMBER trong checklist H |
 | **Không chặn** | Gate A / CPC nếu AMBER_OK |
+| **Kết quả Wave P0** | **AMBER_OK** — keep network-only `sw.js`; offline `/m` not required for Gate P0 |
 
-### P0.3b — A7 Zalo decision sớm (P2 · Owner · optional)
+### P0.3b — A7 Zalo decision sớm (P2 · Owner · optional) — **deferred → B5**
 
 | | |
 |--|--|
 | **Làm** | Chọn ngay: `REQUIRED` (OAuth đầy đủ) **hoặc** `AMBER_OK` (Meta-only) trong `cpc-checklist.md` R2.4 |
 | **Xong khi** | R2.4 ≠ `undecided` |
 | **Gợi ý** | Nếu chưa có OA live → `AMBER_OK` để khỏi chặn CPC sau này |
+| **Kết quả Wave P0** | R2.4 stays **`undecided`** — owner decides at Pha B **B5** before CPC claim (no forged signature) |
 
-### P0.4 — Gate P0 đóng
+### P0.4 — Gate P0 đóng — **YES 2026-07-27**
 
-| Checklist | Bắt buộc? |
-|-----------|-----------|
-| P0.1 regression GREEN | Có |
-| P0.2 docs ports SoT | Có |
-| P0.3a / P0.3b | Không (optional) |
-| Stack `:4700` health | Có |
+| Checklist | Bắt buộc? | Status |
+|-----------|-----------|--------|
+| P0.1 regression GREEN | Có | **GREEN** |
+| P0.2 docs ports SoT | Có | **GREEN** |
+| P0.3a / P0.3b | Không (optional) | A6 **AMBER_OK** · A7 deferred B5 |
+| Stack `:4700` health | Có | **YES** (locked ports) |
 
-**★ Sau P0:** eng local “sạch để mở thương mại”. Vẫn **không** claim CPC.
+**★ Sau P0:** eng local “sạch để mở thương mại”. Vẫn **không** claim CPC (~38% / E100 ~22%+ / tổng ~55% — **NOT 100%**). Next = Pha B **BLOCKED owner** until sell intent.
 
 ---
 
@@ -270,18 +272,19 @@ B6.7  R2.7 tick cpc-checklist → ★ CPC 100%
 ```
 [x] P0.1  Regression Gate A tươi + ghi evidence (SHA d77c197+)
 [x] P0.2  Dọn doc ports/evidence drift → SoT local-ports.json
-[ ] P0.3a (tuỳ) A6 offline SW hoặc AMBER_OK
-[ ] P0.3b (tuỳ) Owner: R2.4 Zalo = REQUIRED|AMBER_OK
+[x] P0.3a (tuỳ) A6 offline SW → AMBER_OK (network-only sw.js; offline /m not required for Gate P0)
+[x] P0.3b (tuỳ) A7 Zalo — deferred to Pha B B5 (R2.4 stays undecided; no forged AMBER_OK)
+[x] Gate P0 eng local sạch = YES (CPC ~38% / E100 ~22%+ / tổng ~55% — NOT 100%)
 ```
 
 ### Khi owner muốn bán
 
 ```
-[ ] B1  Render Starter ×3
+[ ] B1  Render Starter ×3          ← BLOCKED owner until then
 [ ] B2  META_* + App Review submit
 [ ] B3  Staging walkthrough → Gate R0
 [ ] B4  R1 paid ops (+ kick-off C1 vendor)
-[ ] B5  R2.4–R2.6 hết undecided
+[ ] B5  R2.4–R2.6 hết undecided   ← R2.4 Zalo must be REQUIRED|AMBER_OK before CPC
 [ ] B6  Carrier/COD/returns (+ stub REQUIRED) → ★ CPC
 ```
 
@@ -333,7 +336,7 @@ B6.7  R2.7 tick cpc-checklist → ★ CPC 100%
 
 | Metric | % | Ghi chú |
 |--------|--:|---------|
-| Eng / Gate A local | **~98%** | Còn optional A6/A7 + P0 re-verify |
+| Eng / Gate A local | **Gate P0 YES** | A6 AMBER_OK; A7 deferred B5; commercial deferred |
 | CPC thương mại | **~38%** | Code path sẵn; live/owner BLOCKED |
 | E100 | **~22%+** | Scaffold; compliance BLOCKED |
 | **Tổng intended** | **~55%** | = f(CPC, E100) — **NOT 100%** |

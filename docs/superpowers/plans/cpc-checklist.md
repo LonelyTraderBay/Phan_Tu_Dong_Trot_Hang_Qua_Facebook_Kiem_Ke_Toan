@@ -54,7 +54,7 @@ Cross-link: [completion-step-by-step § Pha Local / E0.4](./2026-07-25-completio
 
 | Item | Decision | Owner date | Notes |
 |------|----------|------------|-------|
-| R2.4 Zalo OA | undecided | | OAuth/token + inbound worker vs Meta-only · local-phase OK undecided; **must** REQUIRED/AMBER_OK before CPC claim |
+| R2.4 Zalo OA | undecided | | OAuth/token + inbound worker vs Meta-only · Wave P0: left undecided (A7 deferred to Pha B **B5**); **must** REQUIRED/AMBER_OK before CPC claim — do not forge |
 | R2.5 E-invoice | undecided | | Real provider sandbox vs invoicing outside system · local-phase OK undecided; **must** REQUIRED/AMBER_OK before CPC claim |
 | R2.6 Advisor | undecided | | Live LLM/eval vs stub acceptable · local-phase OK undecided; **must** REQUIRED/AMBER_OK before CPC claim |
 

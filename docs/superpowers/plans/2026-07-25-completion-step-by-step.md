@@ -1,8 +1,11 @@
 # Kế hoạch thực thi từng bước — hoàn thiện tới 100%
 
-**Date:** 2026-07-25 (cập nhật 2026-07-26 — **L2 CLOSED**; code-complete local advanced; CPC deferred)  
-**Baseline:** `main` @ `5fea338` (L1 / PR #26 MERGED) · Wave L2 `cursor/l2-code-complete` CLOSED — Render/Meta **không** default “tiếp theo ngay”  
-**SoT liên quan:** [path-to-100](./2026-07-25-path-to-100-percent.md) · [remaining-priority](./2026-07-25-remaining-completion-priority.md) · [L1 plan](./2026-07-26-sdd-l1-local-first.md) · [L2 plan](./2026-07-26-sdd-l2-code-complete.md) · [L2 gate](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred) · [cpc-checklist](./cpc-checklist.md) · [evidence](../../ops/r0-r3-execution-evidence.md)
+**Date:** 2026-07-25 (cập nhật 2026-07-26 — **L2 CLOSED** @ `e2105a6`; code-first)  
+**Baseline:** `main` @ `e2105a6` (PR #27)  
+**SoT ưu tiên mới (code → thương mại):** [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md)  
+**SoT liên quan:** [path-to-100](./2026-07-25-path-to-100-percent.md) · [remaining-priority](./2026-07-25-remaining-completion-priority.md) · [L1](./2026-07-26-sdd-l1-local-first.md) · [L2](./2026-07-26-sdd-l2-code-complete.md) · [cpc-checklist](./cpc-checklist.md) · [evidence](../../ops/r0-r3-execution-evidence.md)
+
+> Tài liệu này giữ chi tiết **Pha CPC claim** (Render/Meta/R1/R2). Việc **làm ngay** = Pha A trong file code-first ở trên.
 
 ---
 
@@ -10,7 +13,7 @@
 
 | Đích | = 100% khi | Hiện tại (~%) | Ai đóng |
 |------|------------|---------------|---------|
-| **Eng path** | A→H không stub chặn bán + regression xanh | ~**95%+** | Eng gần xong |
+| **Eng path** | A→H không stub chặn bán + regression xanh | ~**97%+** | Eng — Pha A hardening |
 | **CPC thương mại** | Gate R0 + R1 + R2.1–2.3 + R2.7 GREEN | ~**38%** | Owner + Eng live |
 | **E100** | Plan I I1–I8 live/compliance GREEN | ~**22%+** | Owner + Legal + Vendor |
 | **Tổng** | CPC **và** E100 cùng GREEN | ~**55%** | = CPC + E100 |
@@ -379,16 +382,16 @@ Chi tiết: [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-comple
 
 ## 8. Việc **tiếp theo ngay** (copy vào TODO)
 
-**Policy:** local-first — **không** Render payment default “tiếp theo ngay”. Wave **L1 CLOSED** · Wave **L2 CLOSED** ([gate](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred)). Eng code-complete local **advanced**. ~% thật: eng ~97%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%. CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại.
+**Policy:** local-first — **không** Render payment default “tiếp theo ngay”. Wave **L1 CLOSED** · **L2 CLOSED** · **L3 CLOSED** — **Gate A Code local READY = YES** ([gate](../../ops/r0-r3-execution-evidence.md#wave-l3-gate-a-2026-07-26--code-local-ready--yes-commercial-deferred)). ~% thật: eng Gate A READY · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%. CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại.
 
 ```
-▶ Post-L2 (DONE)
-[x] 1. L2.T1–T5: invites · Inngest · advisor aggregates · CI Node 22 · gate
-[x] 2. L2 gate: eng code-complete local advanced; CPC deferred
+▶ Post-Gate A (DONE)
+[x] 1. L3.T1–T5: A1 smoke · A2 e2e · A3 lint · A4 RLS · A5 api-client honesty · Gate A
+[x] 2. Gate A Code local READY = YES; commercial deferred
 
-▶ Tiếp theo (owner chọn; default = local)
-[ ] A. (default) tiếp tục eng local / hardening trên Docker + dev:local
-[ ] B. (khi sẵn sàng claim CPC) mở khối Render/Meta bên dưới
+▶ Tiếp theo (owner chọn)
+[ ] A. (optional) polish A6 offline SW / A7 Zalo decision
+[ ] B. (khi sẵn sàng claim CPC) mở khối Render/Meta bên dưới — Pha B
 
 ── Khi muốn claim CPC thương mại (deferred) ──
 [ ] R1. Render Billing → Add payment method
@@ -399,7 +402,7 @@ Chi tiết: [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-comple
 [ ] R6. Owner E0.4: set REQUIRED/AMBER_OK cho R2.4–R2.6 (hết undecided)
 ```
 
-Sau L2: tiếp tục local eng **hoặc** owner mở Render/Meta khi muốn claim CPC — **owner chọn**; default = local.
+Sau Gate A: optional polish **hoặc** owner mở Render/Meta khi muốn claim CPC — **owner chọn**.
 
 ---
 

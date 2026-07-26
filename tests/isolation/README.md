@@ -1,12 +1,35 @@
 # Isolation tests
 
-`cross-tenant.org.spec.ts` covers the Nest `OrgGuard` path with mocked
-membership lookups. It proves API requests cannot use another tenant's org
-context before application writes run.
+## Suites
 
-Before Plan B Meta work starts, this gate must include Docker-backed Supabase
-RLS E2E coverage using real anon/authenticated clients against migrated local
-Postgres. At minimum, the RLS suite should prove a user who belongs to org A
-cannot directly read or mutate org B rows through the Supabase Data API, and
-cannot update control-plane tables such as `memberships`, `entitlements`, or
-`feature_flags`.
+| File | What it proves |
+|------|----------------|
+| `cross-tenant.org.spec.ts` | Nest `OrgGuard` — API cannot use another tenant's `X-Org-Id` before writes |
+| `cross-tenant.channels.spec.ts` | Channels + inbox routes respect the same org membership gate |
+| `cross-tenant.rls.spec.ts` | **(A4)** Migration proof (always-on) + Docker Supabase Data API: user A cannot UPDATE org B `memberships` / `entitlements` / `feature_flags`, and cannot SELECT org B memberships |
+
+## Prerequisites for RLS E2E
+
+Local Docker Supabase with migrations applied:
+
+```powershell
+supabase start
+supabase db reset   # if needed
+pnpm test:isolation
+```
+
+Env (optional — defaults to local demo keys on `http://127.0.0.1:54321`):
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+CI (`ci-isolation.yml`) starts Supabase the same way as `migrate-check.yml`.
+
+## Run
+
+```powershell
+pnpm test:isolation
+```
+
+Expect **0 skipped** when local/CI Supabase is up.

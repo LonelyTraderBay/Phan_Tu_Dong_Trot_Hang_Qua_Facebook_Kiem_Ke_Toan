@@ -181,12 +181,6 @@ describe('cross-tenant organization isolation', () => {
     expect(membershipLookups).toEqual([{ orgId: ORG_B, userId: USER_A }]);
   });
 
-  it.skip('rls denies cross-tenant direct Supabase updates', () => {
-    // Future Docker-backed RLS E2E: migrate local Supabase, authenticate as
-    // USER_A, then prove direct Data API updates to ORG_B memberships,
-    // entitlements, and feature flags are denied before Plan B Meta work.
-  });
-
   async function request(
     path: string,
     options: {

@@ -203,20 +203,17 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 
 ## Tóm tắt một trang — làm gì **tiếp theo ngay**
 
-Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md) · **thực thi:** [completion-step-by-step](./2026-07-25-completion-step-by-step.md) · **L2 gate:** [evidence § Wave L2](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred) · **L1 gate:** [evidence § Wave L1](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred)
+Evidence: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · **SoT ưu tiên code-first:** [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md)
 
-**~% thật:** eng ~97%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
+**~% thật:** eng Gate A READY · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
 
 ```
-DONE    Wave L1 (SoT · stack · stub embeddings · E0.4 notes · gate)
-DONE    Wave L2 (invites · Inngest · advisor · CI Node 22 · gate)
-▶ NOW   (default) tiếp tục local hardening trên Docker + dev:local
-OR      (khi sẵn sàng claim CPC) Owner: R0.2 payment → Starter ×3
-THEN    (khi claim CPC) Owner: R0.4 real META_* + App Review submit
-THEN    R0.3b staging → Gate R0 → E0.4 decide → R1 → R2 → CPC → R3 → E100 → TỔNG 100%
+DONE    L1 + L2 + L3 ★ Gate A Code local READY (A1–A5/A8)
+▶ NOW   (optional) polish A6/A7  OR  idle until owner wants commercial
+THEN    (chỉ khi muốn bán) Pha B CPC → Pha C E100
 ```
 
-Chi tiết Bước: [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md).
+Chi tiết từng bước: [2026-07-26-completion-priority-code-first.md](./2026-07-26-completion-priority-code-first.md). Gate A evidence: [r0-r3 § L3 Gate A](../../ops/r0-r3-execution-evidence.md#wave-l3-gate-a-2026-07-26--code-local-ready--yes-commercial-deferred).
 
 ---
 
@@ -224,9 +221,11 @@ Chi tiết Bước: [2026-07-25-completion-step-by-step.md](./2026-07-25-complet
 
 | Tài liệu | Path |
 |----------|------|
+| **Checklist code-first** | [completion-priority-code-first](./2026-07-26-completion-priority-code-first.md) |
 | SoT ưu tiên gốc | [path-to-completion-priority](./2026-07-24-path-to-completion-priority.md) |
 | Wave L1 | [sdd-l1-local-first](./2026-07-26-sdd-l1-local-first.md) |
 | Wave L2 | [sdd-l2-code-complete](./2026-07-26-sdd-l2-code-complete.md) |
+| Wave L3 Gate A | [sdd-l3-gate-a](./2026-07-26-sdd-l3-gate-a.md) |
 | CPC checklist | [cpc-checklist](./cpc-checklist.md) |
 | Plan E evidence | [plan-e-dod-evidence](./plan-e-dod-evidence.md) |
 | Plan I playbook | [plan-i-priority-execution](./2026-07-24-plan-i-priority-execution.md) |

@@ -89,6 +89,8 @@ Health checks:
 
 ## Quality checks
 
+`pnpm lint` and `pnpm typecheck` both run `tsc --noEmit` via Turbo across `@omni/api`, `@omni/web`, `@omni/authz-types`, and `@omni/db`. There is no ESLint config in this monorepo (Gate A A3: honesty over an empty flat config).
+
 ```powershell
 pnpm lint
 pnpm typecheck

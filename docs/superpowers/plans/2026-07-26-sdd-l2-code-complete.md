@@ -124,7 +124,7 @@ Owner wants **code-complete / local perfection** on PC first. Commercial / Rende
 
 - Gate accurate; no CPC/E100 100% claim; Render not “tiếp theo ngay”.
 
-**Status:** PENDING
+**Status:** DONE — `2026-07-26` CI Node 22 (`ci-api`/`ci-web`/`ci-isolation`/`scheduled-qa`); L2 gate CLOSED; CPC/E100 still not 100%.
 
 ---
 

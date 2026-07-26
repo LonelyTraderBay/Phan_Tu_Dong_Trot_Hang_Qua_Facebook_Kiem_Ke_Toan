@@ -605,3 +605,37 @@ Do **not** invent Meta credentials. Owner must:
 | Gemini / CPC quality claim | **NONE** — stub explicitly non-production / not live LLM quality |
 
 **Verdict:** E0.2 eng path **GREEN** for local-only (stub). E0.2 live Gemini still optional when key present. No CPC / E100 claim.
+
+## Wave L1 SDD gate (2026-07-26) — local-first eng CLOSED; CPC claim deferred
+
+**SDD plan:** [2026-07-26-sdd-l1-local-first.md](../superpowers/plans/2026-07-26-sdd-l1-local-first.md) · **Branch:** `cursor/l1-local-first` · **PR:** [#26](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/26) · **Base:** `main` @ `51f5370` (PR #25 MERGED)
+
+| Task | Status | Evidence |
+|------|--------|----------|
+| **T1** Local-first SoT + plan + draft PR | **GREEN** | SoT reorder (Pha Local NOW; Render/Meta under CPC claim); plan + ledger; draft **PR #26** |
+| **T2** Local stack verify + non-Meta walkthrough | **PASS** | Health 3/3 + Supabase; Meta BLOCKED OK; [Task 2 section](#wave-l1-task-2--local-stack-verify-2026-07-26) |
+| **T3** E0.2 stub embeddings | **GREEN** (local) | Deterministic stub when `GEMINI_API_KEY` empty; prod refuse; pytest green; [Task 3 section](#wave-l1-task-3--e02-local-stub-embeddings-2026-07-26) |
+| **T4** E0.4 local-phase stub notes | **GREEN** | [cpc-checklist § Stub](../superpowers/plans/cpc-checklist.md#stub-decisions-owner): undecided OK local; **must** REQUIRED/AMBER_OK before CPC; no forged owner signature |
+| **T5** Gate + STOP | **GREEN** | This section; post-L1 “tiếp theo ngay” = next local work **or** when-ready CPC claim path |
+
+### Honest maturity (do **not** invent 100%)
+
+| Đích | ~% sau L1 eng | Còn thiếu |
+|------|---------------|-----------|
+| **Eng path** | ~**96%**+ | Live R2 polish; owner E0.4 Decision before CPC; optional real GEMINI |
+| **CPC thương mại** | ~**38%** | **NOT 100%** — R0.2/R0.4 → R0.3b → Gate R0 → R1 paid → R2.1–2.3 live → R2.7 + E0.4 decide |
+| **E100** | ~**22%**+ | **NOT 100%** — R3 SOC2/pen-test/SSO/SLA + I5 legal + I8 quarterly |
+| **Tổng intended** | ~**55%** | CPC GREEN **và** E100 GREEN — **NOT 100%** |
+
+**Gate L1 verdict: local-first eng CLOSED.** Eng local path advanced (SoT · stack · stub embeddings · E0.4 notes). **CPC thương mại and E100 remain not 100%.** Render Starter / Meta App Review stay **deferred** until owner opens Pha CPC claim — **not** “tiếp theo ngay”.
+
+| Blocker / next | When |
+|----------------|------|
+| **Next local** (optional) | Further local polish / feature eng on Docker + `dev:local` — no Render payment required |
+| **R0.2 / R0.4** | **Khi claim CPC only** — payment → Starter ×3; real `META_*` + App Review |
+| **R0.3b → Gate R0** | After R0.2 + R0.4 |
+| **E0.4 Decision** | Owner fills REQUIRED/AMBER_OK before R2.7 / CPC checklist verdict |
+| **R1 → R2 → CPC** | After Gate R0 |
+| **R3 → E100** | After CPC thương mại |
+
+**Controller STOP (L1).** Wave L1 CLOSED. Continue later local eng waves **or** wait until owner starts CPC claim path. Do not invent Meta/Render credentials. Do not claim CPC / E100 / tổng 100%.

@@ -52,10 +52,9 @@ TỔNG 100%  =  CPC thương mại GREEN  +  E100 GREEN
 ## 2. Bản đồ ưu tiên (thứ tự cứng)
 
 ```
-▶ NOW = Pha Local (Wave L1)
-    · E0.2 knowledge_chunks (GEMINI hoặc stub embeddings local)
-    · E0.4 stub notes local-phase (AMBER_OK / undecided OK local-only)
-    · Local walkthrough non-Meta refresh · stack health (Docker + dev:local)
+▶ NOW = Post-L1 (local eng optional · CPC claim deferred)
+    · Wave L1 CLOSED: SoT · stack PASS · stub embeddings · E0.4 notes · gate
+    · Tiếp tục feature/polish local trên Docker + dev:local (không cần Render)
 
 ── Pha CPC claim (chỉ khi muốn claim CPC thương mại) — KHÔNG “tiếp theo ngay” ──
   BƯỚC 1–2   Owner: R0.2 Render Starter ×3
@@ -63,7 +62,8 @@ TỔNG 100%  =  CPC thương mại GREEN  +  E100 GREEN
   BƯỚC 5     Cả hai: R0.3b walkthrough staging → ★ Gate R0
   BƯỚC 6–12  Owner(+Eng): R1.0–R1.6 paid/live → ★ Gate R1
                (song song sau R1.0: R3.0 kick-off SOC2/pen-test)
-  BƯỚC 13–16 Cả hai: R2.1→R2.3 live + R2.7 checklist → ★ CPC 100%
+  BƯỚC 13    Owner: E0.4 REQUIRED/AMBER_OK (hết undecided) trước R2.7
+  BƯỚC 14–16 Cả hai: R2.1→R2.3 live + R2.7 checklist → ★ CPC 100%
   BƯỚC 17–25 Cả hai: R3 I1–I8 → ★ E100 100% → ★ TỔNG 100%
 ```
 
@@ -75,15 +75,15 @@ TỔNG 100%  =  CPC thương mại GREEN  +  E100 GREEN
 
 Mỗi bước: **Ai** · **Làm gì** · **Playbook** · **Xong khi** · **Ghi evidence**
 
-### Pha Local — Eng trên PC (NOW / Wave L1)
+### Pha Local — Eng trên PC (Wave L1 — **CLOSED**)
 
 | Ưu tiên | Việc | Ai | Xong khi |
 |--------:|------|-----|----------|
-| L1.T2 | Verify stack: Supabase Docker + api/web/ai health | Eng | `/health` 200; evidence ngắn |
-| L1.T2 | Refresh walkthrough §12.1 **non-Meta** | Eng | Criteria không-Meta PASS/partial; Meta rows **BLOCKED** OK local |
-| L1.T3 / E0.2 | `GEMINI_API_KEY` → chunks > 0 **hoặc** stub embeddings khi key trống | Eng | `knowledge_chunks` > 0 local; **không** claim live LLM quality |
-| L1.T4 / E0.4 | Ghi local-phase notes: R2.4–R2.6 **có thể** `undecided` khi eng local; khuyến nghị intent `AMBER_OK` Meta-only (không invent chữ ký) | Eng+Owner note | [cpc-checklist § Stub decisions](./cpc-checklist.md#stub-decisions-owner); **phải** `REQUIRED`/`AMBER_OK` trước CPC claim |
-| L1.T5 | Gate L1 | Eng | Eng local advanced; CPC vẫn deferred |
+| L1.T2 | Verify stack: Supabase Docker + api/web/ai health | Eng | **DONE** `/health` 200 |
+| L1.T2 | Refresh walkthrough §12.1 **non-Meta** | Eng | **DONE** Meta **BLOCKED** OK local |
+| L1.T3 / E0.2 | `GEMINI_API_KEY` → chunks > 0 **hoặc** stub embeddings khi key trống | Eng | **DONE** stub local path; **không** claim live LLM quality |
+| L1.T4 / E0.4 | Ghi local-phase notes: R2.4–R2.6 **có thể** `undecided` khi eng local; khuyến nghị intent `AMBER_OK` Meta-only (không invent chữ ký) | Eng+Owner note | **DONE** [cpc-checklist § Stub](./cpc-checklist.md#stub-decisions-owner); **phải** `REQUIRED`/`AMBER_OK` trước CPC claim |
+| L1.T5 | Gate L1 | Eng | **DONE / CLOSED** — eng local advanced; CPC deferred |
 
 ---
 
@@ -366,15 +366,19 @@ Mỗi bước: **Ai** · **Làm gì** · **Playbook** · **Xong khi** · **Ghi e
 
 ## 8. Việc **tiếp theo ngay** (copy vào TODO)
 
-**Policy:** local-first — **không** Render payment “tiếp theo ngay”. Wave L1: [2026-07-26-sdd-l1-local-first.md](./2026-07-26-sdd-l1-local-first.md). ~% thật: eng ~95%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%. CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại.
+**Policy:** local-first — **không** Render payment “tiếp theo ngay”. Wave **L1 CLOSED** ([gate](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred)). ~% thật: eng ~96%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%. CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại.
 
 ```
-▶ Pha Local (NOW)
-[ ] 1. Verify local stack: Docker Supabase + api/web/ai health (dev:local)
-[ ] 2. E0.2: GEMINI → knowledge_chunks > 0  OR  stub embeddings khi GEMINI_API_KEY trống
-[ ] 3. E0.4: ghi notes local-phase (undecided / khuyến nghị AMBER_OK local-only); decide cứng trước CPC claim
-[ ] 4. Refresh walkthrough §12.1 non-Meta (Meta rows BLOCKED OK local)
-[ ] 5. L1 gate: eng local advanced; CPC deferred
+▶ Post-L1 (NOW)
+[x] 1. Verify local stack: Docker Supabase + api/web/ai health (dev:local)
+[x] 2. E0.2: stub embeddings khi GEMINI_API_KEY trống (local path GREEN)
+[x] 3. E0.4: notes local-phase (R2.4–R2.6 undecided OK; must decide trước CPC)
+[x] 4. Refresh walkthrough §12.1 non-Meta (Meta rows BLOCKED OK local)
+[x] 5. L1 gate: eng local advanced; CPC deferred
+
+▶ Tiếp theo (chọn một)
+[ ] A. (optional) tiếp tục eng local / feature trên Docker + dev:local
+[ ] B. (khi sẵn sàng claim CPC) mở khối Render/Meta bên dưới
 
 ── Khi muốn claim CPC thương mại (deferred) ──
 [ ] R1. Render Billing → Add payment method
@@ -382,9 +386,10 @@ Mỗi bước: **Ai** · **Làm gì** · **Playbook** · **Xong khi** · **Ghi e
 [ ] R3. Verify no cold-start → R0.2 GREEN
 [ ] R4. META_* trên omni-api-staging + App Review submit
 [ ] R5. Walkthrough staging §12.1 → Gate R0
+[ ] R6. Owner E0.4: set REQUIRED/AMBER_OK cho R2.4–R2.6 (hết undecided)
 ```
 
-Sau Pha Local xong, owner mới mở khối Render/Meta nếu muốn claim CPC.
+Sau L1: tiếp tục local eng **hoặc** owner mở Render/Meta khi muốn claim CPC.
 
 ---
 

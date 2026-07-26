@@ -132,6 +132,8 @@ Owner wants **local-first** development on their PC. **Render billing / Starter 
 
 - Gate accurate; CPC/E100 not claimed; Render not “tiếp theo ngay”.
 
+**Status:** DONE — `2026-07-26` Wave L1 gate appended; Tasks 1–5 DONE; wave **CLOSED**; CPC/E100 still not 100%.
+
 ---
 
 ## Self-check (every task)

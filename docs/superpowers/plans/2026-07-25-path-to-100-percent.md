@@ -8,7 +8,7 @@
 
 | Đích | = 100% khi | Hiện tại |
 |------|------------|----------|
-| **Eng path** | A→H không stub chặn bán + regression xanh | ~**95%** (E0+E1+E2 eng landed; E0.2/E0.4 còn — **Wave L1 local**) |
+| **Eng path** | A→H không stub chặn bán + regression xanh | ~**96%**+ (L1: E0.2 stub + E0.4 notes DONE; live R2 polish còn) |
 | **CPC thương mại** | Gate R0+R1+R2.1–2.3+R2.7 GREEN; `cpc-checklist` verdict GREEN | ~**38%** — **không** 100% |
 | **E100** | Plan I I1–I8 live/compliance GREEN | ~**22%** — **không** 100% |
 | **Tổng intended scope** | CPC thương mại **và** E100 | ~**55%** — **không** 100% |
@@ -36,9 +36,9 @@
 | 5 | **R4** Epoch 5 | Ngoài 100% mặc định | — | Optional |
 
 ```
-NOW ~55% tổng (CPC ~38% · E100 ~22% · eng ~95%)
+NOW ~55% tổng (CPC ~38% · E100 ~22% · eng ~96%+)
   │
-  ├─ ▶ Pha Local (L1): E0.2 · E0.4 notes · walkthrough non-Meta
+  ├─ ▶ Pha Local (L1): E0.2 · E0.4 notes · walkthrough — **CLOSED**
   ├─ E0+E1+E2 eng ── DONE (scaffolding)
   ├─ R0 (R0.2–R0.4) ── deferred tới CPC claim ──► Meta + staging E2E
   ├─ R1 paid/live ──────────────────► DR / always-on / LLM / billing
@@ -162,20 +162,21 @@ Thứ tự bắt buộc (COD phụ thuộc vận đơn):
 
 ## Việc **tiếp theo ngay** (thứ tự cứng)
 
-**Local-first (2026-07-26):** Wave **L1** — [2026-07-26-sdd-l1-local-first.md](./2026-07-26-sdd-l1-local-first.md). Render/Meta **deferred** tới Pha CPC claim. ~% thật: eng ~95%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%.
+**Post-L1 (2026-07-26):** Wave **L1 CLOSED** — local-first eng advanced ([gate](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred)). ~% thật: eng ~96%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%.
 
 **Thực thi chi tiết:** [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md).
 
 ```
-▶ NOW  Pha Local: stack health · E0.2 (GEMINI hoặc stub) · E0.4 notes · walkthrough non-Meta
-THEN   (khi claim CPC) Owner: R0.2 Render Starter ×3
-THEN   (khi claim CPC) Owner: R0.4 real META_* + App Review submit
-THEN   R0.3b staging §12.1 → Gate R0
-THEN   R1 paid → R2.1–2.3 → R2.7 → CPC thương mại
-THEN   R3 I1–I8 → E100 → TỔNG 100%
+▶ NOW   (optional) tiếp tục eng local trên Docker + dev:local — không cần Render
+OR      (khi sẵn sàng claim CPC) Owner: R0.2 Render Starter ×3
+THEN    (khi claim CPC) Owner: R0.4 real META_* + App Review submit
+THEN    R0.3b staging §12.1 → Gate R0
+THEN    Owner E0.4: REQUIRED/AMBER_OK cho R2.4–R2.6 (không còn undecided)
+THEN    R1 paid → R2.1–2.3 → R2.7 → CPC thương mại
+THEN    R3 I1–I8 → E100 → TỔNG 100%
 ```
 
-CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại — eng local không thay Gate R0. Prior E5 gate: [r0-r3-execution-evidence § Wave E5](../../ops/r0-r3-execution-evidence.md#wave-e5-sdd-gate-2026-07-26--eng-closed--owner-stop).
+CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại — eng local không thay Gate R0. L1 gate: [r0-r3-execution-evidence § Wave L1](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred). Prior E5: [§ Wave E5](../../ops/r0-r3-execution-evidence.md#wave-e5-sdd-gate-2026-07-26--eng-closed--owner-stop).
 
 ---
 

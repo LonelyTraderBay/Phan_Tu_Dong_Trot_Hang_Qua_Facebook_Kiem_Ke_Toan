@@ -20,8 +20,8 @@
 DONE     Pilot A–D
 DONE     F + G + H code  → CPC engineering
 AMBER    E paid/live + P0 live + F/G/H live ambers
-▶ NEXT   Pha Local (L1): E0.2 · E0.4 notes · walkthrough non-Meta
-THEN     (khi claim CPC) Wave R0 → R2  → claim CPC thương mại
+DONE     Wave L1 local-first eng (stack · stub · E0.4 notes · gate)
+▶ NEXT   (optional) tiếp tục eng local  OR  (khi claim CPC) Wave R0 → R2
 THEN     Wave R3        Plan I live/compliance → claim E100
 OPTIONAL Epoch 5
 ```
@@ -174,7 +174,7 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 | R0.3 §12.1 walkthrough | **AMBER** | Local non-Meta; Meta BLOCKED OK; refresh trong L1 |
 | R0.4 Meta App Review | **BLOCKED / deferred** | Khi claim CPC |
 | E2–E5 eng | **CLOSED** | PR #22–#25; CPC/E100 vẫn không 100% |
-| Wave L1 local-first | **IN PROGRESS** | Task 1–3 DONE (SoT + stack health + stub embeddings `2026-07-26`); Task 4–5 next |
+| Wave L1 local-first | **CLOSED** | Tasks 1–5 DONE (`2026-07-26`); eng local advanced; CPC claim deferred — [L1 gate](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred) |
 | R1–R2 live | **AMBER** | Billing / carrier / COD live — khi claim CPC |
 | R3 E100 | **BLOCKED** | Sau CPC thương mại |
 
@@ -189,16 +189,16 @@ Chỉ khi CPC/E100 ổn: Agency multi-org · Data residency · Vertical packs ·
 
 ## Tóm tắt một trang — làm gì **tiếp theo ngay**
 
-Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md) · **thực thi:** [completion-step-by-step](./2026-07-25-completion-step-by-step.md) · **L1:** [sdd-l1-local-first](./2026-07-26-sdd-l1-local-first.md)
+Evidence live: [r0-r3-execution-evidence](../../ops/r0-r3-execution-evidence.md) · path-to-100: [2026-07-25-path-to-100-percent](./2026-07-25-path-to-100-percent.md) · **thực thi:** [completion-step-by-step](./2026-07-25-completion-step-by-step.md) · **L1:** [sdd-l1-local-first](./2026-07-26-sdd-l1-local-first.md) · **L1 gate:** [evidence § Wave L1](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred)
 
-**~% thật:** eng ~95%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
+**~% thật:** eng ~96%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim CPC/E100/tổng 100%.
 
 ```
-▶ NOW   Pha Local (L1): stack health · E0.2 · E0.4 notes · walkthrough non-Meta
-DONE    E0–E5 eng scaffolding / STOP gates (PR #22–#25)
-THEN    (khi claim CPC) Owner: R0.2 payment → Starter ×3
+DONE    Wave L1 (SoT · stack · stub embeddings · E0.4 notes · gate)
+▶ NOW   (optional) tiếp tục eng local trên Docker + dev:local
+OR      (khi sẵn sàng claim CPC) Owner: R0.2 payment → Starter ×3
 THEN    (khi claim CPC) Owner: R0.4 real META_* + App Review submit
-THEN    R0.3b staging → Gate R0 → R1 → R2 → CPC → R3 → E100 → TỔNG 100%
+THEN    R0.3b staging → Gate R0 → E0.4 decide → R1 → R2 → CPC → R3 → E100 → TỔNG 100%
 ```
 
 Chi tiết Bước: [2026-07-25-completion-step-by-step.md](./2026-07-25-completion-step-by-step.md).

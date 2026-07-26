@@ -373,4 +373,273 @@ describe("IdentityService", () => {
       meta: result.deleteRequest,
     });
   });
+
+  it("creates an invite and returns the raw token once", async () => {
+    const { client, insertCalls } = mockSupabase([
+      {
+        data: {
+          id: "44444444-4444-4444-4444-444444444444",
+          org_id: ORG_ID,
+          email: "cskh@example.com",
+          role: "cskh",
+          expires_at: "2026-08-01T00:00:00.000Z",
+          created_at: "2026-07-25T00:00:00.000Z",
+          accepted_at: null,
+        },
+        error: null,
+      },
+    ]);
+    const service = new IdentityService(client);
+
+    const result = await service.createInvite(ORG_ID, {
+      email: "cskh@example.com",
+      role: "cskh",
+    });
+
+    expect(result.token).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.invite).toMatchObject({
+      id: "44444444-4444-4444-4444-444444444444",
+      orgId: ORG_ID,
+      email: "cskh@example.com",
+      role: "cskh",
+      acceptedAt: null,
+    });
+    expect(insertCalls[0]).toMatchObject({
+      table: "membership_invites",
+      values: expect.objectContaining({
+        org_id: ORG_ID,
+        email: "cskh@example.com",
+        role: "cskh",
+        token_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      }),
+    });
+    expect(
+      (insertCalls[0].values as { token_hash: string }).token_hash,
+    ).not.toEqual(result.token);
+  });
+
+  it("lists pending non-expired invites for an org", async () => {
+    const { client, queryCalls } = mockInviteSupabase({
+      list: [
+        {
+          id: "44444444-4444-4444-4444-444444444444",
+          org_id: ORG_ID,
+          email: "cskh@example.com",
+          role: "cskh",
+          expires_at: "2026-08-01T00:00:00.000Z",
+          created_at: "2026-07-25T00:00:00.000Z",
+          accepted_at: null,
+        },
+      ],
+    });
+    const service = new IdentityService(client);
+
+    const result = await service.listInvites(
+      ORG_ID,
+      new Date("2026-07-26T00:00:00.000Z"),
+    );
+
+    expect(result.invites).toEqual([
+      {
+        id: "44444444-4444-4444-4444-444444444444",
+        orgId: ORG_ID,
+        email: "cskh@example.com",
+        role: "cskh",
+        expiresAt: "2026-08-01T00:00:00.000Z",
+        createdAt: "2026-07-25T00:00:00.000Z",
+        acceptedAt: null,
+      },
+    ]);
+    expect(queryCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "membership_invites",
+          filters: expect.arrayContaining([
+            { column: "org_id", value: ORG_ID },
+            { column: "accepted_at", value: null, op: "is" },
+          ]),
+        }),
+      ]),
+    );
+  });
+
+  it("accepts a valid invite token and invalidates it", async () => {
+    const { createHash } = await import("node:crypto");
+    const rawToken = "a".repeat(64);
+    const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+    const inviteeId = "55555555-5555-5555-5555-555555555555";
+    const { client, insertCalls, updateCalls } = mockInviteSupabase({
+      acceptLookup: {
+        id: "44444444-4444-4444-4444-444444444444",
+        org_id: ORG_ID,
+        email: "cskh@example.com",
+        role: "cskh",
+        token_hash: tokenHash,
+        expires_at: "2099-01-01T00:00:00.000Z",
+        created_at: "2026-07-25T00:00:00.000Z",
+        accepted_at: null,
+      },
+      membershipInsert: {
+        id: "66666666-6666-6666-6666-666666666666",
+        org_id: ORG_ID,
+        user_id: inviteeId,
+        role: "cskh",
+      },
+    });
+    const service = new IdentityService(client);
+
+    const result = await service.acceptInvite(
+      { id: inviteeId, email: "cskh@example.com" },
+      { token: rawToken },
+    );
+
+    expect(result.membership).toEqual({
+      id: "66666666-6666-6666-6666-666666666666",
+      orgId: ORG_ID,
+      userId: inviteeId,
+      role: "cskh",
+    });
+    expect(result.invite.acceptedAt).toBeTruthy();
+    expect(insertCalls).toEqual([
+      expect.objectContaining({
+        table: "memberships",
+        values: {
+          org_id: ORG_ID,
+          user_id: inviteeId,
+          role: "cskh",
+        },
+      }),
+    ]);
+    expect(updateCalls).toEqual([
+      expect.objectContaining({
+        table: "membership_invites",
+        values: { accepted_at: expect.any(String) },
+        filters: expect.arrayContaining([
+          { column: "id", value: "44444444-4444-4444-4444-444444444444" },
+          { column: "accepted_at", value: null, op: "is" },
+        ]),
+      }),
+    ]);
+  });
+
+  it("rejects accept when signed-in email does not match invite", async () => {
+    const { createHash } = await import("node:crypto");
+    const rawToken = "b".repeat(64);
+    const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+    const { client } = mockInviteSupabase({
+      acceptLookup: {
+        id: "44444444-4444-4444-4444-444444444444",
+        org_id: ORG_ID,
+        email: "cskh@example.com",
+        role: "cskh",
+        token_hash: tokenHash,
+        expires_at: "2099-01-01T00:00:00.000Z",
+        created_at: "2026-07-25T00:00:00.000Z",
+        accepted_at: null,
+      },
+    });
+    const service = new IdentityService(client);
+
+    await expect(
+      service.acceptInvite(
+        { id: "55555555-5555-5555-5555-555555555555", email: "other@example.com" },
+        { token: rawToken },
+      ),
+    ).rejects.toMatchObject({
+      response: { code: "invite_email_mismatch" },
+    });
+  });
 });
+
+type InviteQueryCall = {
+  table: string;
+  select?: string;
+  filters: Array<{ column: string; value: unknown; op?: string }>;
+  orderBy?: { column: string; options: unknown };
+};
+
+type InviteUpdateCall = {
+  table: string;
+  values: unknown;
+  filters: Array<{ column: string; value: unknown; op?: string }>;
+};
+
+function mockInviteSupabase(fixture: {
+  list?: unknown[];
+  acceptLookup?: unknown | null;
+  membershipInsert?: unknown;
+}) {
+  const insertCalls: InsertCall[] = [];
+  const updateCalls: InviteUpdateCall[] = [];
+  const queryCalls: InviteQueryCall[] = [];
+
+  const client = {
+    rpc() {
+      throw new Error("rpc() should not be called");
+    },
+    from(table: string) {
+      return {
+        insert(values: unknown) {
+          insertCalls.push({ table, values });
+          return {
+            select: () => ({
+              single: async () => ({
+                data: fixture.membershipInsert ?? null,
+                error: null,
+              }),
+            }),
+          };
+        },
+        update(values: unknown) {
+          const call: InviteUpdateCall = { table, values, filters: [] };
+          updateCalls.push(call);
+          const chain = {
+            eq(column: string, value: unknown) {
+              call.filters.push({ column, value });
+              return chain;
+            },
+            is(column: string, value: unknown) {
+              call.filters.push({ column, value, op: "is" });
+              return Promise.resolve({ data: null, error: null });
+            },
+          };
+          return chain;
+        },
+        select(select: string) {
+          const call: InviteQueryCall = { table, select, filters: [] };
+          queryCalls.push(call);
+          const chain = {
+            eq(column: string, value: unknown) {
+              call.filters.push({ column, value });
+              return chain;
+            },
+            is(column: string, value: unknown) {
+              call.filters.push({ column, value, op: "is" });
+              return chain;
+            },
+            gt(column: string, value: unknown) {
+              call.filters.push({ column, value, op: "gt" });
+              return chain;
+            },
+            order(column: string, orderOptions: unknown) {
+              call.orderBy = { column, options: orderOptions };
+              return Promise.resolve({
+                data: fixture.list ?? [],
+                error: null,
+              });
+            },
+            maybeSingle() {
+              return Promise.resolve({
+                data: fixture.acceptLookup ?? null,
+                error: null,
+              });
+            },
+          };
+          return chain;
+        },
+      };
+    },
+  } as unknown as SupabaseLike;
+
+  return { client, insertCalls, updateCalls, queryCalls };
+}

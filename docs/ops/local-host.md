@@ -38,6 +38,12 @@ pnpm run dev:local
 pnpm run dev:local:stop
 ```
 
+`dev:local` starts **API + Web + AI + Inngest Dev Server** (separate process).  
+Inngest CLI: `npx --yes inngest-cli@latest dev -u http://127.0.0.1:3001/api/inngest`  
+Skip one service: `scripts/dev-local.ps1 -NoInngest` (also `-NoApi` / `-NoWeb` / `-NoAi`).
+
+AI process gets `APP_ENV=local` and `EMBEDDINGS_ALLOW_STUB=1` when unset so stub embeddings work without Gemini.
+
 ## URLs
 
 | Service | URL |
@@ -45,6 +51,7 @@ pnpm run dev:local:stop
 | Web | http://127.0.0.1:3000 |
 | API | http://127.0.0.1:3001/health |
 | AI | http://127.0.0.1:8000/health |
+| Inngest Dev UI | http://127.0.0.1:8288 |
 | Supabase API | http://127.0.0.1:54321 |
 | Studio | http://127.0.0.1:54323 |
 | Mailpit | http://127.0.0.1:54324 |
@@ -64,11 +71,12 @@ pnpm run dev:local:stop
 ## Knowledge reindex (`knowledge_chunks`)
 
 Product create enqueues `knowledge.reindex` via outbox → Inngest → AI embed → `replace_knowledge_chunks`.
-Without a local Inngest dev server, chunks stay empty even though the product exists.
+Without Inngest, chunks stay empty even though the product exists.
+
+**Default (L2):** `pnpm run dev:local` already starts Inngest. Manual companion (only if `-NoInngest` or debugging):
 
 ```powershell
-# separate terminal while API is running (must be up before outbox publishes)
-npx inngest-cli@latest dev -u http://127.0.0.1:3001/api/inngest
+npx --yes inngest-cli@latest dev -u http://127.0.0.1:3001/api/inngest
 ```
 
 ### Embeddings: Gemini vs local stub
@@ -100,16 +108,28 @@ Unit coverage: `cd apps/ai; uv run pytest tests/test_stub_embeddings.py -q`
 | Stub embeddings code | **PASS** — `apps/ai` factory + `StubEmbeddingProvider` (768-d, labeled `local-stub-embeddings`) |
 | Prod guard | **PASS** — stub refused when `APP_ENV`/`NODE_ENV=production` even with `EMBEDDINGS_ALLOW_STUB=1` |
 | `uv run pytest tests/test_stub_embeddings.py -q` | **PASS** — see commit evidence |
-| Create product + Inngest → `knowledge_chunks` > 0 | **VERIFY STEPS** (optional smoke) — stack + Inngest required; see below |
+| Create product + Inngest → `knowledge_chunks` > 0 | **ENG PATH READY** (L2 Task 3) — `dev:local` bundles Inngest; smoke commands below |
 
-**Optional smoke (after AI restart with stub enabled):**
+### L2 Task 3 — Inngest in `dev:local` (2026-07-26)
+
+| Check | Result |
+|-------|--------|
+| `dev:local` starts Inngest | **PASS** — `scripts/dev-local.ps1` pid `inngest`; `-u http://127.0.0.1:3001/api/inngest` |
+| `dev:local:stop` stops Inngest | **PASS** — process tree kill includes `inngest` |
+| Stub embeddings env | **PASS** — sets `APP_ENV=local` + `EMBEDDINGS_ALLOW_STUB=1` when unset |
+| Live `knowledge_chunks` > 0 | **PASS** (2026-07-26 smoke) — stub reindex wrote 1 chunk; count `> 0` |
+
+**Verify chunks smoke:**
 
 ```powershell
-# 1) Ensure APP_ENV=local (or EMBEDDINGS_ALLOW_STUB=1), GEMINI empty OK
-# 2) API + AI + Inngest dev running
-# 3) POST /v1/catalog/products (auth as usual)
-# 4) Wait for knowledge.reindex, then:
+# 1) Stack with Inngest (one command)
+pnpm run dev:local
+# 2) APP_ENV=local / EMBEDDINGS_ALLOW_STUB already set by script when unset; GEMINI empty OK
+# 3) Authenticate, then POST /v1/catalog/products for an org (web UI or API)
+# 4) Wait ~10–30s for outbox → knowledge.reindex, then:
+$env:Path = "C:\Program Files\Docker\Docker\resources\bin;$env:Path"
 docker exec supabase_db_omni-commerce psql -U postgres -d postgres -t -c "select count(*) from knowledge_chunks;"
+# Expect count > 0 (stub vectors). Logs: .local-secrets\logs\inngest.*.log
 ```
 
 Expect `> 0` with stub vectors. **Do not** claim Gemini retrieval / CPC quality from stub chunks.

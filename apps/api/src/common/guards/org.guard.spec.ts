@@ -119,7 +119,7 @@ describe("OrgGuard", () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 
-  it("does not skip invite route", async () => {
+  it("does not skip invite create route", async () => {
     const guard = new OrgGuard(mockMemberships());
 
     await expect(
@@ -132,6 +132,21 @@ describe("OrgGuard", () => {
         }),
       ),
     ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("skips invite accept route (no org membership yet)", async () => {
+    const guard = new OrgGuard(mockMemberships());
+
+    await expect(
+      guard.canActivate(
+        mockContext({
+          headers: {},
+          method: "POST",
+          originalUrl: "/v1/invites/accept",
+          user: { id: "u1" },
+        }),
+      ),
+    ).resolves.toBe(true);
   });
 
   it("rejects membership miss", async () => {

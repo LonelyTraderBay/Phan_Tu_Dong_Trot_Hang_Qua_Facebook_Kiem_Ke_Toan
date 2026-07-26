@@ -3,6 +3,7 @@ param(
   [switch]$NoWeb,
   [switch]$NoApi,
   [switch]$NoAi,
+  [switch]$NoInngest,
   [switch]$Stop
 )
 
@@ -18,14 +19,20 @@ function Stop-LocalStack {
     return
   }
   $saved = Get-Content $PidFile -Raw | ConvertFrom-Json
-  foreach ($name in @("api", "web", "ai")) {
+  foreach ($name in @("api", "web", "ai", "inngest")) {
     $id = $saved.$name
     if ($id) {
       try {
-        Stop-Process -Id $id -Force -ErrorAction Stop
+        # Kill process tree (npx/node children for Inngest)
+        & taskkill /PID $id /T /F 2>$null | Out-Null
         Write-Host ("Stopped {0} (pid {1})" -f $name, $id)
       } catch {
-        Write-Host ("Skip {0}: {1}" -f $name, $_.Exception.Message)
+        try {
+          Stop-Process -Id $id -Force -ErrorAction Stop
+          Write-Host ("Stopped {0} (pid {1})" -f $name, $id)
+        } catch {
+          Write-Host ("Skip {0}: {1}" -f $name, $_.Exception.Message)
+        }
       }
     }
   }
@@ -37,8 +44,17 @@ if ($Stop) {
   exit 0
 }
 
-if (-not (Test-Path (Join-Path $Root ".env"))) {
-  throw "Missing .env. Create it from .env.example or .local-secrets first."
+$EnvFile = Join-Path $Root ".env"
+if (-not (Test-Path $EnvFile)) {
+  # Linked worktrees often omit ignored .env — fall back to canonical repo root
+  # (.worktrees/<name> → ../.. = repo root).
+  $parentEnv = Join-Path $Root "..\..\.env"
+  if (Test-Path $parentEnv) {
+    $EnvFile = (Resolve-Path $parentEnv).Path
+    Write-Host ("Using parent .env: {0}" -f $EnvFile)
+  } else {
+    throw "Missing .env. Create it from .env.example or .local-secrets first."
+  }
 }
 
 $uvCandidates = @(
@@ -75,6 +91,21 @@ if (-not (Test-Path $uvExe)) {
 }
 if (-not $uvExe) { throw "uv.exe not found" }
 
+$npxCmd = Join-Path $env:APPDATA "npm\npx.cmd"
+if (-not (Test-Path $npxCmd)) {
+  $npxCmd = (Get-Command npx.cmd -ErrorAction SilentlyContinue).Source
+}
+if (-not $npxCmd -and -not $NoInngest) { throw "npx.cmd not found (needed for Inngest CLI)" }
+
+# Local stub embeddings when GEMINI empty: APP_ENV=local (AI default) or EMBEDDINGS_ALLOW_STUB=1.
+# Ensure process env so uvicorn sees stub path without requiring apps/ai/.env edits.
+if (-not $env:APP_ENV -or $env:APP_ENV.Trim() -eq "") {
+  $env:APP_ENV = "local"
+}
+if (-not $env:EMBEDDINGS_ALLOW_STUB -or $env:EMBEDDINGS_ALLOW_STUB.Trim() -eq "") {
+  $env:EMBEDDINGS_ALLOW_STUB = "1"
+}
+
 if (-not $NoApi) {
   $p = Start-Process -FilePath $pnpmCmd -ArgumentList @("--dir", "apps/api", "dev") `
     -WorkingDirectory $Root -PassThru -WindowStyle Hidden `
@@ -90,7 +121,7 @@ if (-not $NoAi) {
     -RedirectStandardOutput (Join-Path $logDir "ai.out.log") `
     -RedirectStandardError (Join-Path $logDir "ai.err.log")
   $pids.ai = $p.Id
-  Write-Host ("AI   pid {0}  -> http://127.0.0.1:8000/health" -f $p.Id)
+  Write-Host ("AI   pid {0}  -> http://127.0.0.1:8000/health (APP_ENV={1}, stub={2})" -f $p.Id, $env:APP_ENV, $env:EMBEDDINGS_ALLOW_STUB)
 }
 
 if (-not $NoWeb) {
@@ -100,6 +131,24 @@ if (-not $NoWeb) {
     -RedirectStandardError (Join-Path $logDir "web.err.log")
   $pids.web = $p.Id
   Write-Host ("Web  pid {0}  -> http://127.0.0.1:3000" -f $p.Id)
+}
+
+# Inngest Dev Server — polls API serve endpoint for knowledge.reindex / outbox jobs.
+# Prefer starting after API so sync can succeed promptly; CLI retries if API still booting.
+if (-not $NoInngest) {
+  $inngestArgs = @(
+    "--yes",
+    "inngest-cli@latest",
+    "dev",
+    "-u",
+    "http://127.0.0.1:3001/api/inngest"
+  )
+  $p = Start-Process -FilePath $npxCmd -ArgumentList $inngestArgs `
+    -WorkingDirectory $Root -PassThru -WindowStyle Hidden `
+    -RedirectStandardOutput (Join-Path $logDir "inngest.out.log") `
+    -RedirectStandardError (Join-Path $logDir "inngest.err.log")
+  $pids.inngest = $p.Id
+  Write-Host ("Inngest pid {0}  -> http://127.0.0.1:8288 (app http://127.0.0.1:3001/api/inngest)" -f $p.Id)
 }
 
 $pids | ConvertTo-Json | Set-Content $PidFile -Encoding utf8
@@ -121,6 +170,10 @@ function Probe([string]$url) {
 Write-Host ("API : {0}" -f (Probe "http://127.0.0.1:3001/health"))
 Write-Host ("AI  : {0}" -f (Probe "http://127.0.0.1:8000/health"))
 Write-Host ("Web : {0}" -f (Probe "http://127.0.0.1:3000/"))
+if (-not $NoInngest) {
+  Write-Host ("Inngest UI : {0}" -f (Probe "http://127.0.0.1:8288"))
+}
 Write-Host ""
 Write-Host "Logs: .local-secrets\logs\"
 Write-Host "Stop:  pnpm run dev:local:stop"
+Write-Host "Chunks smoke: create product -> wait -> docker exec supabase_db_omni-commerce psql -U postgres -d postgres -t -c `"select count(*) from knowledge_chunks;`""

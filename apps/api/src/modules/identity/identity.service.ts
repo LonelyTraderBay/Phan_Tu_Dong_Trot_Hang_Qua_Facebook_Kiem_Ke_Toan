@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -13,7 +15,7 @@ import { loadEnv } from "../../config/env";
 import type { AuthenticatedUser } from "../../common/decorators/current-user.decorator";
 import type { MembershipRole } from "../../common/guards/org.guard";
 import { AuditService, type WriteAuditInput } from "../audit/audit.service";
-import type { CreateInviteBody, CreateOrgBody } from "./dto";
+import type { AcceptInviteBody, CreateInviteBody, CreateOrgBody } from "./dto";
 
 export const IDENTITY_SERVICE_SUPABASE = Symbol("IDENTITY_SERVICE_SUPABASE");
 export const IDENTITY_USER_SUPABASE_FACTORY = Symbol(
@@ -27,7 +29,9 @@ const MEMBERSHIP_EXPORT_SELECT =
   "id, org_id, user_id, role, created_at, updated_at";
 const ENTITLEMENTS_SELECT =
   "org_id, max_pages, ai_monthly_token_limit, auto_confirm_allowed, updated_at";
-const INVITE_SELECT = "id, org_id, email, role, expires_at, created_at";
+const INVITE_SELECT = "id, org_id, email, role, expires_at, created_at, accepted_at";
+const INVITE_ACCEPT_SELECT =
+  "id, org_id, email, role, token_hash, expires_at, created_at, accepted_at";
 const CONTACT_EXPORT_SELECT =
   "id, org_id, display_name, phone_e164, page_scoped_id, ig_scoped_id, tags_json, created_at, updated_at";
 const CONVERSATION_SUMMARY_SELECT =
@@ -93,6 +97,11 @@ type InviteRow = {
   role: MembershipRole;
   expires_at: string;
   created_at: string;
+  accepted_at: string | null;
+};
+
+type InviteAcceptRow = InviteRow & {
+  token_hash: string;
 };
 
 type MembershipWithOrganizationRow = MembershipRow & {
@@ -275,7 +284,101 @@ export class IdentityService {
       throwIdentityError(error, "Could not create membership invite");
     }
 
-    return { invite: mapInvite(data as InviteRow) };
+    // Raw token returned once for local/Mailpit copy; only the hash is stored.
+    return { invite: mapInvite(data as InviteRow), token };
+  }
+
+  async listInvites(orgId: string, now = new Date()) {
+    const { data, error } = await this.serviceSupabase
+      .from("membership_invites")
+      .select(INVITE_SELECT)
+      .eq("org_id", orgId)
+      .is("accepted_at", null)
+      .gt("expires_at", now.toISOString())
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throwIdentityDataError(error, "Could not list membership invites");
+    }
+
+    return {
+      invites: ((data ?? []) as InviteRow[]).map(mapInvite),
+    };
+  }
+
+  async acceptInvite(user: AuthenticatedUser, body: AcceptInviteBody) {
+    const email = user.email?.trim().toLowerCase();
+    if (!email) {
+      throw new BadRequestException({
+        code: "invite_email_required",
+        message: "Authenticated user email is required to accept an invite",
+      });
+    }
+
+    const tokenHash = createHash("sha256").update(body.token).digest("hex");
+    const { data, error } = await this.serviceSupabase
+      .from("membership_invites")
+      .select(INVITE_ACCEPT_SELECT)
+      .eq("token_hash", tokenHash)
+      .is("accepted_at", null)
+      .maybeSingle();
+
+    if (error) {
+      throwIdentityDataError(error, "Could not read membership invite");
+    }
+
+    const invite = data as InviteAcceptRow | null;
+    if (!invite) {
+      throw new NotFoundException({
+        code: "invite_not_found",
+        message: "Invite was not found or already accepted",
+      });
+    }
+
+    if (new Date(invite.expires_at).getTime() <= Date.now()) {
+      throw new BadRequestException({
+        code: "invite_expired",
+        message: "Invite has expired",
+      });
+    }
+
+    if (invite.email.trim().toLowerCase() !== email) {
+      throw new ForbiddenException({
+        code: "invite_email_mismatch",
+        message: "Signed-in email does not match the invite",
+      });
+    }
+
+    const acceptedAt = new Date().toISOString();
+    const { data: membershipData, error: membershipError } =
+      await this.serviceSupabase
+        .from("memberships")
+        .insert({
+          org_id: invite.org_id,
+          user_id: user.id,
+          role: invite.role,
+        })
+        .select(MEMBERSHIP_SELECT)
+        .single();
+
+    if (membershipError) {
+      throwIdentityError(membershipError, "Could not create membership");
+    }
+
+    const { error: acceptError } = await this.serviceSupabase
+      .from("membership_invites")
+      .update({ accepted_at: acceptedAt })
+      .eq("id", invite.id)
+      .is("accepted_at", null);
+
+    if (acceptError) {
+      throwIdentityError(acceptError, "Could not invalidate membership invite");
+    }
+
+    return {
+      membership: mapMembership(membershipData as MembershipRow),
+      invite: mapInvite({ ...invite, accepted_at: acceptedAt }),
+    };
   }
 
   async exportOrganizationData(input: {
@@ -482,6 +585,7 @@ function mapInvite(row: InviteRow) {
     role: row.role,
     expiresAt: row.expires_at,
     createdAt: row.created_at,
+    acceptedAt: row.accepted_at,
   };
 }
 

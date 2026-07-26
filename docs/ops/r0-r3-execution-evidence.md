@@ -639,3 +639,51 @@ Do **not** invent Meta credentials. Owner must:
 | **R3 → E100** | After CPC thương mại |
 
 **Controller STOP (L1).** Wave L1 CLOSED. Continue later local eng waves **or** wait until owner starts CPC claim path. Do not invent Meta/Render credentials. Do not claim CPC / E100 / tổng 100%.
+
+## Wave L2 progress ledger (2026-07-26) — code-complete local; commercial deferred
+
+**SDD plan:** [2026-07-26-sdd-l2-code-complete.md](../superpowers/plans/2026-07-26-sdd-l2-code-complete.md) · **Branch:** `cursor/l2-code-complete` · **Worktree:** `.worktrees/l2-code` · **Base:** `main` @ `5fea338` (PR #26 MERGED) · **PR:** [#27](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/27) (draft)
+
+| Task | Status | Evidence |
+|------|--------|----------|
+| **T1** Plan + SoT code-first + ledger | **GREEN** | Plan `2026-07-26-sdd-l2-code-complete.md`; path-to-100 / completion-step-by-step / remaining “tiếp theo ngay” = **NOW = L2 code-complete local**; CPC claim deferred · commit `980bb4f` |
+| **T2** Invite list + accept loop | **GREEN** | `GET /v1/orgs/:orgId/invites` · `POST /v1/invites/accept` · create returns raw `token` once · web settings/invites · OpenAPI · vitest identity+org.guard **17/17 PASS** |
+| **T3** Inngest in `dev:local` + chunks smoke | **GREEN** | `scripts/dev-local.ps1` starts/stops Inngest (`-u http://127.0.0.1:3001/api/inngest`); stub `APP_ENV`/`EMBEDDINGS_ALLOW_STUB`; smoke stub reindex → `knowledge_chunks` count **1** (not Gemini quality) · [local-host](./local-host.md) |
+| **T4** Advisor aggregates + Zalo runbook | **GREEN** | Real catalog/sales aggregates from `products`/`product_variants`/`orders` (empty-state OK; no invented Meta ads); `zalo-oa-connect.md` + `phase2-operations.md` note worker `zalo-persist-inbound` shipped — remaining gap = full OAuth vs token paste |
+| **T5** CI Node 22 + L2 gate | **GREEN** | `node-version: 22` in `ci-api`/`ci-web`/`ci-isolation`/`scheduled-qa` (matches `engines.node >=22` + `.nvmrc`); this gate section |
+
+**Constraints (active):** No Render payment · Meta may stay BLOCKED · No CPC / E100 / tổng 100% claim.
+
+## Wave L2 SDD gate (2026-07-26) — code-complete local CLOSED; commercial deferred
+
+**SDD plan:** [2026-07-26-sdd-l2-code-complete.md](../superpowers/plans/2026-07-26-sdd-l2-code-complete.md) · **Branch:** `cursor/l2-code-complete` · **Worktree:** `.worktrees/l2-code` · **PR:** [#27](https://github.com/LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan/pull/27) · **Base:** `main` @ `5fea338` (PR #26 MERGED)
+
+| Task | Status | Evidence |
+|------|--------|----------|
+| **T1** Plan + SoT code-first + ledger | **GREEN** | Plan + “tiếp theo ngay” = L2; CPC deferred · `980bb4f` |
+| **T2** Invite list + accept loop | **GREEN** | List + accept + raw token once · web · OpenAPI · vitest identity+org.guard |
+| **T3** Inngest in `dev:local` + chunks smoke | **GREEN** | Inngest in `dev:local`; stub reindex → `knowledge_chunks` > 0 · [local-host](./local-host.md) |
+| **T4** Advisor aggregates + Zalo runbook | **GREEN** | Real catalog/sales aggregates; Zalo worker shipped note · `d9d6c41` |
+| **T5** CI Node 22 + L2 gate | **GREEN** | CI Node **22** aligned with `engines` / `.nvmrc`; this section |
+
+### Honest maturity (do **not** invent 100%)
+
+| Đích | ~% sau L2 eng | Còn thiếu |
+|------|---------------|-----------|
+| **Eng path** | ~**97%**+ | Optional further local hardening; live R2 polish; owner E0.4 Decision before CPC; optional real GEMINI |
+| **CPC thương mại** | ~**38%** | **NOT 100%** — R0.2/R0.4 → R0.3b → Gate R0 → R1 paid → R2.1–2.3 live → R2.7 + E0.4 decide |
+| **E100** | ~**22%**+ | **NOT 100%** — R3 SOC2/pen-test/SSO/SLA + I5 legal + I8 quarterly |
+| **Tổng intended** | ~**55%** | CPC GREEN **và** E100 GREEN — **NOT 100%** |
+
+**Gate L2 verdict: eng code-complete local CLOSED / advanced.** Invites · Inngest · advisor aggregates · CI Node 22 landed. **CPC thương mại and E100 remain not 100%.** Render Starter / Meta App Review stay **deferred** until owner opens Pha CPC claim — **not** default “tiếp theo ngay”.
+
+| Blocker / next | When |
+|----------------|------|
+| **Next (default)** | Continue local hardening on Docker + `dev:local` — no Render payment required |
+| **OR CPC claim** | Owner chooses when ready — R0.2 payment → Starter ×3; real `META_*` + App Review |
+| **R0.3b → Gate R0** | After R0.2 + R0.4 |
+| **E0.4 Decision** | Owner fills REQUIRED/AMBER_OK before R2.7 / CPC checklist verdict |
+| **R1 → R2 → CPC** | After Gate R0 |
+| **R3 → E100** | After CPC thương mại |
+
+**Controller STOP (L2).** Wave L2 CLOSED. **Tiếp theo ngay** = continue local hardening **OR** (when ready) CPC claim — **owner chooses**; **default remains local**. Do not invent Meta/Render credentials. Do not claim CPC / E100 / tổng 100%.

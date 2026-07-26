@@ -22,5 +22,12 @@ export const CreateInviteBodySchema = z
   })
   .strict();
 
+export const AcceptInviteBodySchema = z
+  .object({
+    token: z.string().trim().min(32).max(128),
+  })
+  .strict();
+
 export type CreateOrgBody = z.infer<typeof CreateOrgBodySchema>;
 export type CreateInviteBody = z.infer<typeof CreateInviteBodySchema>;
+export type AcceptInviteBody = z.infer<typeof AcceptInviteBodySchema>;

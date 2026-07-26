@@ -1,8 +1,8 @@
 # Kế hoạch thực thi từng bước — hoàn thiện tới 100%
 
-**Date:** 2026-07-25 (cập nhật 2026-07-26 — **local-first** / Wave L1; E5 CLOSED PR #25)  
-**Baseline:** `main` @ `51f5370` (E5 gate / PR #25 MERGED) · Wave L1 `cursor/l1-local-first` — Pha Local trước; Render/Meta **không** “tiếp theo ngay”  
-**SoT liên quan:** [path-to-100](./2026-07-25-path-to-100-percent.md) · [remaining-priority](./2026-07-25-remaining-completion-priority.md) · [L1 plan](./2026-07-26-sdd-l1-local-first.md) · [cpc-checklist](./cpc-checklist.md) · [evidence](../../ops/r0-r3-execution-evidence.md)
+**Date:** 2026-07-25 (cập nhật 2026-07-26 — **L2 CLOSED**; code-complete local advanced; CPC deferred)  
+**Baseline:** `main` @ `5fea338` (L1 / PR #26 MERGED) · Wave L2 `cursor/l2-code-complete` CLOSED — Render/Meta **không** default “tiếp theo ngay”  
+**SoT liên quan:** [path-to-100](./2026-07-25-path-to-100-percent.md) · [remaining-priority](./2026-07-25-remaining-completion-priority.md) · [L1 plan](./2026-07-26-sdd-l1-local-first.md) · [L2 plan](./2026-07-26-sdd-l2-code-complete.md) · [L2 gate](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred) · [cpc-checklist](./cpc-checklist.md) · [evidence](../../ops/r0-r3-execution-evidence.md)
 
 ---
 
@@ -52,11 +52,12 @@ TỔNG 100%  =  CPC thương mại GREEN  +  E100 GREEN
 ## 2. Bản đồ ưu tiên (thứ tự cứng)
 
 ```
-▶ NOW = Post-L1 (local eng optional · CPC claim deferred)
-    · Wave L1 CLOSED: SoT · stack PASS · stub embeddings · E0.4 notes · gate
-    · Tiếp tục feature/polish local trên Docker + dev:local (không cần Render)
+▶ NOW = Post-L2 (owner chọn; default = local)
+    · L1 + L2 CLOSED · eng code-complete local advanced (invites · Inngest · advisor · CI Node 22)
+    · Default: tiếp tục harden eng trên Docker + dev:local (không cần Render)
+    · OR khi sẵn sàng: mở Pha CPC claim
 
-── Pha CPC claim (chỉ khi muốn claim CPC thương mại) — KHÔNG “tiếp theo ngay” ──
+── Pha CPC claim (chỉ khi muốn claim CPC thương mại) — KHÔNG default “tiếp theo ngay” ──
   BƯỚC 1–2   Owner: R0.2 Render Starter ×3
   BƯỚC 3–4   Owner: R0.4 META_* + App Review submit
   BƯỚC 5     Cả hai: R0.3b walkthrough staging → ★ Gate R0
@@ -67,7 +68,7 @@ TỔNG 100%  =  CPC thương mại GREEN  +  E100 GREEN
   BƯỚC 17–25 Cả hai: R3 I1–I8 → ★ E100 100% → ★ TỔNG 100%
 ```
 
-**Playbook local:** [local-host.md](../../ops/local-host.md) · [L1 SDD](./2026-07-26-sdd-l1-local-first.md)
+**Playbook local:** [local-host.md](../../ops/local-host.md) · [L1 SDD](./2026-07-26-sdd-l1-local-first.md) · [L2 SDD](./2026-07-26-sdd-l2-code-complete.md)
 
 ---
 
@@ -84,6 +85,18 @@ Mỗi bước: **Ai** · **Làm gì** · **Playbook** · **Xong khi** · **Ghi e
 | L1.T3 / E0.2 | `GEMINI_API_KEY` → chunks > 0 **hoặc** stub embeddings khi key trống | Eng | **DONE** stub local path; **không** claim live LLM quality |
 | L1.T4 / E0.4 | Ghi local-phase notes: R2.4–R2.6 **có thể** `undecided` khi eng local; khuyến nghị intent `AMBER_OK` Meta-only (không invent chữ ký) | Eng+Owner note | **DONE** [cpc-checklist § Stub](./cpc-checklist.md#stub-decisions-owner); **phải** `REQUIRED`/`AMBER_OK` trước CPC claim |
 | L1.T5 | Gate L1 | Eng | **DONE / CLOSED** — eng local advanced; CPC deferred |
+
+### Pha Local — Code-complete (Wave L2 — **CLOSED**)
+
+| Ưu tiên | Việc | Ai | Xong khi |
+|--------:|------|-----|----------|
+| L2.T1 | Plan + SoT code-first + ledger | Eng | **DONE** Plan + CPC deferred |
+| L2.T2 | Invite list + accept loop (raw token once) | Eng | **DONE** Create → list → accept → membership local |
+| L2.T3 | Inngest in `dev:local` + knowledge_chunks smoke (stub) | Eng | **DONE** Smoke path documented/proven |
+| L2.T4 | Advisor real aggregates + Zalo runbook refresh | Eng | **DONE** Real aggregates; Zalo runbook current |
+| L2.T5 | CI Node 22 + L2 gate | Eng | **DONE / CLOSED** — CI Node 22; CPC still deferred |
+
+Chi tiết: [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-complete.md) · [L2 gate](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred).
 
 ---
 
@@ -325,7 +338,7 @@ Mỗi bước: **Ai** · **Làm gì** · **Playbook** · **Xong khi** · **Ghi e
 
 | Tuần | Focus | Output / % |
 |-----:|-------|------------|
-| **Ngay (Tuần 0)** | **Pha Local:** E0.2 · E0.4 notes · walkthrough non-Meta · Wave L1 | Eng local↑ |
+| **Ngay (Tuần 0)** | **Post-L2:** local hardening **hoặc** (owner) CPC claim | Eng local↑ / Gate R0 |
 | **Khi claim CPC** | Bước 1–2 Render Starter; Bước 3–4 Meta | Mở R0.2 / R0.4 |
 | **+1** | Bước 4 submit + Bước 5 walkthrough staging | **★ Gate R0** |
 | **+1–2** | Bước 6–12 R1 + R3.0 vendor kick-off | **★ Gate R1** |
@@ -366,18 +379,15 @@ Mỗi bước: **Ai** · **Làm gì** · **Playbook** · **Xong khi** · **Ghi e
 
 ## 8. Việc **tiếp theo ngay** (copy vào TODO)
 
-**Policy:** local-first — **không** Render payment “tiếp theo ngay”. Wave **L1 CLOSED** ([gate](../../ops/r0-r3-execution-evidence.md#wave-l1-sdd-gate-2026-07-26--local-first-eng-closed-cpc-claim-deferred)). ~% thật: eng ~96%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%. CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại.
+**Policy:** local-first — **không** Render payment default “tiếp theo ngay”. Wave **L1 CLOSED** · Wave **L2 CLOSED** ([gate](../../ops/r0-r3-execution-evidence.md#wave-l2-sdd-gate-2026-07-26--code-complete-local-closed-commercial-deferred)). Eng code-complete local **advanced**. ~% thật: eng ~97%+ · CPC ~38% · E100 ~22%+ · tổng ~55% — **không** claim 100%. CPC/E100 vẫn cần owner R0.2+R0.4 **khi** claim thương mại.
 
 ```
-▶ Post-L1 (NOW)
-[x] 1. Verify local stack: Docker Supabase + api/web/ai health (dev:local)
-[x] 2. E0.2: stub embeddings khi GEMINI_API_KEY trống (local path GREEN)
-[x] 3. E0.4: notes local-phase (R2.4–R2.6 undecided OK; must decide trước CPC)
-[x] 4. Refresh walkthrough §12.1 non-Meta (Meta rows BLOCKED OK local)
-[x] 5. L1 gate: eng local advanced; CPC deferred
+▶ Post-L2 (DONE)
+[x] 1. L2.T1–T5: invites · Inngest · advisor aggregates · CI Node 22 · gate
+[x] 2. L2 gate: eng code-complete local advanced; CPC deferred
 
-▶ Tiếp theo (chọn một)
-[ ] A. (optional) tiếp tục eng local / feature trên Docker + dev:local
+▶ Tiếp theo (owner chọn; default = local)
+[ ] A. (default) tiếp tục eng local / hardening trên Docker + dev:local
 [ ] B. (khi sẵn sàng claim CPC) mở khối Render/Meta bên dưới
 
 ── Khi muốn claim CPC thương mại (deferred) ──
@@ -389,7 +399,7 @@ Mỗi bước: **Ai** · **Làm gì** · **Playbook** · **Xong khi** · **Ghi e
 [ ] R6. Owner E0.4: set REQUIRED/AMBER_OK cho R2.4–R2.6 (hết undecided)
 ```
 
-Sau L1: tiếp tục local eng **hoặc** owner mở Render/Meta khi muốn claim CPC.
+Sau L2: tiếp tục local eng **hoặc** owner mở Render/Meta khi muốn claim CPC — **owner chọn**; default = local.
 
 ---
 
@@ -407,3 +417,4 @@ Sau L1: tiếp tục local eng **hoặc** owner mở Render/Meta khi muốn clai
 | Plan I | [2026-07-24-plan-i-priority-execution.md](./2026-07-24-plan-i-priority-execution.md) |
 | Local host | [local-host.md](../../ops/local-host.md) |
 | Wave L1 (local-first) | [2026-07-26-sdd-l1-local-first.md](./2026-07-26-sdd-l1-local-first.md) |
+| Wave L2 (code-complete local) | [2026-07-26-sdd-l2-code-complete.md](./2026-07-26-sdd-l2-code-complete.md) |

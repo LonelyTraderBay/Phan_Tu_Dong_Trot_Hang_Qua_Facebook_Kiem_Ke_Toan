@@ -286,6 +286,7 @@ export type PnlDay = {
   revenueVnd: string;
   cogsVnd: string;
   grossProfitVnd: string;
+  shippingVnd: string;
   adSpendVnd: string;
   netProfitVnd: string;
   orderCount: number;
@@ -295,7 +296,9 @@ export type PnlSummary = {
   revenueVnd: string;
   cogsVnd: string;
   grossProfitVnd: string;
+  shippingVnd: string;
   adSpendVnd: string;
+  /** grossProfitVnd − shippingVnd − adSpendVnd. */
   netProfitVnd: string;
   orderCount: number;
   days: PnlDay[];

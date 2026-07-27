@@ -39,16 +39,32 @@ export class GhnShippingProvider implements ShippingProvider {
       return this.createSandboxShipment(sandboxUrl, token, request);
     }
 
+    // Fail closed. Without a carrier endpoint we cannot know the tracking code
+    // or the fee, and fabricating them used to flow straight into
+    // `orders.shipping_fee_vnd = 0`, `ship_order`, and a COD expectation —
+    // money and fulfilment state derived from a shipment that never existed.
+    // Mock stays available for dev/demo, but only when the org opts in.
+    if (input.connection.config.allowMock !== true) {
+      throw new BadRequestException({
+        code: 'carrier_not_configured',
+        message:
+          'GHN requires config.sandboxUrl. Set it, or enable config.allowMock for non-production use.',
+      });
+    }
+
     const suffix = input.order.id.slice(0, 8).toUpperCase();
     return {
       externalShipmentId: `GHN-MOCK-${suffix}`,
-      trackingCode: `GHN-${suffix}`,
+      trackingCode: `GHN-MOCK-${suffix}`,
       status: 'created',
       feeVnd: 0n,
       labelUrl: null,
+      isMock: true,
       raw: {
         mode: 'mock',
         provider: 'ghn',
+        warning:
+          'No carrier was contacted. Identifiers are fabricated and the fee is unknown, not zero.',
         request,
       },
     };

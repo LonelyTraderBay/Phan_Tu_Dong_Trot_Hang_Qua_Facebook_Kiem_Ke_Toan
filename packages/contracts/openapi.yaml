@@ -2859,9 +2859,16 @@ components:
         - $ref: '#/components/schemas/PnlMoneyAggregate'
         - type: object
           required:
+            - shippingVnd
             - adSpendVnd
             - netProfitVnd
           properties:
+            shippingVnd:
+              type: string
+              pattern: '^[0-9]+$'
+              description: >-
+                Shipping cost booked on the orders in this bucket
+                (orders.shipping_fee_vnd) as a bigint string.
             adSpendVnd:
               type: string
               pattern: '^[0-9]+$'
@@ -2869,7 +2876,9 @@ components:
             netProfitVnd:
               type: string
               pattern: '^-?[0-9]+$'
-              description: grossProfitVnd minus adSpendVnd as a bigint string.
+              description: >-
+                grossProfitVnd minus shippingVnd minus adSpendVnd, as a bigint
+                string.
     PnlDailyAggregate:
       allOf:
         - $ref: '#/components/schemas/PnlProfitAggregate'

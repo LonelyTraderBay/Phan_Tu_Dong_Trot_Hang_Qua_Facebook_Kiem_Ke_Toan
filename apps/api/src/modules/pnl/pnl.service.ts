@@ -27,9 +27,12 @@ type OrderRow = {
   id: string;
   status: OrderStatus;
   total_vnd: string | number;
+  shipping_fee_vnd?: string | number | null;
   shipped_at: string | null;
   done_at: string | null;
   created_at: string;
+  /** Generated column: coalesce(done_at, shipped_at, created_at). */
+  sold_at?: string | null;
   items?: OrderItemRow[] | null;
 };
 
@@ -51,6 +54,7 @@ type GrossAggregate = {
 };
 
 type MoneyAggregate = GrossAggregate & {
+  shipping: bigint;
   adSpend: bigint;
 };
 
@@ -62,8 +66,13 @@ type SkuAggregate = GrossAggregate & {
 
 const SOLD_STATUSES: OrderStatus[] = ['shipped', 'done'];
 const ORDER_WITH_ITEMS_SELECT =
-  'id, status, total_vnd, shipped_at, done_at, created_at, items:order_items(sku_snapshot, qty, line_total_vnd, cogs_unit_vnd)';
+  'id, status, total_vnd, shipping_fee_vnd, shipped_at, done_at, created_at, sold_at, items:order_items(sku_snapshot, qty, line_total_vnd, cogs_unit_vnd)';
 const AD_SPEND_SELECT = 'date, amount_vnd';
+
+/** Rows fetched per round-trip while walking the full date range. */
+const ORDER_PAGE_SIZE = 1_000;
+/** Runaway guard: 1M sold orders in one range means something is wrong upstream. */
+const MAX_ORDER_PAGES = 1_000;
 
 @Injectable()
 export class PnlService {
@@ -91,9 +100,10 @@ export class PnlService {
       const dayAggregate = byDay.get(day) ?? emptyAggregate();
       const revenue = toBigintVnd(order.total_vnd);
       const cogs = orderCogs(order);
+      const shipping = toBigintVnd(order.shipping_fee_vnd ?? '0');
 
-      addOrder(totals, revenue, cogs);
-      addOrder(dayAggregate, revenue, cogs);
+      addOrder(totals, revenue, cogs, shipping);
+      addOrder(dayAggregate, revenue, cogs, shipping);
       byDay.set(day, dayAggregate);
     }
 
@@ -150,26 +160,51 @@ export class PnlService {
     };
   }
 
+  /**
+   * Walks every sold order in the range.
+   *
+   * The date predicate is pushed into SQL against the generated `orders.sold_at`
+   * column and the result set is paged, so a wide range returns *all* matching
+   * orders instead of the newest 10k. Silently truncating a financial report is
+   * worse than being slow.
+   */
   private async loadSoldOrders(orgId: string, query: PnlDateRangeQuery) {
-    const { data, error } = await this.supabase
-      .from('orders')
-      .select(ORDER_WITH_ITEMS_SELECT)
-      .eq('org_id', orgId)
-      .in('status', SOLD_STATUSES)
-      .order('created_at', { ascending: false })
-      .limit(10_000);
+    const range = normalizeRangeIso(query);
+    const orders: OrderRow[] = [];
 
-    if (error) {
-      throwPnlError(error, 'Could not load P&L orders');
+    for (let page = 0; page < MAX_ORDER_PAGES; page += 1) {
+      let builder = this.supabase
+        .from('orders')
+        .select(ORDER_WITH_ITEMS_SELECT)
+        .eq('org_id', orgId)
+        .in('status', SOLD_STATUSES);
+
+      if (range.from !== null) {
+        builder = builder.gte('sold_at', range.from);
+      }
+      if (range.to !== null) {
+        builder = builder.lte('sold_at', range.to);
+      }
+
+      const offset = page * ORDER_PAGE_SIZE;
+      const { data, error } = await builder
+        .order('sold_at', { ascending: true })
+        .range(offset, offset + ORDER_PAGE_SIZE - 1);
+
+      if (error) {
+        throwPnlError(error, 'Could not load P&L orders');
+      }
+
+      const batch = (data ?? []) as unknown as OrderRow[];
+      orders.push(...batch);
+      if (batch.length < ORDER_PAGE_SIZE) {
+        return orders;
+      }
     }
 
-    const range = normalizeRange(query);
-    return ((data ?? []) as unknown as OrderRow[]).filter((order) => {
-      const at = new Date(soldAt(order)).getTime();
-      return (
-        (range.from === null || at >= range.from) &&
-        (range.to === null || at <= range.to)
-      );
+    throw new InternalServerErrorException({
+      code: 'pnl_range_too_large',
+      message: 'P&L range exceeded the maximum number of orders that can be aggregated',
     });
   }
 
@@ -205,6 +240,7 @@ function emptyAggregate(): MoneyAggregate {
     revenue: 0n,
     cogs: 0n,
     grossProfit: 0n,
+    shipping: 0n,
     adSpend: 0n,
     orderCount: 0,
   };
@@ -222,10 +258,16 @@ function emptySkuAggregate(sku: string): SkuAggregate {
   };
 }
 
-function addOrder(aggregate: GrossAggregate, revenue: bigint, cogs: bigint) {
+function addOrder(
+  aggregate: MoneyAggregate,
+  revenue: bigint,
+  cogs: bigint,
+  shipping: bigint,
+) {
   aggregate.revenue += revenue;
   aggregate.cogs += cogs;
   aggregate.grossProfit += revenue - cogs;
+  aggregate.shipping += shipping;
   aggregate.orderCount += 1;
 }
 
@@ -234,8 +276,16 @@ function serializeAggregate(aggregate: MoneyAggregate) {
     revenueVnd: aggregate.revenue.toString(),
     cogsVnd: aggregate.cogs.toString(),
     grossProfitVnd: aggregate.grossProfit.toString(),
+    shippingVnd: aggregate.shipping.toString(),
     adSpendVnd: aggregate.adSpend.toString(),
-    netProfitVnd: (aggregate.grossProfit - aggregate.adSpend).toString(),
+    // Spec: revenue − COGS − ship − ads. Shipping used to be omitted here, which
+    // overstated profit by the full shipping spend and made this number disagree
+    // with the accounting export (which does read `shipments.fee_vnd`).
+    netProfitVnd: (
+      aggregate.grossProfit -
+      aggregate.shipping -
+      aggregate.adSpend
+    ).toString(),
     orderCount: aggregate.orderCount,
   };
 }
@@ -250,7 +300,9 @@ function serializeGrossAggregate(aggregate: GrossAggregate) {
 }
 
 function soldAt(order: OrderRow) {
-  return order.done_at ?? order.shipped_at ?? order.created_at;
+  // `sold_at` is the generated column the SQL filter uses; the coalesce chain is
+  // kept as a fallback so aggregation stays correct against older rows/fixtures.
+  return order.sold_at ?? order.done_at ?? order.shipped_at ?? order.created_at;
 }
 
 function orderCogs(order: OrderRow) {
@@ -261,10 +313,11 @@ function itemCogs(item: OrderItemRow) {
   return toBigintVnd(item.cogs_unit_vnd ?? '0') * BigInt(item.qty);
 }
 
-function normalizeRange(query: PnlDateRangeQuery) {
+/** Range bounds as ISO instants, ready to be sent to PostgREST as `sold_at` filters. */
+function normalizeRangeIso(query: PnlDateRangeQuery) {
   return {
-    from: query.from ? dateBound(query.from, 'from') : null,
-    to: query.to ? dateBound(query.to, 'to') : null,
+    from: query.from ? new Date(dateBound(query.from, 'from')).toISOString() : null,
+    to: query.to ? new Date(dateBound(query.to, 'to')).toISOString() : null,
   };
 }
 

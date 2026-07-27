@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { decryptToken } from '../../common/crypto/token-crypto';
+import { decryptToken, encryptToken } from '../../common/crypto/token-crypto';
 import { GhnShippingProvider } from './ghn-shipping.provider';
 import { ManualShippingProvider } from './manual-shipping.provider';
 import {
@@ -129,6 +129,50 @@ describe('shipping providers', () => {
       response: { code: 'carrier_not_configured' },
       status: 400,
     });
+  });
+
+  it('GHN provider fails closed when no sandbox URL is configured', async () => {
+    // Regression: this branch used to fabricate `GHN-MOCK-*` with feeVnd 0n,
+    // which then flowed into orders.shipping_fee_vnd and ship_order.
+    const provider = new GhnShippingProvider();
+
+    await expect(
+      provider.createShipment({
+        orgId: ORG_ID,
+        order: shippingOrder(),
+        connection: {
+          id: CONNECTION_ID,
+          provider: 'ghn',
+          displayName: 'GHN',
+          config: {},
+          credentials: { token: 'GHN_TOKEN' },
+        },
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'carrier_not_configured' },
+      status: 400,
+    });
+  });
+
+  it('GHN provider only mocks when the org explicitly opts in, and flags the result', async () => {
+    const provider = new GhnShippingProvider();
+
+    const result = await provider.createShipment({
+      orgId: ORG_ID,
+      order: shippingOrder(),
+      connection: {
+        id: CONNECTION_ID,
+        provider: 'ghn',
+        displayName: 'GHN',
+        config: { allowMock: true },
+        credentials: { token: 'GHN_TOKEN' },
+      },
+    });
+
+    expect(result.isMock).toBe(true);
+    expect(result.externalShipmentId).toBe('GHN-MOCK-22222222');
+    // The tracking code must also be recognisably fake, never a plausible one.
+    expect(result.trackingCode).toBe('GHN-MOCK-22222222');
   });
 });
 
@@ -262,6 +306,122 @@ describe('ShippingService', () => {
     });
     expect(result.shipment.trackingCode).toBe('MANUAL-22222222');
     expect(result.order).toMatchObject({ status: 'shipped' });
+  });
+
+  it('never lets a mock shipment touch the order fee, status, or COD', async () => {
+    const inserts: Array<Record<string, unknown>> = [];
+    const updates: unknown[] = [];
+    const rpc = vi.fn(async () => ({ data: null, error: null }));
+    const client = {
+      rpc,
+      from(table: string) {
+        if (table === 'orders') {
+          return {
+            select() {
+              return {
+                eq() {
+                  return {
+                    eq() {
+                      return {
+                        maybeSingle: async () => ({
+                          data: orderRow('confirmed'),
+                          error: null,
+                        }),
+                      };
+                    },
+                  };
+                },
+              };
+            },
+            update(values: unknown) {
+              updates.push(values);
+              return {
+                eq() {
+                  return { eq: async () => ({ error: null }) };
+                },
+              };
+            },
+          };
+        }
+
+        if (table === 'carrier_connections') {
+          return {
+            select() {
+              return {
+                eq() {
+                  return {
+                    eq() {
+                      return {
+                        maybeSingle: async () => ({
+                          data: {
+                            id: CONNECTION_ID,
+                            org_id: ORG_ID,
+                            provider: 'ghn',
+                            display_name: 'GHN',
+                            credentials_enc: encryptToken(
+                              JSON.stringify({ token: 'GHN_TOKEN' }),
+                              TOKEN_KEY,
+                            ),
+                            config_json: { allowMock: true },
+                            enabled: true,
+                            created_at: CREATED_AT,
+                            updated_at: CREATED_AT,
+                          },
+                          error: null,
+                        }),
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        }
+
+        if (table === 'shipments') {
+          return {
+            insert(values: Record<string, unknown>) {
+              inserts.push(values);
+              return {
+                select() {
+                  return {
+                    single: async () => ({
+                      data: shipmentRow({
+                        provider: 'ghn',
+                        external_shipment_id: 'GHN-MOCK-22222222',
+                        tracking_code: 'GHN-MOCK-22222222',
+                        raw_json: values.raw_json,
+                      }),
+                      error: null,
+                    }),
+                  };
+                },
+              };
+            },
+          };
+        }
+
+        throw new Error(`unexpected table ${table}`);
+      },
+    } as unknown as SupabaseLike;
+    const cod = { ensureExpectationForOrder: vi.fn(async () => null) };
+    const service = new ShippingService(client, env, undefined, undefined, cod);
+
+    const result = await service.createShipment({
+      orgId: ORG_ID,
+      actorUserId: USER_ID,
+      body: { orderId: ORDER_ID, provider: 'ghn' },
+    });
+
+    // The shipment row is still written so the attempt is traceable...
+    expect(inserts).toHaveLength(1);
+    expect(result.shipment.trackingCode).toBe('GHN-MOCK-22222222');
+    // ...but nothing downstream may treat it as a real parcel.
+    expect(updates).toEqual([]);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(cod.ensureExpectationForOrder).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ mock: true });
+    expect(result).not.toHaveProperty('order');
   });
 
   it('encrypts carrier credentials and omits them from the returned DTO', async () => {

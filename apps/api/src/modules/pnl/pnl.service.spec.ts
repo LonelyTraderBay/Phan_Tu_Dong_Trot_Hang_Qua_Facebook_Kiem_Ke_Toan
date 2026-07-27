@@ -8,11 +8,12 @@ type Row = Record<string, unknown>;
 type Tables = Record<string, Row[]>;
 
 function order(overrides: Row = {}) {
-  return {
+  const row = {
     id: 'order-1',
     org_id: ORG_ID,
     status: 'shipped',
     total_vnd: '150000',
+    shipping_fee_vnd: '0',
     shipped_at: '2026-07-27T10:00:00.000Z',
     done_at: null,
     created_at: '2026-07-26T10:00:00.000Z',
@@ -31,6 +32,13 @@ function order(overrides: Row = {}) {
       },
     ],
     ...overrides,
+  };
+
+  // Mirrors the `orders.sold_at` generated column so the fake honours the same
+  // SQL predicate the service now pushes down.
+  return {
+    ...row,
+    sold_at: row.done_at ?? row.shipped_at ?? row.created_at,
   };
 }
 
@@ -57,11 +65,12 @@ describe('PnlService', () => {
     const service = new PnlService(
       createClient({
         orders: [
-          order(),
+          order({ shipping_fee_vnd: '25000' }),
           order({
             id: 'order-2',
             status: 'done',
             total_vnd: '120000',
+            shipping_fee_vnd: '15000',
             shipped_at: '2026-07-27T12:00:00.000Z',
             done_at: '2026-07-28T09:00:00.000Z',
             items: [
@@ -104,12 +113,14 @@ describe('PnlService', () => {
       to: '2026-07-28',
     });
 
+    // net = gross − shipping − ads, per design spec §2E.
     expect(result).toEqual({
       revenueVnd: '270000',
       cogsVnd: '120000',
       grossProfitVnd: '150000',
+      shippingVnd: '40000',
       adSpendVnd: '30000',
-      netProfitVnd: '120000',
+      netProfitVnd: '80000',
       orderCount: 2,
       days: [
         {
@@ -117,8 +128,9 @@ describe('PnlService', () => {
           revenueVnd: '150000',
           cogsVnd: '80000',
           grossProfitVnd: '70000',
+          shippingVnd: '25000',
           adSpendVnd: '20000',
-          netProfitVnd: '50000',
+          netProfitVnd: '25000',
           orderCount: 1,
         },
         {
@@ -126,8 +138,9 @@ describe('PnlService', () => {
           revenueVnd: '120000',
           cogsVnd: '40000',
           grossProfitVnd: '80000',
+          shippingVnd: '15000',
           adSpendVnd: '10000',
-          netProfitVnd: '70000',
+          netProfitVnd: '55000',
           orderCount: 1,
         },
       ],
@@ -202,6 +215,7 @@ describe('PnlService', () => {
       revenueVnd: '0',
       cogsVnd: '0',
       grossProfitVnd: '0',
+      shippingVnd: '0',
       adSpendVnd: '50000',
       netProfitVnd: '-50000',
       orderCount: 0,
@@ -211,12 +225,83 @@ describe('PnlService', () => {
           revenueVnd: '0',
           cogsVnd: '0',
           grossProfitVnd: '0',
+          shippingVnd: '0',
           adSpendVnd: '50000',
           netProfitVnd: '-50000',
           orderCount: 0,
         },
       ],
     });
+  });
+
+  it('subtracts shipping cost from net profit', async () => {
+    const service = new PnlService(
+      createClient([order({ total_vnd: '150000', shipping_fee_vnd: '30000' })]),
+    );
+
+    const result = await service.getSummary(ORG_ID, {
+      from: '2026-07-27',
+      to: '2026-07-27',
+    });
+
+    // revenue 150000 − COGS 80000 = gross 70000; minus 30000 shipping = 40000.
+    // Before this fix netProfitVnd reported 70000 and silently overstated profit.
+    expect(result.grossProfitVnd).toBe('70000');
+    expect(result.shippingVnd).toBe('30000');
+    expect(result.netProfitVnd).toBe('40000');
+  });
+
+  it('pages through every sold order in range instead of truncating at one batch', async () => {
+    // 2500 orders => 3 pages of 1000. The previous implementation issued a single
+    // unfiltered `.limit(10_000)` and filtered in Node, so any org past the cap
+    // silently received a partial — not empty — financial report.
+    const orders = Array.from({ length: 2_500 }, (_, index) =>
+      order({
+        id: `order-${index}`,
+        total_vnd: '1000',
+        shipping_fee_vnd: '0',
+        items: [
+          {
+            sku_snapshot: 'SKU-A',
+            qty: 1,
+            line_total_vnd: '1000',
+            cogs_unit_vnd: '400',
+          },
+        ],
+      }),
+    );
+
+    const service = new PnlService(createClient(orders));
+    const result = await service.getSummary(ORG_ID, {
+      from: '2026-07-27',
+      to: '2026-07-27',
+    });
+
+    expect(result.orderCount).toBe(2_500);
+    expect(result.revenueVnd).toBe('2500000');
+    expect(result.grossProfitVnd).toBe('1500000');
+  });
+
+  it('excludes orders whose sold_at falls outside the requested range', async () => {
+    const service = new PnlService(
+      createClient([
+        order({ id: 'in-range', total_vnd: '100000' }),
+        order({
+          id: 'too-old',
+          total_vnd: '999999',
+          shipped_at: '2026-07-01T10:00:00.000Z',
+          created_at: '2026-07-01T09:00:00.000Z',
+        }),
+      ]),
+    );
+
+    const result = await service.getSummary(ORG_ID, {
+      from: '2026-07-27',
+      to: '2026-07-27',
+    });
+
+    expect(result.orderCount).toBe(1);
+    expect(result.revenueVnd).toBe('100000');
   });
 });
 
@@ -226,6 +311,8 @@ class Query {
   private rangeFilters: Array<{ column: string; value: unknown; op: 'gte' | 'lte' }> =
     [];
   private limitCount: number | null = null;
+  private sortColumn: string | null = null;
+  private offsets: { from: number; to: number } | null = null;
 
   constructor(
     private readonly tables: Tables,
@@ -256,12 +343,19 @@ class Query {
     return this;
   }
 
-  order() {
+  order(column?: string) {
+    this.sortColumn = column ?? null;
     return this;
   }
 
   limit(count: number) {
     this.limitCount = count;
+    return this;
+  }
+
+  /** PostgREST `.range()` is inclusive on both bounds. */
+  range(from: number, to: number) {
+    this.offsets = { from, to };
     return this;
   }
 
@@ -278,8 +372,17 @@ class Query {
             : String(row[filter.column]) <= String(filter.value),
         ),
     );
+    if (this.sortColumn) {
+      const column = this.sortColumn;
+      rows = [...rows].sort((left, right) =>
+        String(left[column]).localeCompare(String(right[column])),
+      );
+    }
     if (this.limitCount !== null) {
       rows = rows.slice(0, this.limitCount);
+    }
+    if (this.offsets) {
+      rows = rows.slice(this.offsets.from, this.offsets.to + 1);
     }
     resolve({ data: rows, error: null });
   }

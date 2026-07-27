@@ -48,6 +48,12 @@ export type CreateShipmentResult = {
   feeVnd: bigint;
   labelUrl: string | null;
   raw: Record<string, unknown>;
+  /**
+   * True when no carrier was actually contacted and the identifiers are
+   * fabricated (dev/demo only). Callers MUST NOT let a mock result touch money
+   * or order state: no shipping fee write, no `ship_order`, no COD expectation.
+   */
+  isMock?: boolean;
 };
 
 export interface ShippingProvider {

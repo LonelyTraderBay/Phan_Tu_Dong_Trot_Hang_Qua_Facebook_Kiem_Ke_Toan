@@ -15,6 +15,8 @@ import { loadEnv } from "../../config/env";
 import type { AuthenticatedUser } from "../../common/decorators/current-user.decorator";
 import type { MembershipRole } from "../../common/guards/org.guard";
 import { AuditService, type WriteAuditInput } from "../audit/audit.service";
+import { EntitlementsService } from "../billing/entitlements.service";
+import { isPlanSlug, type PlanSlug } from "../billing/plan-catalog";
 import type { AcceptInviteBody, CreateInviteBody, CreateOrgBody } from "./dto";
 
 export const IDENTITY_SERVICE_SUPABASE = Symbol("IDENTITY_SERVICE_SUPABASE");
@@ -51,6 +53,10 @@ type UserSupabaseFactory = (accessToken: string) => SupabaseLike;
 export type AuditWriter = {
   writeAudit(input: WriteAuditInput): Promise<unknown>;
 };
+export type EntitlementsSyncer = Pick<
+  EntitlementsService,
+  "syncPlanEntitlements"
+>;
 
 type SupabaseError = {
   code?: string;
@@ -181,6 +187,7 @@ export class IdentityService {
   private readonly serviceSupabase: SupabaseLike;
   private readonly userSupabaseFactory: UserSupabaseFactory;
   private readonly audit: AuditWriter;
+  private readonly entitlements: EntitlementsSyncer;
 
   constructor(
     @Optional()
@@ -192,11 +199,16 @@ export class IdentityService {
     @Optional()
     @Inject(AuditService)
     audit?: AuditWriter,
+    @Optional()
+    @Inject(EntitlementsService)
+    entitlements?: EntitlementsSyncer,
   ) {
     this.serviceSupabase = serviceSupabase ?? createSupabaseServiceClient();
     this.userSupabaseFactory =
       userSupabaseFactory ?? createSupabaseUserClient;
     this.audit = audit ?? new AuditService(this.serviceSupabase);
+    this.entitlements =
+      entitlements ?? new EntitlementsService(this.serviceSupabase);
   }
 
   async createOrganization(user: AuthenticatedUser, body: CreateOrgBody) {
@@ -216,11 +228,26 @@ export class IdentityService {
     }
 
     const row = data as CreateOrganizationWithOwnerRow;
+    const organization = mapOrganization(row.organization);
+
+    // create_organization_with_owner() inserts the entitlements row scoped
+    // only by org_id, so it falls back to the `entitlements` table's raw
+    // column defaults (0 pages, 0 AI tokens, no auto-confirm) rather than the
+    // limits the organization's plan actually grants per PLAN_CATALOG. Sync
+    // entitlements to the plan right away so a brand-new org is never
+    // provisioned with less than its own plan promises.
+    const plan: PlanSlug = isPlanSlug(organization.plan)
+      ? organization.plan
+      : "free";
+    const entitlements = await this.entitlements.syncPlanEntitlements(
+      organization.id,
+      plan,
+    );
 
     return {
-      organization: mapOrganization(row.organization),
+      organization,
       membership: mapMembership(row.membership),
-      entitlements: mapEntitlements(row.entitlements),
+      entitlements,
     };
   }
 
@@ -567,15 +594,6 @@ function mapMembershipExport(row: MembershipExportRow) {
   };
 }
 
-function mapEntitlements(row: EntitlementsRow) {
-  return {
-    orgId: row.org_id,
-    maxPages: row.max_pages,
-    aiMonthlyTokenLimit: Number(row.ai_monthly_token_limit),
-    autoConfirmAllowed: row.auto_confirm_allowed,
-    updatedAt: row.updated_at,
-  };
-}
 
 function mapInvite(row: InviteRow) {
   return {

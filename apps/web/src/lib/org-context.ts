@@ -35,3 +35,28 @@ export function buildApiHeaders(input: {
     'Content-Type': 'application/json',
   };
 }
+
+/**
+ * Picks the org id that should be treated as active given a candidate
+ * (typically whatever was last persisted to storage) and the current list of
+ * organizations the user actually belongs to.
+ *
+ * The candidate is only trusted when it still refers to a membership in
+ * `organizations`. Otherwise callers must fall back to the first known
+ * organization (or `null` when there are none) rather than keep sending a
+ * stale/foreign org id to the API, which the server will reject with 403/400
+ * even though valid organizations are available.
+ */
+export function resolveActiveOrgId(
+  candidateOrgId: string | null | undefined,
+  organizations: ReadonlyArray<{ id: string }>,
+): string | null {
+  if (
+    candidateOrgId &&
+    organizations.some((org) => org.id === candidateOrgId)
+  ) {
+    return candidateOrgId;
+  }
+
+  return organizations[0]?.id ?? null;
+}

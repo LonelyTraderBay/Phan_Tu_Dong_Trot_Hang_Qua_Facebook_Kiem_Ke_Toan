@@ -349,6 +349,76 @@ describe('OrdersService lifecycle stock handling', () => {
       }),
     );
   });
+
+  it('uses the done RPC to mark a shipped order complete', async () => {
+    const client = {
+      rpc: vi.fn(async (fn: string, args: Record<string, unknown>) => {
+        expect(fn).toBe('done_order');
+        expect(args).toMatchObject({
+          p_org_id: ORG_ID,
+          p_order_id: ORDER_ID,
+          p_done_at: expect.any(String),
+        });
+        return {
+          data: orderPayload(ORDER_ID, 'done'),
+          error: null,
+        };
+      }),
+      from() {
+        throw new Error('from() should not be called');
+      },
+    } as unknown as SupabaseLike;
+    const audit = auditMock();
+    const service = new OrdersService(client, audit);
+
+    const result = await service.markOrderDone({
+      orgId: ORG_ID,
+      orderId: ORDER_ID,
+      actorUserId: USER_ID,
+    });
+
+    expect(result.order.status).toBe('done');
+    expect(audit.writeAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'order.done',
+        entityId: ORDER_ID,
+        meta: {},
+      }),
+    );
+  });
+
+  it('rejects marking an order done from a non-shipped status', async () => {
+    const client = {
+      rpc: vi.fn(async (fn: string) => {
+        expect(fn).toBe('done_order');
+        return {
+          data: null,
+          error: {
+            code: 'P0001',
+            hint: 'invalid_order_status',
+            message: 'order cannot be marked done from status confirmed',
+          },
+        };
+      }),
+      from() {
+        throw new Error('from() should not be called');
+      },
+    } as unknown as SupabaseLike;
+    const audit = auditMock();
+    const service = new OrdersService(client, audit);
+
+    await expect(
+      service.markOrderDone({
+        orgId: ORG_ID,
+        orderId: ORDER_ID,
+        actorUserId: USER_ID,
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'invalid_order_status' },
+      status: 400,
+    });
+    expect(audit.writeAudit).not.toHaveBeenCalled();
+  });
 });
 
 describe('OrdersService auto-confirm create', () => {

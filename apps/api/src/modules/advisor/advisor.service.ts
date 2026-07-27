@@ -107,7 +107,9 @@ export class AdvisorService {
   private readonly supabase: SupabaseLike;
 
   constructor(
+    @Inject(FeatureFlagsService)
     private readonly featureFlags: FeatureFlagsService,
+    @Inject(AiRunsService)
     private readonly aiRuns: AiRunsService,
     @Optional()
     @Inject(ADVISOR_FETCH)

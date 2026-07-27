@@ -16,6 +16,7 @@ import {
   createShipment,
   downloadOrdersExport,
   listOrders,
+  markOrderDone,
   returnOrder,
   type Order,
   type OrdersExportFormat,
@@ -75,7 +76,7 @@ function OrdersContent() {
 
   async function runOrderAction(
     order: Order,
-    action: 'confirm' | 'cancel' | 'shipment' | 'return',
+    action: 'confirm' | 'cancel' | 'shipment' | 'return' | 'done',
   ) {
     setBusyOrderId(order.id);
     setError(null);
@@ -93,7 +94,9 @@ function OrdersContent() {
             ? await cancelOrder(order.id)
             : action === 'return'
               ? await returnOrder(order.id, { restock: true })
-              : shipmentResult?.order;
+              : action === 'done'
+                ? await markOrderDone(order.id)
+                : shipmentResult?.order;
       setOrders((current) =>
         updated
           ? current.map((item) => (item.id === updated.id ? updated : item))
@@ -106,7 +109,9 @@ function OrdersContent() {
             )}.`
           : action === 'return'
             ? `Đã hoàn hàng và nhập lại kho cho đơn ${shortId(order.id)}.`
-          : `Đã cập nhật đơn ${shortId(order.id)}.`,
+            : action === 'done'
+              ? `Đã hoàn tất đơn ${shortId(order.id)}.`
+              : `Đã cập nhật đơn ${shortId(order.id)}.`,
       );
     } catch (err) {
       setError(getApiErrorMessage(err, 'Không thể cập nhật đơn hàng.'));
@@ -264,6 +269,16 @@ function OrdersContent() {
                             style={{ ...linkButtonStyle, color: '#b91c1c' }}
                           >
                             Huỷ
+                          </button>
+                        ) : null}
+                        {order.status === 'shipped' ? (
+                          <button
+                            type="button"
+                            onClick={() => void runOrderAction(order, 'done')}
+                            disabled={busyOrderId === order.id}
+                            style={{ ...linkButtonStyle, color: '#15803d' }}
+                          >
+                            Hoàn tất
                           </button>
                         ) : null}
                         {order.status === 'shipped' || order.status === 'done' ? (

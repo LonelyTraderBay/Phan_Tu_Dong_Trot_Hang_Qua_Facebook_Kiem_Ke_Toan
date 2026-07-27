@@ -126,7 +126,7 @@ function mockExportSupabase(tables: Record<string, unknown[]>) {
 }
 
 describe("IdentityService", () => {
-  it("creates org owner membership and default entitlements", async () => {
+  it("creates org owner membership and syncs entitlements from the plan catalog", async () => {
     const { client, insertCalls, rpcCalls } = mockSupabase([
       {
         data: {
@@ -148,6 +148,10 @@ describe("IdentityService", () => {
             user_id: USER_ID,
             role: "owner",
           },
+          // create_organization_with_owner() inserts the entitlements row
+          // scoped only by org_id, so the RPC itself always returns the
+          // `entitlements` table's raw zeroed column defaults here — it is
+          // IdentityService's job to sync real plan limits afterward.
           entitlements: {
             org_id: ORG_ID,
             max_pages: 0,
@@ -159,7 +163,17 @@ describe("IdentityService", () => {
         error: null,
       },
     ]);
-    const service = new IdentityService(client);
+    const syncPlanEntitlements = vi.fn(async () => ({
+      orgId: ORG_ID,
+      maxPages: 1,
+      aiMonthlyTokenLimit: 100_000,
+      autoConfirmAllowed: false,
+      autoConfirmBlockedReason: null,
+      updatedAt: "2026-07-24T10:00:00.000Z",
+    }));
+    const service = new IdentityService(client, undefined, undefined, {
+      syncPlanEntitlements,
+    });
 
     const result = await service.createOrganization(
       { id: USER_ID, email: "owner@example.com" },
@@ -177,10 +191,17 @@ describe("IdentityService", () => {
       },
     ]);
     expect(insertCalls).toEqual([]);
+    // Regression: a brand-new "free"-plan org must be provisioned with the
+    // free plan's real entitlements (PLAN_CATALOG.free: 1 page, 100k AI
+    // tokens/month), not the entitlements table's raw zeroed column defaults
+    // that create_organization_with_owner() alone leaves in place — that bug
+    // meant every new signup was unable to connect any channel or use AI at
+    // all until a platform admin manually ran the admin-ops plan sync.
+    expect(syncPlanEntitlements).toHaveBeenCalledWith(ORG_ID, "free");
     expect(result.entitlements).toMatchObject({
       orgId: ORG_ID,
-      maxPages: 0,
-      aiMonthlyTokenLimit: 0,
+      maxPages: 1,
+      aiMonthlyTokenLimit: 100_000,
       autoConfirmAllowed: false,
     });
   });

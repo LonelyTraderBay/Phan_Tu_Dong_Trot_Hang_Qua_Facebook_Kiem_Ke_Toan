@@ -1,4 +1,4 @@
-import { getActiveOrgId, setActiveOrgId } from './org-context';
+import { getActiveOrgId, resolveActiveOrgId, setActiveOrgId } from './org-context';
 
 export const ACCESS_TOKEN_STORAGE_KEY = 'omni.accessToken';
 export const ORGANIZATIONS_STORAGE_KEY = 'omni.organizations';
@@ -69,11 +69,7 @@ export function saveSession(input: {
 }): StoredSession {
   const organizations = normalizeOrganizations(input.organizations);
   const preferredActiveOrgId = input.activeOrgId ?? getActiveOrgId();
-  const activeOrgId =
-    preferredActiveOrgId &&
-    organizations.some((org) => org.id === preferredActiveOrgId)
-      ? preferredActiveOrgId
-      : organizations[0]?.id ?? null;
+  const activeOrgId = resolveActiveOrgId(preferredActiveOrgId, organizations);
 
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, input.accessToken);
@@ -113,10 +109,7 @@ export function saveOrganizations(organizations: StoredOrganization[]): void {
     );
   }
 
-  const activeOrgId = getActiveOrgId();
-  if (!activeOrgId || !normalized.some((org) => org.id === activeOrgId)) {
-    setActiveOrgId(normalized[0]?.id ?? null);
-  }
+  setActiveOrgId(resolveActiveOrgId(getActiveOrgId(), normalized));
 
   notifySessionChanged();
 }

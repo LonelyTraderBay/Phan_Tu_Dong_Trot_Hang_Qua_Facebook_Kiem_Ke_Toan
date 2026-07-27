@@ -17,7 +17,11 @@ import {
   SESSION_CHANGED_EVENT,
   type StoredOrganization,
 } from '../lib/auth-session';
-import { getActiveOrgId, setActiveOrgId } from '../lib/org-context';
+import {
+  getActiveOrgId,
+  resolveActiveOrgId,
+  setActiveOrgId,
+} from '../lib/org-context';
 
 const navItems = [
   { href: '/dashboard', label: 'Tổng quan' },
@@ -62,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       setOrganizations(storedOrganizations);
 
       const storedActiveOrgId =
-        getActiveOrgId() ?? storedOrganizations[0]?.id ?? '';
+        resolveActiveOrgId(getActiveOrgId(), storedOrganizations) ?? '';
       if (storedActiveOrgId) {
         setActiveOrgId(storedActiveOrgId);
       }

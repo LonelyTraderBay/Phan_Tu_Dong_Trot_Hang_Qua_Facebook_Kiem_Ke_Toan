@@ -258,6 +258,8 @@ export class ShippingService {
       connection,
     });
 
+    const isMock = providerResult.isMock === true;
+
     const shipment = await this.insertShipment({
       orgId: input.orgId,
       orderId: order.id,
@@ -270,6 +272,29 @@ export class ShippingService {
       labelUrl: providerResult.labelUrl,
       raw: providerResult.raw,
     });
+
+    // A mock shipment is a traceability record only. Its fee is unknown (not
+    // zero) and no parcel exists, so it must not overwrite the order's shipping
+    // fee, must not advance the order to `shipped`, and must not create a COD
+    // expectation the shop would later try to reconcile against a real carrier.
+    if (isMock) {
+      await this.audit?.writeAudit({
+        orgId: input.orgId,
+        actorUserId: input.actorUserId,
+        actorType: 'user',
+        action: 'shipment.created_mock',
+        entityType: 'shipment',
+        entityId: shipment.id,
+        meta: {
+          orderId: order.id,
+          provider: shipment.provider,
+          trackingCode: shipment.trackingCode,
+          note: 'No carrier contacted; order status, shipping fee and COD were left untouched.',
+        },
+      });
+
+      return { shipment, mock: true as const };
+    }
 
     await this.updateOrderShippingFee(
       input.orgId,

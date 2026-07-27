@@ -32,6 +32,8 @@ type OrderRow = {
   shipped_at: string | null;
   done_at: string | null;
   created_at: string;
+  /** Generated column: coalesce(done_at, shipped_at, created_at). */
+  sold_at?: string | null;
   items?: OrderItemRow[] | null;
 };
 
@@ -69,7 +71,11 @@ type SupabaseError = {
 };
 
 const ORDER_SELECT =
-  'id, status, total_vnd, shipped_at, done_at, created_at, items:order_items(cogs_unit_vnd, qty)';
+  'id, status, total_vnd, shipped_at, done_at, created_at, sold_at, items:order_items(cogs_unit_vnd, qty)';
+/** Rows fetched per round-trip while walking the full date range. */
+const ORDER_PAGE_SIZE = 1_000;
+/** Runaway guard: 1M sold orders in one export means something is wrong upstream. */
+const MAX_ORDER_PAGES = 1_000;
 const SHIPMENT_SELECT = 'id, order_id, fee_vnd, created_at';
 const COD_SELECT = 'id, order_id, amount_vnd, collected_at';
 const AD_SPEND_SELECT = 'id, date, campaign_name, amount_vnd';
@@ -158,26 +164,52 @@ export class AccountingService {
     return buildCsvExport(query, lines);
   }
 
+  /**
+   * Walks every sold order in the range.
+   *
+   * The date predicate is pushed into SQL against the generated `orders.sold_at`
+   * column and the result set is paged. The previous unfiltered `.limit(10_000)`
+   * silently dropped the oldest rows, producing a ledger that looked complete
+   * and balanced but was missing entries.
+   */
   private async loadOrders(orgId: string, query: AccountingExportQuery) {
-    const { data, error } = await this.supabase
-      .from('orders')
-      .select(ORDER_SELECT)
-      .eq('org_id', orgId)
-      .in('status', SOLD_STATUSES)
-      .order('created_at', { ascending: false })
-      .limit(10_000);
+    const range = normalizeRangeIso(query);
+    const orders: OrderRow[] = [];
 
-    if (error) {
-      throwAccountingError(error, 'Could not load accounting orders');
+    for (let page = 0; page < MAX_ORDER_PAGES; page += 1) {
+      let builder = this.supabase
+        .from('orders')
+        .select(ORDER_SELECT)
+        .eq('org_id', orgId)
+        .in('status', SOLD_STATUSES);
+
+      if (range.from !== null) {
+        builder = builder.gte('sold_at', range.from);
+      }
+      if (range.to !== null) {
+        builder = builder.lte('sold_at', range.to);
+      }
+
+      const offset = page * ORDER_PAGE_SIZE;
+      const { data, error } = await builder
+        .order('sold_at', { ascending: true })
+        .range(offset, offset + ORDER_PAGE_SIZE - 1);
+
+      if (error) {
+        throwAccountingError(error, 'Could not load accounting orders');
+      }
+
+      const batch = (data ?? []) as unknown as OrderRow[];
+      orders.push(...batch);
+      if (batch.length < ORDER_PAGE_SIZE) {
+        return orders;
+      }
     }
 
-    const range = normalizeRange(query);
-    return ((data ?? []) as unknown as OrderRow[]).filter((order) => {
-      const at = new Date(soldAt(order)).getTime();
-      return (
-        (range.from === null || at >= range.from) &&
-        (range.to === null || at <= range.to)
-      );
+    throw new InternalServerErrorException({
+      code: 'accounting_range_too_large',
+      message:
+        'Accounting range exceeded the maximum number of orders that can be exported',
     });
   }
 
@@ -277,7 +309,9 @@ function buildCsvExport(
 }
 
 function soldAt(order: OrderRow) {
-  return order.done_at ?? order.shipped_at ?? order.created_at;
+  // `sold_at` is the generated column the SQL filter uses; the coalesce chain is
+  // kept as a fallback so grouping stays correct against older rows/fixtures.
+  return order.sold_at ?? order.done_at ?? order.shipped_at ?? order.created_at;
 }
 
 function orderCogs(order: OrderRow) {
@@ -286,10 +320,11 @@ function orderCogs(order: OrderRow) {
   }, 0n);
 }
 
-function normalizeRange(query: AccountingExportQuery) {
+/** Range bounds as ISO instants, ready to be sent to PostgREST as `sold_at` filters. */
+function normalizeRangeIso(query: AccountingExportQuery) {
   return {
-    from: query.from ? dateBound(query.from, 'from') : null,
-    to: query.to ? dateBound(query.to, 'to') : null,
+    from: query.from ? new Date(dateBound(query.from, 'from')).toISOString() : null,
+    to: query.to ? new Date(dateBound(query.to, 'to')).toISOString() : null,
   };
 }
 

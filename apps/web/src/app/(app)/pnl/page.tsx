@@ -68,6 +68,7 @@ export default function PnlPage() {
         'revenueVnd',
         'cogsVnd',
         'grossProfitVnd',
+        'shippingVnd',
         'adSpendVnd',
         'netProfitVnd',
         'orderCount',
@@ -79,6 +80,7 @@ export default function PnlPage() {
         day.revenueVnd,
         day.cogsVnd,
         day.grossProfitVnd,
+        day.shippingVnd,
         day.adSpendVnd,
         day.netProfitVnd,
         String(day.orderCount),
@@ -90,6 +92,7 @@ export default function PnlPage() {
         sku.revenueVnd,
         sku.cogsVnd,
         sku.grossProfitVnd,
+        '',
         '',
         '',
         String(sku.orderCount),
@@ -194,11 +197,15 @@ export default function PnlPage() {
           value={formatVnd(summary?.grossProfitVnd ?? '0')}
         />
         <SummaryCard
+          label="Phí vận chuyển"
+          value={formatVnd(summary?.shippingVnd ?? '0')}
+        />
+        <SummaryCard
           label="Chi phí ads"
           value={formatVnd(summary?.adSpendVnd ?? '0')}
         />
         <SummaryCard
-          label="Lãi sau ads"
+          label="Lãi ròng"
           value={formatVnd(summary?.netProfitVnd ?? '0')}
         />
         <SummaryCard label="Đơn đã bán" value={String(summary?.orderCount ?? 0)} />
@@ -220,8 +227,9 @@ export default function PnlPage() {
                   <th style={tableHeaderStyle}>Doanh thu</th>
                   <th style={tableHeaderStyle}>COGS</th>
                   <th style={tableHeaderStyle}>Lãi gộp</th>
+                  <th style={tableHeaderStyle}>Ship</th>
                   <th style={tableHeaderStyle}>Ads</th>
-                  <th style={tableHeaderStyle}>Lãi sau ads</th>
+                  <th style={tableHeaderStyle}>Lãi ròng</th>
                 </tr>
               </thead>
               <tbody>
@@ -236,6 +244,7 @@ export default function PnlPage() {
                         {formatVnd(day.grossProfitVnd)}
                       </span>
                     </td>
+                    <td style={tableCellStyle}>{formatVnd(day.shippingVnd)}</td>
                     <td style={tableCellStyle}>{formatVnd(day.adSpendVnd)}</td>
                     <td style={tableCellStyle}>
                       <span style={profitStyle(day.netProfitVnd)}>

@@ -6,13 +6,14 @@ export const EnvSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
     .default('development'),
-  PORT: z.coerce.number().default(3001),
+  PORT: z.coerce.number().default(4701),
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   TOKEN_ENCRYPTION_KEY: z.string().min(32),
   SERVICE_M2M_KEY: z.string().min(16),
-  AI_BASE_URL: z.string().url().default('http://127.0.0.1:8000'),
+  AI_BASE_URL: z.string().url().default('http://127.0.0.1:4702'),
+  WEB_ORIGIN: z.string().url().default('http://127.0.0.1:4700'),
   INNGEST_EVENT_KEY: z.string().optional(),
   INNGEST_SIGNING_KEY: z.string().optional(),
   SENTRY_DSN: z.string().optional(),

@@ -497,7 +497,52 @@ export class ApiClientError extends Error {
 }
 
 export function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:3001';
+  return process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:4701';
+}
+
+/**
+ * Parses an API error response body into `{ code, message }`.
+ *
+ * The API's global error handler (apps/api/src/common/filters/problem-details.filter.ts)
+ * returns RFC 7807 Problem Details: `{ type, title, status, detail, instance,
+ * requestId, code? }`. The human-readable text lives in `detail` (falling
+ * back to `title`) — there is no top-level `message` field in that shape.
+ * Some older/simpler error bodies may still use `{ code, message }` (or a
+ * Nest validation-pipe body with a `message` string/array), so both shapes
+ * are supported to avoid ever losing a real error message.
+ */
+async function parseApiErrorBody(
+  response: Response,
+): Promise<{ code: string; message: string | undefined }> {
+  let code = 'api_error';
+  let message: string | undefined;
+
+  try {
+    const body = (await response.json()) as {
+      code?: string;
+      detail?: string;
+      title?: string;
+      message?: string | string[];
+    };
+
+    if (body.code) {
+      code = body.code;
+    }
+
+    if (typeof body.detail === 'string' && body.detail) {
+      message = body.detail;
+    } else if (Array.isArray(body.message) && body.message.length > 0) {
+      message = body.message.join(', ');
+    } else if (typeof body.message === 'string' && body.message) {
+      message = body.message;
+    } else if (typeof body.title === 'string' && body.title) {
+      message = body.title;
+    }
+  } catch {
+    // Ignore non-JSON error bodies.
+  }
+
+  return { code, message };
 }
 
 export function getApiAuthContext(): ApiAuthContext | null {
@@ -548,25 +593,12 @@ export async function apiFetch<T>(
   });
 
   if (!response.ok) {
-    let message = `Yêu cầu API thất bại (${response.status})`;
-    let code = 'api_error';
-
-    try {
-      const body = (await response.json()) as {
-        code?: string;
-        message?: string;
-      };
-      if (body.code) {
-        code = body.code;
-      }
-      if (body.message) {
-        message = body.message;
-      }
-    } catch {
-      // Ignore non-JSON error bodies.
-    }
-
-    throw new ApiClientError(code, message, response.status);
+    const { code, message } = await parseApiErrorBody(response);
+    throw new ApiClientError(
+      code,
+      message ?? `Yêu cầu API thất bại (${response.status})`,
+      response.status,
+    );
   }
 
   if (response.status === 204) {
@@ -942,6 +974,15 @@ export async function returnOrder(
         ...(input.reason ? { reason: input.reason } : {}),
       }),
     },
+  );
+
+  return order;
+}
+
+export async function markOrderDone(orderId: string): Promise<Order> {
+  const { order } = await apiFetch<{ order: Order }>(
+    `/v1/orders/${encodeURIComponent(orderId)}/done`,
+    { method: 'POST' },
   );
 
   return order;
@@ -1388,9 +1429,10 @@ async function rawApiFetch(
   });
 
   if (!response.ok) {
+    const { code, message } = await parseApiErrorBody(response);
     throw new ApiClientError(
-      'api_error',
-      `Yêu cầu API thất bại (${response.status})`,
+      code,
+      message ?? `Yêu cầu API thất bại (${response.status})`,
       response.status,
     );
   }

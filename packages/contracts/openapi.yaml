@@ -1067,6 +1067,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
+  /v1/orders/{orderId}/done:
+    post:
+      summary: Mark a shipped order as done, unblocking e-invoice issuance
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Done
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: Invalid order status
   /v1/orders/{orderId}/return:
     post:
       summary: Mark a shipped or done order as returned and optionally restock items

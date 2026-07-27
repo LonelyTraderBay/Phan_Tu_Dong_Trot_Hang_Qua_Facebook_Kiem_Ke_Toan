@@ -18,6 +18,7 @@ $web = [int]$P.apps.web
 $api = [int]$P.apps.api
 $ai = [int]$P.apps.ai
 $sb = [int]$P.supabase.api
+$inngest = [int]$P.apps.inngest
 
 $replacements = [ordered]@{
   "PORT"                        = "$api"
@@ -28,6 +29,8 @@ $replacements = [ordered]@{
   "CORE_BASE_URL"               = "http://${hostName}:${api}"
   "META_REDIRECT_URI"           = "http://${hostName}:${web}/settings/channels/callback"
   "API_BASE_URL"                = "http://${hostName}:${api}"
+  "INNGEST_DEV"                 = "http://${hostName}:${inngest}"
+  "WEB_ORIGIN"                  = "http://${hostName}:${web}"
 }
 
 function Update-EnvFile([string]$Path) {
@@ -35,7 +38,7 @@ function Update-EnvFile([string]$Path) {
     Write-Host ("skip (missing): {0}" -f $Path)
     return
   }
-  $lines = Get-Content $Path
+  $lines = Get-Content $Path -Encoding utf8
   $out = New-Object System.Collections.Generic.List[string]
   $seen = @{}
   foreach ($line in $lines) {

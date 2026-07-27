@@ -127,7 +127,11 @@ type AutoConfirmOrderPayload = OrderPayload & {
 };
 
 type LifecycleRpcName =
-  'confirm_order' | 'cancel_order' | 'ship_order' | 'return_order';
+  | 'confirm_order'
+  | 'cancel_order'
+  | 'ship_order'
+  | 'return_order'
+  | 'done_order';
 
 const ORDER_SELECT =
   'id, org_id, conversation_id, contact_id, status, payment_method, customer_name, phone_e164, address_text, address_json, currency, subtotal_vnd, shipping_fee_vnd, total_vnd, idempotency_key, utm_source, utm_medium, utm_campaign, click_id, confirmed_at, shipped_at, cancelled_at, done_at, created_at, updated_at';
@@ -437,6 +441,31 @@ export class OrdersService {
         restock,
         reason,
       },
+    });
+
+    return payload;
+  }
+
+  async markOrderDone(input: {
+    orgId: string;
+    orderId: string;
+    actorUserId: string;
+    now?: Date;
+  }) {
+    const payload = await this.callLifecycleRpc('done_order', {
+      p_org_id: input.orgId,
+      p_order_id: input.orderId,
+      p_done_at: (input.now ?? new Date()).toISOString(),
+    });
+
+    await this.audit.writeAudit({
+      orgId: input.orgId,
+      actorUserId: input.actorUserId,
+      actorType: 'user',
+      action: 'order.done',
+      entityType: 'order',
+      entityId: input.orderId,
+      meta: {},
     });
 
     return payload;

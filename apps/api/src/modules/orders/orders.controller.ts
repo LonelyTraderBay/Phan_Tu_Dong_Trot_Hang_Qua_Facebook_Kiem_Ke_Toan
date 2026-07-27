@@ -169,6 +169,21 @@ export class OrdersController {
       body: parseBody(ReturnOrderBodySchema, body),
     });
   }
+
+  @Post(':orderId/done')
+  @HttpCode(200)
+  @RequirePermission('orders.write')
+  markOrderDone(
+    @OrgId() orgId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser | undefined,
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+  ) {
+    return this.orders.markOrderDone({
+      orgId: requireOrgId(orgId),
+      orderId,
+      actorUserId: requireUser(user).id,
+    });
+  }
 }
 
 function parseBody<TSchema extends z.ZodTypeAny>(

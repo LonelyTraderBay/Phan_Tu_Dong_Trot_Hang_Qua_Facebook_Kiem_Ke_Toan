@@ -2,7 +2,7 @@
 /**
  * A2 local e2e smoke (API-level, no Meta / no Playwright).
  * Happy path: health → signup → org → invite accept → catalog → stock →
- * draft → confirm → export CSV.
+ * draft → confirm → ship → done → e-invoice issue → export CSV.
  *
  * Prerequisites: Docker Supabase + `pnpm run dev:local` (API from config/local-ports.json).
  * Env: SUPABASE_URL + SUPABASE_ANON_KEY (parent `.env` or process env).
@@ -112,6 +112,67 @@ async function api(path, { method = 'GET', token, orgId, body, headers = {} } = 
     json = null;
   }
   return { res, text, json };
+}
+
+async function supabaseRest(path, { token } = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      apikey: ANON_KEY,
+      authorization: `Bearer ${token ?? ANON_KEY}`,
+    },
+  });
+  const text = await res.text();
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+  return { res, text, json };
+}
+
+// Regression check for the bug where apps/ai silently used the wrong
+// SERVICE_M2M_KEY (fell back to the hardcoded default because
+// scripts/dev-local.ps1 never copied the root .env to apps/ai/.env, while
+// apps/api loaded the real key). Every API -> AI knowledge-reindex call
+// (POST /internal/v1/reindex, triggered here by product creation) silently
+// failed with 401 and no knowledge_chunks row was ever written — the
+// product-creation request itself still returned 200, so nothing in the
+// existing API-level assertions could catch it. Polling knowledge_chunks
+// for the product we just created is the most faithful reproduction of the
+// actual failure mode, end to end (outbox -> Inngest -> AI -> chunks).
+async function waitForKnowledgeChunks({
+  orgId,
+  token,
+  sourceId,
+  sourceType = 'product',
+  timeoutMs = 30_000,
+  intervalMs = 1_000,
+}) {
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  while (Date.now() < deadline) {
+    const { res, json, text } = await supabaseRest(
+      `knowledge_chunks?org_id=eq.${orgId}&source_type=eq.${sourceType}&source_id=eq.${sourceId}&select=id`,
+      { token },
+    );
+    if (res.ok && Array.isArray(json) && json.length > 0) {
+      return json.length;
+    }
+    last = { status: res.status, body: text };
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  fail(
+    'knowledge.reindex',
+    `no knowledge_chunks row for ${sourceType} ${sourceId} after ${timeoutMs}ms ` +
+      `(last poll: ${last ? `${last.status} ${last.body}` : 'no attempt made'}). ` +
+      'If the AI service logs show 401 on POST /internal/v1/reindex: apps/ai reads ' +
+      'SERVICE_M2M_KEY from apps/ai/.env (its own working directory), not the root .env — ' +
+      'check apps/ai/.env exists and its SERVICE_M2M_KEY matches the root .env ' +
+      '(scripts/dev-local.ps1 copies it on every dev:local run). Also confirm the AI and ' +
+      'Inngest dev services are running (pnpm run dev:local).',
+  );
+  return 0;
 }
 
 async function authSignup(email, password) {
@@ -374,6 +435,54 @@ async function main() {
     ok('orders.confirm', orderId);
   }
 
+  const shipRes = await api(`/v1/orders/${orderId}/ship`, {
+    method: 'POST',
+    token: owner.accessToken,
+    orgId,
+  });
+  if (!shipRes.res.ok) {
+    fail('orders.ship', `${shipRes.res.status} ${shipRes.text}`);
+  }
+  if (shipRes.json?.order?.status !== 'shipped') {
+    fail('orders.ship', `expected shipped: ${shipRes.text}`);
+  }
+  ok('orders.ship', orderId);
+
+  // Regression check for the bug where no endpoint, service method, webhook,
+  // or cron anywhere in the API ever set orders.status = 'done', which meant
+  // einvoice.service.ts's `order.status === 'done'` gate (issue(), ~L124)
+  // could never be reached through the app's own intended lifecycle
+  // (create -> confirm -> ship -> ???). POST /v1/orders/:orderId/done closes
+  // that gap; the assertions below exercise the real HTTP surface end to
+  // end (not just markOrderDone in isolation) to prove e-invoice issuance is
+  // now actually reachable.
+  const doneRes = await api(`/v1/orders/${orderId}/done`, {
+    method: 'POST',
+    token: owner.accessToken,
+    orgId,
+  });
+  if (!doneRes.res.ok) {
+    fail('orders.done', `${doneRes.res.status} ${doneRes.text}`);
+  }
+  if (doneRes.json?.order?.status !== 'done') {
+    fail('orders.done', `expected done: ${doneRes.text}`);
+  }
+  ok('orders.done', orderId);
+
+  const einvoiceRes = await api('/v1/einvoice/issue', {
+    method: 'POST',
+    token: owner.accessToken,
+    orgId,
+    body: { orderId, provider: 'stub' },
+  });
+  if (!einvoiceRes.res.ok) {
+    fail('einvoice.issue', `${einvoiceRes.res.status} ${einvoiceRes.text}`);
+  }
+  if (einvoiceRes.json?.job?.status !== 'sent') {
+    fail('einvoice.issue', `expected sent job: ${einvoiceRes.text}`);
+  }
+  ok('einvoice.issue', einvoiceRes.json.job.id);
+
   const exportRes = await api('/v1/orders/export?format=csv', {
     token: owner.accessToken,
     orgId,
@@ -386,6 +495,13 @@ async function main() {
     fail('orders.export', 'empty CSV body');
   }
   ok('orders.export', `${exportRes.res.status} ${ctype || 'text'} (${exportRes.text.length}b)`);
+
+  const chunkCount = await waitForKnowledgeChunks({
+    orgId,
+    token: owner.accessToken,
+    sourceId: productRes.json.product.id,
+  });
+  ok('knowledge.reindex', `${chunkCount} chunk(s) for product ${productRes.json.product.id}`);
 
   // Fingerprint for logs only — not a secret.
   const runId = createHash('sha256')

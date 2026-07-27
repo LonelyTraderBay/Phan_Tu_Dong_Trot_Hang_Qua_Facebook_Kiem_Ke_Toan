@@ -865,3 +865,136 @@ Ports in this table (`:3000` / `:3001` / `:8000` / `:54321`) predate the Omni lo
 | CPC / E100 / tổng 100% | **NOT claimed** (~38% / ~22%+ / ~55%) |
 
 **Next:** Owner làm [b1-render-starter-owner.md](./b1-render-starter-owner.md) → eng ghi R0.2 GREEN → **B2** Meta.
+
+---
+
+## Local hardening 2026-07-27 — eng local browser + cross-service verification (Đích A only)
+
+**Scope:** Ad-hoc thorough local verification pass (not a scheduled SDD wave — no separate plan doc). **Đích A / Eng local only.** Does **not** touch CPC thương mại or E100 — both remain exactly where [Wave B1 OPEN](#wave-b1-open-2026-07-27--eng-kickoff-render-starter-r02-vẫn-blocked-owner) / [Wave P0 CLOSED](#wave-p0-closed-2026-07-27--eng-local-sạch--yes-commercial-deferred) left them (~38% / ~22%+ / ~55% — **unchanged**, **NOT** re-claimed here).
+
+**Method:** Drove the real stack end-to-end (`pnpm run dev:local`), including a real browser session against `:4700`/`:4701`, not just `fetch`-based automated tests. Found and fixed 7 real bugs; found and deferred 2 more (non-blocking).
+
+### Bugs found and fixed
+
+| # | Bug | Fix | File(s) |
+|---|-----|-----|---------|
+| 1 | Mojibake in `.env.example` comments (`—`/`→` → `â€"`/`â†'`) — PS 5.1 `Get-Content` misreads UTF-8-no-BOM without an explicit encoding, so every `pnpm run ports:sync` reintroduced the corruption | Added `-Encoding utf8` to the `Get-Content` call | `scripts/sync-local-env-ports.ps1` |
+| 2 | Inngest SDK registered against its own hardcoded default `http://localhost:8288` instead of this repo's locked `:4788`, spamming "Failed to register" / ECONNREFUSED (harmless — auto-discovery still worked — but noisy) | Added `INNGEST_DEV=http://127.0.0.1:4788` | `.env`, `.env.example`, `scripts/sync-local-env-ports.ps1`, `scripts/dev-local.ps1` |
+| 3 | **CORS never enabled on the API** — `main.ts` never called `app.enableCors`; every browser cross-origin call from web `:4700` → api `:4701` (login/dashboard/catalog/orders) was silently blocked at preflight. Only a real browser could catch this — existing tests all call the API via Node `fetch`, which isn't subject to CORS | Added `buildCorsOptions`, wired into bootstrap; new `WEB_ORIGIN` env var (default `http://127.0.0.1:4700`) | `apps/api/src/config/cors.ts` (new), `apps/api/src/main.ts`, `apps/api/src/config/env.ts`, `.env`/`.env.example`/`sync-local-env-ports.ps1`/`dev-local.ps1` |
+| 4 | **apps/ai silently used the wrong `SERVICE_M2M_KEY`** — `apps/ai/app/config.py` reads `.env` relative to its own cwd (per README's manual "copy `.env` → `apps/ai/.env`" step), but `dev-local.ps1` never did that copy, so AI always fell back to its hardcoded default while the API loaded the real key. Every API→AI M2M call (`POST /internal/v1/reindex`, the product-creation embedding pipeline) silently 401'd — products saved fine but nothing ever reached `knowledge_chunks` | `dev-local.ps1` now copies root `.env` → `apps/ai/.env` before starting AI, and fails loudly at startup if the two `SERVICE_M2M_KEY` values don't match (value itself never logged) | `scripts/dev-local.ps1` |
+| 5 | Stale legacy-port defaults from the Wave P0 port-lock migration (harmless under documented run paths — always overridden — but a trap for standalone runs) | `:3001`→`:4701`, `:8000`→`:4702` defaults corrected | `apps/web/src/lib/api-client.ts`, `apps/api/src/config/env.ts` (`PORT`, `AI_BASE_URL`), `apps/ai/app/config.py` (`core_base_url`) |
+| 6 | `next build` crashed 100%-reproducibly: `The "id" argument must be of type string. Received undefined` — `typescript@7.0.2`'s native-compiler rewrite dropped the legacy `lib/typescript.js` CommonJS entry that Next.js 16.2.11 hardcodes a check against, so Next always saw `typescript` as "missing," tried a pointless reinstall, then crashed. GitHub Actions CI never saw this (`CI=1` takes a different, non-crashing path) — **silently broken for every local dev, invisible to CI** | Added `@typescript/native-preview` devDependency (trips Next's sanctioned native-TS escape hatch); `typescript: { ignoreBuildErrors: true }` in `next.config.ts` as defense-in-depth — real type safety unaffected, still enforced by the separate `pnpm typecheck` gate (confirmed still green) | `apps/web/package.json`, `apps/web/next.config.ts` |
+| 7 (deferred, non-blocking) | `next dev`/`next build` under Turbopack fail with "couldn't find next/package.json" specifically when checked out as a **nested** git worktree under another checkout of the same repo (two `pnpm-workspace.yaml` found; wrong one picked). Confirmed the outer directory is a separate real (non-nested) checkout — very likely a testing-sandbox-only artifact | Added `turbopack.root` pointing at monorepo root (fixes part, not all, of the ambiguity). **Did not** force `--webpack` project-wide — that's a real perf-affecting call that shouldn't be made from nested-worktree evidence alone. Recommend owner re-check `pnpm run dev:local` / `pnpm build` in the real (non-worktree) checkout | `apps/web/next.config.ts` |
+| 8 (deferred, pre-existing, non-blocking) | Booting `AppModule`/`AdvisorService` via `@nestjs/testing`'s `Test.createTestingModule` fails under Vitest — esbuild's TS transform doesn't reliably emit `emitDecoratorMetadata` like `tsc` does, and `AdvisorService` relies on implicit constructor-type DI. Real app (built with `tsc`, run via `next dev`) unaffected — worked around locally with a route-level stub controller for the CORS regression test instead of booting the full module graph | `apps/api/src/config/cors.integration.spec.ts` |
+
+### Regression coverage added (so #3 and #4 can't silently reappear)
+
+| Coverage | File |
+|----------|------|
+| CORS unit test | `apps/api/src/config/cors.spec.ts` |
+| CORS live-preflight integration test (real ephemeral Nest HTTP server) | `apps/api/src/config/cors.integration.spec.ts` |
+| AI config test (`Settings()` reads `SERVICE_M2M_KEY` from env; `core_base_url` default correct) | `apps/ai/tests/test_config.py` |
+| e2e smoke `knowledge.reindex` step — polls `knowledge_chunks` after product creation, fails with a pointed error if the AI-embedding pipeline doesn't complete | `scripts/local-e2e-smoke.mjs` |
+| `dev-local.ps1` fails loudly at stack startup if `apps/ai/.env` `SERVICE_M2M_KEY` ≠ root `.env` | `scripts/dev-local.ps1` |
+
+### Test counts (before → after)
+
+| Suite | Before | After |
+|-------|--------|-------|
+| API unit tests | 185/185 | **190/190** (+5 CORS) |
+| AI pytest | 37/37 | **39/39** (+2 config) |
+| Isolation | 8/8 · 0 skip | **8/8 · 0 skip** (unchanged) |
+| Local e2e smoke | GREEN | **GREEN** (+ `knowledge.reindex` step) |
+| lint | 5/5 tasks | **5/5 tasks** |
+| typecheck | 5/5 tasks | **5/5 tasks** |
+| `pnpm build` (production, all 4 packages) | — | **GREEN** |
+
+### Real browser verification (not just automated tests)
+
+Created a real Supabase Auth user → logged into actual `/login` → reached real `/dashboard` → created a product through the actual `/catalog` UI form (not an API script). Confirmed working end-to-end **after** the CORS fix (#3), zero browser console errors.
+
+### Verdict
+
+| Item | Status |
+|------|--------|
+| Local eng hardening (7 bugs fixed + regression coverage + browser verify) | **GREEN** |
+| Turbopack nested-worktree issue (#7) | **Deferred** — non-blocking, likely sandbox-only; owner to confirm in real checkout |
+| AdvisorService/Vitest DI issue (#8) | **Deferred** — pre-existing, out of scope, doesn't block current suite |
+| CPC thương mại | **NOT re-claimed** — unchanged at ~38% |
+| E100 | **NOT re-claimed** — unchanged at ~22%+ |
+| Tổng intended | **NOT re-claimed** — unchanged at ~55% |
+
+**What's still NOT claimed:** no change to Gate R0/R1 status, no CPC or E100 percentage movement, no Render/Meta progress — this pass is local/eng-only. Turbopack (#7) and the AdvisorService/Vitest Nest-testing gap (#8) remain open, deferred, non-blocking findings — see rows above.
+
+**Controller STOP (local hardening).** Do not claim CPC / E100 / tổng 100% from this pass. Pha B (Render/Meta) remains **BLOCKED owner** exactly as in [Wave B1 OPEN](#wave-b1-open-2026-07-27--eng-kickoff-render-starter-r02-vẫn-blocked-owner).
+
+### Follow-up (same day) — #8 AdvisorService/Vitest DI gap fixed
+
+Item #8 above (deferred) was subsequently fixed, not left open:
+
+- **Fix:** added explicit `@Inject(FeatureFlagsService)` / `@Inject(AiRunsService)` to `apps/api/src/modules/advisor/advisor.service.ts`'s constructor, matching the `@Optional() @Inject(...)` pattern already used for the later token-based param — DI resolution no longer depends on `emitDecoratorMetadata` output at all.
+- **New regression coverage:** `apps/api/src/app.module.integration.spec.ts` boots the **entire** `AppModule` (all 23 feature modules) via `Test.createTestingModule` under Vitest and asserts it resolves and can listen — guards against this class of bug for ANY future service, not just AdvisorService. Verified meaningful by reverting the fix and confirming the test fails with the original error, then restoring it and confirming it passes.
+- **Survey:** grepped `apps/api/src/modules/**` for other implicit-type-DI classes (~30 found, mostly controllers depending on their own module's service) — none caused a failure in the full-boot test, so left untouched (implicit DI is normal/idiomatic; only the confirmed-broken case was fixed).
+- **Test counts after this follow-up:** API unit tests **191/191** (was 190 — +1 full-boot test); lint/typecheck still 5/5 tasks.
+
+Row #8's verdict above is superseded: **Fixed**, not deferred.
+
+---
+
+## Full-app browser sweep 2026-07-28 — eng local only (Đích A only)
+
+**Scope:** Subagent-driven, 4 waves, each covering one slice of the app not yet manually exercised (previous passes only covered login/dashboard/catalog). Every wave: real browser session (real Supabase Auth user + real org, not a fixture), real CRUD through the actual UI, root-cause fixes, regression coverage, independently re-verified by the orchestrating session (not just trusted self-report). **Đích A / Eng local only** — does **not** touch CPC/E100, unchanged at ~38% / ~22%+ / ~55%.
+
+### Bugs found and fixed
+
+| # | Wave | Bug | Fix | File(s) |
+|---|------|-----|-----|---------|
+| 9 | 1 — Inventory | **`public.receive_po()` left `stock_qty` stale** whenever a variant's stock spanned >1 warehouse — a `totals` CTE re-scanned `variant_stocks` as a *sibling* of the CTE that had just updated it in the same `WITH` statement; Postgres never lets a sibling CTE see another's writes except via `RETURNING`. Silently made every PO receive a no-op for the reported total | New migration threading `RETURNING` value + fresh sum of untouched warehouses, mirroring `private.sync_variant_total_stock`'s already-correct pattern | `supabase/migrations/20260728000000_fix_receive_po_stock_total.sql`, `apps/api/src/modules/supplier-po/receive-po.integration.spec.ts` |
+| 10 | 2 — Orders | **Same sibling-CTE bug in `private.apply_order_stock_change()`** (confirm/cancel/return) — confirmed by direct investigation, not assumed from #9's pattern alone | Same fix pattern | `supabase/migrations/20260728010000_fix_apply_order_stock_change_total.sql`, `apps/api/src/modules/orders/apply-order-stock-change.integration.spec.ts` |
+| 11 | 3 — Analytics | **`AI_MODEL_ALLOWLIST` config drift** — `.env`/`.env.example` shipped `gemini-2.0-flash` only, missing `advisor-stub`; with no `GEMINI_API_KEY` (the expected local default) the AI service always returns the stub model, which `AiRunsService.assertModelAllowed` then rejected — **`/advisor` was unusable out of the box** for anyone following the documented local setup. `render.yaml`'s deployed config already had the correct value, confirming this was template drift | Added `advisor-stub` to the allowlist in `.env`/`.env.example` | `.env`, `.env.example`, `apps/api/src/modules/audit/ai-runs.local-env.integration.spec.ts` (reads the real tracked `.env.example`, fails again if it regresses) |
+| 12 | 4 — Comms/admin | Stale `activeOrgId` in `localStorage` never validated against the user's real org list (unlike `auth-session.ts`, which already did this elsewhere) — anyone with leftover org context got silent 403/400s app-wide | Extracted shared `resolveActiveOrgId()`, used consistently | `apps/web/src/lib/org-context.ts` (+test), `apps/web/src/lib/auth-session.ts`, `apps/web/src/components/app-shell.tsx` |
+| 13 | 4 — Comms/admin | API error `detail` text (RFC 7807 shape, per `problem-details.filter.ts`) was discarded app-wide — the web client only read `body.message`, which the API never sends — every error shown to users was a useless generic message instead of the real reason | `parseApiErrorBody()`: checks `detail` → `message` → `title` → fallback | `apps/web/src/lib/api-client.ts` (+test) |
+| 14 | 4 — Comms/admin | **New orgs provisioned with zero entitlements** regardless of plan — `create_organization_with_owner()` inserts the entitlements row scoped only by `org_id`, falling back to the table's raw `0/0/false` defaults instead of `PLAN_CATALOG.free`'s real limits (1 page, 100k AI tokens/mo); `syncPlanEntitlements` existed but was only wired to the admin manual-plan-change path — **every real signup was stuck at zero until an admin intervened by hand** | `createOrganization()` now calls `syncPlanEntitlements` right after the RPC; `IdentityModule` now imports `BillingModule` (verified no circular dependency, and `app.module.integration.spec.ts` — see follow-up above — still boots clean) | `apps/api/src/modules/identity/identity.service.ts`, `identity.service.spec.ts`, `identity.module.ts` |
+
+Bugs #9 and #10 are the same root-cause class discovered independently in two different functions — a full grep of `supabase/migrations/**/*.sql` for the pattern (later CTE fresh-scanning a table an earlier sibling CTE just wrote) turned up no third instance; `adjust_variant_stock`/`transfer_stock` already avoid it by design (separate sequential statement, not folded into one `WITH`).
+
+### Live re-verification (this session, independent of subagent self-reports)
+
+- #9/#10: confirmed the fixed function bodies are the ones actually loaded in the running Postgres (`pg_proc.prosrc` contains the `RETURNING`-threaded fix), not just written to a migration file.
+- #14: signed up a fresh throwaway user, created a fresh org via the real API, confirmed the response carries `{maxPages:1, aiMonthlyTokenLimit:100000}` — not zeros.
+- Reran the full suite independently after every wave rather than trusting the reported numbers.
+
+### Test counts (after this sweep, cumulative with the follow-up above)
+
+| Suite | Count |
+|-------|-------|
+| API unit/integration tests | **194/194** (56 files) |
+| Web unit tests | **9/9** (2 files) — new: `org-context.test.ts`, `api-client.test.ts` |
+| AI pytest | **39/39** (unchanged) |
+| typecheck / lint | **5/5 tasks** each |
+
+### Deferred — product decisions, not bugs (flagged via `spawn_task`, not implemented)
+
+- **E-invoice status-transition gap** (wave 2): no code path ever sets `orders.status = 'done'`, the state `einvoice.service.ts` requires to issue — the manual e-invoice feature is unreachable through the app's own confirm→ship→COD-collect flow. Needs a product decision (manual "Hoàn tất" action vs. auto-transition on COD match); not freelanced.
+
+### Verdict
+
+| Item | Status |
+|------|--------|
+| Full-app browser sweep (4 waves, 6 bugs fixed incl. 2 data-integrity + 1 onboarding-blocker, all independently re-verified) | **GREEN** |
+| CPC thương mại / E100 / Tổng | **NOT re-claimed** — unchanged |
+
+**Controller STOP (full-app sweep).** Do not claim CPC / E100 / tổng 100% from this pass. E-invoice status-transition gap remains an open product decision. Pha B (Render/Meta) remains **BLOCKED owner**.
+
+### Follow-up (2026-07-28) — e-invoice status-transition gap closed
+
+Owner decided: **manual-only** "Hoàn tất" action (no auto-transition on COD match — that stays a separate, still-open decision, not implemented).
+
+- **New RPC**: `public.done_order(p_org_id, p_order_id, p_done_at)` — `shipped` → `done`, mirroring `ship_order`'s exact structure (idempotent on already-`done`, rejects any other source status with `hint = 'invalid_order_status'`). `supabase/migrations/20260728020000_order_done_rpc.sql`. The `done_at` column and `'done'` value already existed from earlier Plan D/F work — only the missing RPC + Nest wiring were the gap.
+- **New endpoint**: `POST /v1/orders/:orderId/done` (`orders.controller.ts`/`orders.service.ts::markOrderDone`), same permission guard (`orders.write`) and audit event pattern (`order.done`) as `confirm`/`cancel`/`ship`/`return`.
+- **Web UI**: "Hoàn tất" button in `/orders`, shown when `order.status === 'shipped'`, next to "Hoàn hàng".
+- **Regression coverage**: unit tests for the new transition (happy path + wrong-source-status rejection) in `orders.service.spec.ts`/`orders.controller.spec.ts`; `scripts/local-e2e-smoke.mjs` extended with real `ship → done → einvoice.issue` steps, proving the full reachability gap is closed end-to-end over real HTTP, not just in isolation.
+- **Verified live**: full e2e smoke run — `PASS [orders.ship]` → `PASS [orders.done]` → `PASS [einvoice.issue]` — confirmed independently, not just from the implementing subagent's self-report.
+- **Test counts after this follow-up:** API **198/198** (was 194 — +4: 2 new unit tests, existing suite unaffected). typecheck and lint both still green across all packages (turbo).
+
+The "Deferred" row above is superseded: **Fixed**, not open. No CPC/E100 change — this is a bug-closure (the feature already existed and was already counted; it was simply unreachable), not new commercial functionality.

@@ -112,6 +112,40 @@ Push-Location (Join-Path $Root "apps\ai")
 uv sync
 Pop-Location
 
+# apps/ai reads pydantic-settings' `.env` relative to its own directory (see app/config.py),
+# same as the README's manual "Copy .env apps/ai/.env -Force" step. Without this, values like
+# SERVICE_M2M_KEY silently fall back to the hardcoded default and the API<->AI service-to-service
+# calls (e.g. knowledge reindex) fail with 401.
+$AiEnvFile = Join-Path $Root "apps\ai\.env"
+Copy-Item $EnvFile $AiEnvFile -Force
+
+function Get-EnvValue([string]$Path, [string]$Key) {
+  if (-not (Test-Path $Path)) { return $null }
+  foreach ($line in Get-Content $Path -Encoding utf8) {
+    if ($line -match '^\s*#' -or $line.Trim() -eq "") { continue }
+    $eq = $line.IndexOf("=")
+    if ($eq -lt 1) { continue }
+    if ($line.Substring(0, $eq).Trim() -eq $Key) {
+      return $line.Substring($eq + 1).Trim()
+    }
+  }
+  return $null
+}
+
+# Fail loudly right here (never silently, as the original bug did) if the copy above didn't
+# actually sync the shared M2M secret. Compares values only in-memory - never printed.
+$rootM2mKey = Get-EnvValue -Path $EnvFile -Key "SERVICE_M2M_KEY"
+$aiM2mKey = Get-EnvValue -Path $AiEnvFile -Key "SERVICE_M2M_KEY"
+if ([string]::IsNullOrWhiteSpace($rootM2mKey)) {
+  throw "Root .env is missing SERVICE_M2M_KEY - apps/ai <-> apps/api calls would 401."
+}
+if ($aiM2mKey -ne $rootM2mKey) {
+  throw ("apps\ai\.env SERVICE_M2M_KEY does not match root .env after the copy above - " +
+    "API<->AI service-to-service calls (e.g. knowledge reindex) will silently 401. " +
+    "Check apps\ai\.env was written correctly (see scripts\dev-local.ps1).")
+}
+Write-Host "apps/ai/.env SERVICE_M2M_KEY verified in sync with root .env"
+
 $logDir = Join-Path $Root ".local-secrets\logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $pids = @{}
@@ -147,6 +181,11 @@ $env:AI_BASE_URL = $UrlAi
 $env:CORE_BASE_URL = $UrlApi
 $env:NEXT_PUBLIC_API_BASE_URL = $UrlApi
 $env:NEXT_PUBLIC_SUPABASE_URL = $Ports.urls.supabase
+# Inngest SDK defaults to :8288 when unset; point it at the locked dev-server port so the
+# API's self-registration handshake doesn't loop on ECONNREFUSED.
+$env:INNGEST_DEV = $UrlInngest
+# CORS allow-list for the API; must match the web origin or browser-based calls are blocked.
+$env:WEB_ORIGIN = $UrlWeb
 
 if (-not $NoApi) {
   $p = Start-Process -FilePath $pnpmCmd -ArgumentList @("--dir", "apps/api", "dev") `

@@ -11,6 +11,7 @@ import { rateLimitMiddleware } from "./common/rate-limit/rate-limit.middleware";
 import { requestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { securityHeadersMiddleware } from "./common/middleware/security-headers.middleware";
 import { traceparentMiddleware } from "./common/middleware/traceparent.middleware";
+import { buildCorsOptions } from "./config/cors";
 import { loadEnv } from "./config/env";
 
 async function bootstrap() {
@@ -21,6 +22,7 @@ async function bootstrap() {
   });
 
   app.enableShutdownHooks();
+  app.enableCors(buildCorsOptions(env));
   app.use(requestIdMiddleware);
   app.use(rateLimitMiddleware);
   app.use(traceparentMiddleware);

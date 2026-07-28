@@ -13,7 +13,7 @@ Blueprint file: [`render.yaml`](../../render.yaml) (currently **free** plan — 
 ## One-shot (Dashboard)
 
 1. Open https://dashboard.render.com/blueprints  
-2. **New Blueprint Instance** → connect GitHub repo `LonelyTraderBay/Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan`  
+2. **New Blueprint Instance** → connect GitHub repo `LonelyTraderBay/omni-commerce-platform`  
 3. Branch `main`, path `render.yaml`  
 4. Fill `sync: false` env vars (see below)  
 5. **Deploy Blueprint**

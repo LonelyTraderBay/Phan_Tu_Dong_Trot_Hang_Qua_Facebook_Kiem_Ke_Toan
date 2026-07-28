@@ -24,6 +24,29 @@ import {
   type ProductStatus,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import {
+  Button,
+  Card,
+  colorBackgroundCard,
+  colorBorder,
+  colorBorderStrong,
+  colorDanger,
+  colorPrimary,
+  colorTextBody,
+  colorTextHeading,
+  colorTextMuted,
+  EmptyState,
+  ErrorText,
+  Input,
+  MutedText,
+  SuccessText,
+  Table,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  Textarea,
+} from '../../../components/ui';
 
 const emptyProductForm = {
   title: '',
@@ -283,48 +306,38 @@ export default function CatalogPage() {
             Quản lý sản phẩm, SKU, giá và tồn kho qua API /v1/catalog/products.
           </p>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() => {
             setSelectedProduct(null);
             setEditingVariantId(null);
             setProductForm(emptyProductForm);
           }}
-          style={secondaryButtonStyle}
         >
           Tạo sản phẩm mới
-        </button>
+        </Button>
       </header>
 
-      {error ? (
-        <p role="alert" style={alertStyle}>
-          {error}
-        </p>
-      ) : null}
-      {message ? (
-        <p role="status" style={successStyle}>
-          {message}
-        </p>
-      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
+      {message ? <SuccessText>{message}</SuccessText> : null}
 
       <div style={layoutStyle}>
-        <section style={panelStyle}>
+        <Card>
           <div style={panelHeaderStyle}>
             <h2 style={sectionTitleStyle}>Sản phẩm</h2>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => void loadProducts()}
               disabled={loading}
-              style={secondaryButtonStyle}
             >
               {loading ? 'Đang tải...' : 'Tải lại'}
-            </button>
+            </Button>
           </div>
 
           {loading ? (
-            <p style={mutedStyle}>Đang tải sản phẩm...</p>
+            <MutedText style={{ fontSize: 14 }}>Đang tải sản phẩm...</MutedText>
           ) : products.length === 0 ? (
-            <p style={emptyStyle}>Chưa có sản phẩm nào.</p>
+            <EmptyState>Chưa có sản phẩm nào.</EmptyState>
           ) : (
             <div style={{ display: 'grid', gap: 10 }}>
               {products.map((product) => (
@@ -335,9 +348,11 @@ export default function CatalogPage() {
                   style={{
                     ...productButtonStyle,
                     borderColor:
-                      product.id === selectedProduct?.id ? '#2563eb' : '#e2e8f0',
+                      product.id === selectedProduct?.id ? colorPrimary : colorBorder,
                     background:
-                      product.id === selectedProduct?.id ? '#eff6ff' : '#ffffff',
+                      product.id === selectedProduct?.id
+                        ? '#eff6ff'
+                        : colorBackgroundCard,
                   }}
                 >
                   <span style={{ fontWeight: 800 }}>{product.title}</span>
@@ -349,16 +364,16 @@ export default function CatalogPage() {
               ))}
             </div>
           )}
-        </section>
+        </Card>
 
-        <section style={panelStyle}>
+        <Card>
           <h2 style={sectionTitleStyle}>
             {selectedProduct ? 'Sửa sản phẩm' : 'Tạo sản phẩm'}
           </h2>
           <form onSubmit={(event) => void handleProductSubmit(event)}>
             <label style={labelStyle}>
               Tên sản phẩm
-              <input
+              <Input
                 value={productForm.title}
                 onChange={(event) =>
                   setProductForm((current) => ({
@@ -366,12 +381,11 @@ export default function CatalogPage() {
                     title: event.target.value,
                   }))
                 }
-                style={inputStyle}
               />
             </label>
             <label style={labelStyle}>
               Mô tả
-              <textarea
+              <Textarea
                 value={productForm.description}
                 onChange={(event) =>
                   setProductForm((current) => ({
@@ -380,7 +394,6 @@ export default function CatalogPage() {
                   }))
                 }
                 rows={4}
-                style={inputStyle}
               />
             </label>
             <label style={labelStyle}>
@@ -393,29 +406,25 @@ export default function CatalogPage() {
                     status: event.target.value as ProductStatus,
                   }))
                 }
-                style={inputStyle}
+                style={selectStyle}
               >
                 <option value="active">Đang bán</option>
                 <option value="archived">Lưu trữ</option>
               </select>
             </label>
             <div style={buttonRowStyle}>
-              <button
-                type="submit"
-                disabled={savingProduct}
-                style={primaryButtonStyle}
-              >
+              <Button type="submit" disabled={savingProduct}>
                 {savingProduct ? 'Đang lưu...' : 'Lưu sản phẩm'}
-              </button>
+              </Button>
               {selectedProduct ? (
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  style={{ color: colorDanger }}
                   onClick={() => void handleDeleteProduct()}
                   disabled={savingProduct}
-                  style={dangerButtonStyle}
                 >
                   Xoá
-                </button>
+                </Button>
               ) : null}
             </div>
           </form>
@@ -424,14 +433,14 @@ export default function CatalogPage() {
 
           <h2 style={sectionTitleStyle}>Phiên bản / SKU</h2>
           {!selectedProduct ? (
-            <p style={emptyStyle}>Chọn hoặc tạo sản phẩm trước khi thêm SKU.</p>
+            <EmptyState>Chọn hoặc tạo sản phẩm trước khi thêm SKU.</EmptyState>
           ) : (
             <>
               <form onSubmit={(event) => void handleVariantSubmit(event)}>
                 <div style={variantFormGridStyle}>
                   <label style={labelStyle}>
                     SKU
-                    <input
+                    <Input
                       value={variantForm.sku}
                       onChange={(event) =>
                         setVariantForm((current) => ({
@@ -439,12 +448,11 @@ export default function CatalogPage() {
                           sku: event.target.value,
                         }))
                       }
-                      style={inputStyle}
                     />
                   </label>
                   <label style={labelStyle}>
                     Tên phiên bản
-                    <input
+                    <Input
                       value={variantForm.title}
                       onChange={(event) =>
                         setVariantForm((current) => ({
@@ -452,12 +460,11 @@ export default function CatalogPage() {
                           title: event.target.value,
                         }))
                       }
-                      style={inputStyle}
                     />
                   </label>
                   <label style={labelStyle}>
                     Giá VND
-                    <input
+                    <Input
                       inputMode="numeric"
                       value={variantForm.priceVnd}
                       onChange={(event) =>
@@ -466,12 +473,11 @@ export default function CatalogPage() {
                           priceVnd: event.target.value,
                         }))
                       }
-                      style={inputStyle}
                     />
                   </label>
                   <label style={labelStyle}>
                     COGS VND / đơn vị
-                    <input
+                    <Input
                       inputMode="numeric"
                       placeholder="0"
                       value={variantForm.cogsVnd}
@@ -481,12 +487,11 @@ export default function CatalogPage() {
                           cogsVnd: event.target.value,
                         }))
                       }
-                      style={inputStyle}
                     />
                   </label>
                   <label style={labelStyle}>
                     Tồn kho
-                    <input
+                    <Input
                       min={0}
                       type="number"
                       value={variantForm.stockQty}
@@ -496,86 +501,76 @@ export default function CatalogPage() {
                           stockQty: Number(event.target.value),
                         }))
                       }
-                      style={inputStyle}
                     />
                   </label>
                 </div>
                 <div style={buttonRowStyle}>
-                  <button
-                    type="submit"
-                    disabled={savingVariant}
-                    style={primaryButtonStyle}
-                  >
+                  <Button type="submit" disabled={savingVariant}>
                     {savingVariant
                       ? 'Đang lưu...'
                       : editingVariantId
                         ? 'Lưu SKU'
                         : 'Thêm SKU'}
-                  </button>
+                  </Button>
                   {editingVariantId ? (
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
                       onClick={() => setEditingVariantId(null)}
-                      style={secondaryButtonStyle}
                     >
                       Huỷ sửa
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               </form>
 
               {(selectedProduct.variants ?? []).length === 0 ? (
-                <p style={emptyStyle}>Sản phẩm chưa có SKU.</p>
+                <EmptyState>Sản phẩm chưa có SKU.</EmptyState>
               ) : (
-                <div style={{ marginTop: 18, overflowX: 'auto' }}>
-                  <table style={tableStyle}>
-                    <thead>
-                      <tr>
-                        <th style={tableHeaderStyle}>SKU</th>
-                        <th style={tableHeaderStyle}>Tên</th>
-                        <th style={tableHeaderStyle}>Giá</th>
-                        <th style={tableHeaderStyle}>COGS</th>
-                        <th style={tableHeaderStyle}>Tồn</th>
-                        <th style={tableHeaderStyle}>Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(selectedProduct.variants ?? []).map((variant) => (
-                        <tr key={variant.id}>
-                          <td style={tableCellStyle}>{variant.sku}</td>
-                          <td style={tableCellStyle}>{variant.title}</td>
-                          <td style={tableCellStyle}>
-                            {formatMoney(variant.priceVnd)}
-                          </td>
-                          <td style={tableCellStyle}>
-                            {formatMoney(variant.cogsVnd ?? '0')}
-                          </td>
-                          <td style={tableCellStyle}>{variant.stockQty}</td>
-                          <td style={tableCellStyle}>
-                            <button
-                              type="button"
-                              onClick={() => setEditingVariantId(variant.id)}
-                              style={linkButtonStyle}
-                            >
-                              Sửa
-                            </button>{' '}
-                            <button
-                              type="button"
-                              onClick={() => void handleDeleteVariant(variant)}
-                              style={{ ...linkButtonStyle, color: '#b91c1c' }}
-                            >
-                              Xoá
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <Table style={{ marginTop: 18, minWidth: 680 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableHeaderCell>SKU</TableHeaderCell>
+                      <TableHeaderCell>Tên</TableHeaderCell>
+                      <TableHeaderCell>Giá</TableHeaderCell>
+                      <TableHeaderCell>COGS</TableHeaderCell>
+                      <TableHeaderCell>Tồn</TableHeaderCell>
+                      <TableHeaderCell>Thao tác</TableHeaderCell>
+                    </TableRow>
+                  </TableHead>
+                  <tbody>
+                    {(selectedProduct.variants ?? []).map((variant) => (
+                      <TableRow key={variant.id}>
+                        <TableCell>{variant.sku}</TableCell>
+                        <TableCell>{variant.title}</TableCell>
+                        <TableCell>
+                          {formatMoney(variant.priceVnd)}
+                        </TableCell>
+                        <TableCell>
+                          {formatMoney(variant.cogsVnd ?? '0')}
+                        </TableCell>
+                        <TableCell>{variant.stockQty}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="link"
+                            onClick={() => setEditingVariantId(variant.id)}
+                          >
+                            Sửa
+                          </Button>{' '}
+                          <Button
+                            variant="danger"
+                            onClick={() => void handleDeleteVariant(variant)}
+                          >
+                            Xoá
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </tbody>
+                </Table>
               )}
             </>
           )}
-        </section>
+        </Card>
       </div>
     </main>
   );
@@ -624,13 +619,6 @@ const layoutStyle: CSSProperties = {
   marginTop: 28,
 };
 
-const panelStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
-  padding: 20,
-};
-
 const panelHeaderStyle: CSSProperties = {
   alignItems: 'center',
   display: 'flex',
@@ -645,9 +633,9 @@ const sectionTitleStyle: CSSProperties = {
 };
 
 const productButtonStyle: CSSProperties = {
-  border: '1px solid #e2e8f0',
+  border: `1px solid ${colorBorder}`,
   borderRadius: 12,
-  color: '#0f172a',
+  color: colorTextBody,
   cursor: 'pointer',
   display: 'flex',
   flexDirection: 'column',
@@ -657,7 +645,7 @@ const productButtonStyle: CSSProperties = {
 };
 
 const labelStyle: CSSProperties = {
-  color: '#334155',
+  color: colorTextHeading,
   display: 'flex',
   flexDirection: 'column',
   fontSize: 14,
@@ -666,10 +654,14 @@ const labelStyle: CSSProperties = {
   marginTop: 14,
 };
 
-const inputStyle: CSSProperties = {
-  border: '1px solid #cbd5e1',
+// No shared `Select` primitive exists yet, so the native <select> keeps a
+// local style, just with the border/text literals swapped for their tokens
+// (radius stays a raw 10, matching the same native-<select> precedent in
+// orders/page.tsx).
+const selectStyle: CSSProperties = {
+  border: `1px solid ${colorBorderStrong}`,
   borderRadius: 10,
-  color: '#0f172a',
+  color: colorTextBody,
   font: 'inherit',
   padding: '11px 12px',
 };
@@ -687,92 +679,13 @@ const buttonRowStyle: CSSProperties = {
   marginTop: 18,
 };
 
-const primaryButtonStyle: CSSProperties = {
-  background: '#2563eb',
-  border: 'none',
-  borderRadius: 10,
-  color: '#ffffff',
-  cursor: 'pointer',
-  fontSize: 15,
-  fontWeight: 800,
-  padding: '11px 16px',
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '9px 12px',
-};
-
-const dangerButtonStyle: CSSProperties = {
-  ...secondaryButtonStyle,
-  color: '#b91c1c',
-};
-
-const linkButtonStyle: CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: '#2563eb',
-  cursor: 'pointer',
-  font: 'inherit',
-  fontWeight: 800,
-  padding: 0,
-};
-
 const dividerStyle: CSSProperties = {
   border: 'none',
-  borderTop: '1px solid #e2e8f0',
+  borderTop: `1px solid ${colorBorder}`,
   margin: '28px 0',
 };
 
-const tableStyle: CSSProperties = {
-  borderCollapse: 'collapse',
-  minWidth: 680,
-  width: '100%',
-};
-
-const tableHeaderStyle: CSSProperties = {
-  borderBottom: '1px solid #e2e8f0',
-  color: '#334155',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '12px 16px',
-  textAlign: 'left',
-};
-
-const tableCellStyle: CSSProperties = {
-  borderBottom: '1px solid #f1f5f9',
-  color: '#0f172a',
-  fontSize: 15,
-  padding: '12px 16px',
-};
-
 const mutedStyle: CSSProperties = {
-  color: '#64748b',
+  color: colorTextMuted,
   fontSize: 14,
-};
-
-const emptyStyle: CSSProperties = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: 12,
-  color: '#64748b',
-  padding: 16,
-};
-
-const alertStyle: CSSProperties = {
-  color: '#b91c1c',
-  fontSize: 16,
-  marginTop: 20,
-};
-
-const successStyle: CSSProperties = {
-  color: '#15803d',
-  fontSize: 16,
-  marginTop: 20,
 };

@@ -16,6 +16,20 @@ import {
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import { VariantPicker } from '../../../components/variant-picker';
+import {
+  Button,
+  Card,
+  colorBorderStrong,
+  ErrorText,
+  Input,
+  MutedText,
+  SuccessText,
+  Table,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../../../components/ui';
 
 export default function PurchaseOrdersPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
@@ -137,17 +151,21 @@ export default function PurchaseOrdersPage() {
     <main style={pageStyle}>
       <header>
         <h1 style={{ margin: 0, fontSize: 32 }}>Purchase orders</h1>
-        <p style={mutedStyle}>Tạo PO mỏng và receive để ghi inbound ledger vào kho.</p>
+        <MutedText>Tạo PO mỏng và receive để ghi inbound ledger vào kho.</MutedText>
       </header>
-      {error ? <p style={errorStyle}>{error}</p> : null}
-      {message ? <p style={okStyle}>{message}</p> : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
+      {message ? <SuccessText>{message}</SuccessText> : null}
 
-      <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Tạo PO một dòng</h2>
+      <Card title="Tạo PO một dòng" style={{ marginTop: 24 }}>
         <form onSubmit={(event) => void handleCreate(event)} style={formStyle}>
           <label style={labelStyle}>
             Supplier
-            <select value={supplierId} onChange={(event) => setSupplierId(event.target.value)} required style={inputStyle}>
+            <select
+              value={supplierId}
+              onChange={(event) => setSupplierId(event.target.value)}
+              required
+              style={selectStyle}
+            >
               <option value="">Chọn supplier</option>
               {suppliers.map((supplier) => (
                 <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
@@ -156,7 +174,11 @@ export default function PurchaseOrdersPage() {
           </label>
           <label style={labelStyle}>
             Kho nhận
-            <select value={warehouseId} onChange={(event) => setWarehouseId(event.target.value)} style={inputStyle}>
+            <select
+              value={warehouseId}
+              onChange={(event) => setWarehouseId(event.target.value)}
+              style={selectStyle}
+            >
               <option value="">Chọn khi receive</option>
               {warehouses.map((warehouse) => (
                 <option key={warehouse.id} value={warehouse.id}>{warehouse.name} ({warehouse.code})</option>
@@ -169,71 +191,96 @@ export default function PurchaseOrdersPage() {
           </label>
           <label style={labelStyle}>
             Số lượng
-            <input type="number" min={1} value={qty} onChange={(event) => setQty(Number(event.target.value))} required style={inputStyle} />
+            <Input
+              type="number"
+              min={1}
+              value={qty}
+              onChange={(event) => setQty(Number(event.target.value))}
+              required
+            />
           </label>
           <label style={labelStyle}>
             Giá vốn / đơn vị
-            <input value={unitCostVnd} onChange={(event) => setUnitCostVnd(event.target.value)} required pattern="\d+" style={inputStyle} />
+            <Input
+              value={unitCostVnd}
+              onChange={(event) => setUnitCostVnd(event.target.value)}
+              required
+              pattern="\d+"
+            />
           </label>
           <label style={labelStyle}>
             Ghi chú
-            <input value={note} onChange={(event) => setNote(event.target.value)} style={inputStyle} />
+            <Input value={note} onChange={(event) => setNote(event.target.value)} />
           </label>
-          <button type="submit" disabled={saving} style={primaryButtonStyle}>
+          <Button type="submit" disabled={saving} style={{ alignSelf: 'end' }}>
             {saving ? 'Đang lưu...' : 'Tạo PO'}
-          </button>
+          </Button>
         </form>
-      </section>
+      </Card>
 
-      <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Danh sách PO</h2>
+      <Card title="Danh sách PO" style={{ marginTop: 24 }}>
         {loading ? (
-          <p style={mutedStyle}>Đang tải...</p>
+          <MutedText>Đang tải...</MutedText>
         ) : purchaseOrders.length === 0 ? (
-          <p style={mutedStyle}>Chưa có PO.</p>
+          <MutedText>Chưa có PO.</MutedText>
         ) : (
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>PO</th>
-                <th style={thStyle}>Supplier</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Items</th>
-                <th style={thStyle}>Thao tác</th>
-              </tr>
-            </thead>
+          <Table style={{ minWidth: 900 }}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>PO</TableHeaderCell>
+                <TableHeaderCell>Supplier</TableHeaderCell>
+                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>Items</TableHeaderCell>
+                <TableHeaderCell>Thao tác</TableHeaderCell>
+              </TableRow>
+            </TableHead>
             <tbody>
               {purchaseOrders.map((po) => (
-                <tr key={po.id}>
-                  <td style={tdStyle}>{po.id.slice(0, 8)}</td>
-                  <td style={tdStyle}>{po.supplier?.name ?? po.supplierId}</td>
-                  <td style={tdStyle}>{po.status}</td>
-                  <td style={tdStyle}>
+                <TableRow key={po.id}>
+                  <TableCell>{po.id.slice(0, 8)}</TableCell>
+                  <TableCell>{po.supplier?.name ?? po.supplierId}</TableCell>
+                  <TableCell>{po.status}</TableCell>
+                  <TableCell>
                     {po.items.map((item) => `${item.variantId.slice(0, 8)} x${item.qty} @ ${formatVnd(item.unitCostVnd)}`).join(', ')}
-                  </td>
-                  <td style={tdStyle}>
+                  </TableCell>
+                  <TableCell>
                     {po.status === 'draft' ? (
-                      <button type="button" disabled={saving} onClick={() => void handleStatus(po, 'ordered')} style={linkButtonStyle}>
+                      <Button
+                        variant="link"
+                        style={{ marginRight: 8 }}
+                        disabled={saving}
+                        onClick={() => void handleStatus(po, 'ordered')}
+                      >
                         Đặt hàng
-                      </button>
+                      </Button>
                     ) : null}
                     {po.status === 'draft' || po.status === 'ordered' ? (
-                      <button type="button" disabled={saving} onClick={() => void handleReceive(po)} style={linkButtonStyle}>
+                      <Button
+                        variant="link"
+                        style={{ marginRight: 8 }}
+                        disabled={saving}
+                        onClick={() => void handleReceive(po)}
+                      >
                         Nhập kho
-                      </button>
+                      </Button>
                     ) : null}
                     {po.status === 'draft' || po.status === 'ordered' ? (
-                      <button type="button" disabled={saving} onClick={() => void handleStatus(po, 'cancelled')} style={dangerLinkStyle}>
+                      <Button
+                        variant="danger"
+                        style={{ marginRight: 8 }}
+                        disabled={saving}
+                        onClick={() => void handleStatus(po, 'cancelled')}
+                      >
                         Hủy
-                      </button>
+                      </Button>
                     ) : null}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
-      </section>
+      </Card>
     </main>
   );
 }
@@ -247,17 +294,8 @@ function formatVnd(value: string) {
 }
 
 const pageStyle: CSSProperties = { maxWidth: 1120, margin: '0 auto', padding: '28px 20px 48px' };
-const panelStyle: CSSProperties = { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, marginTop: 24, padding: 20 };
-const sectionTitleStyle: CSSProperties = { fontSize: 22, margin: '0 0 16px' };
 const formStyle: CSSProperties = { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' };
 const labelStyle: CSSProperties = { display: 'grid', gap: 6, fontSize: 14, fontWeight: 700 };
-const inputStyle: CSSProperties = { border: '1px solid #cbd5e1', borderRadius: 8, font: 'inherit', padding: '10px 12px' };
-const primaryButtonStyle: CSSProperties = { alignSelf: 'end', background: '#0f766e', border: 0, borderRadius: 8, color: '#fff', cursor: 'pointer', fontWeight: 700, padding: '11px 14px' };
-const tableStyle: CSSProperties = { borderCollapse: 'collapse', minWidth: 900, width: '100%' };
-const thStyle: CSSProperties = { borderBottom: '1px solid #e2e8f0', color: '#475569', padding: '10px', textAlign: 'left' };
-const tdStyle: CSSProperties = { borderBottom: '1px solid #f1f5f9', padding: '10px', verticalAlign: 'top' };
-const linkButtonStyle: CSSProperties = { background: 'transparent', border: 0, color: '#0f766e', cursor: 'pointer', fontWeight: 700, marginRight: 8, padding: 0 };
-const dangerLinkStyle: CSSProperties = { ...linkButtonStyle, color: '#b91c1c' };
-const mutedStyle: CSSProperties = { color: '#64748b' };
-const errorStyle: CSSProperties = { color: '#b91c1c' };
-const okStyle: CSSProperties = { color: '#047857' };
+// No shared `Select` primitive exists yet, so the native <select>s keep a
+// local style, just with the border literal swapped for its token.
+const selectStyle: CSSProperties = { border: `1px solid ${colorBorderStrong}`, borderRadius: 8, font: 'inherit', padding: '10px 12px' };

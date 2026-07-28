@@ -1291,6 +1291,17 @@ export async function resumeInboxConversation(
   return conversation;
 }
 
+export async function sendInboxMessage(
+  conversationId: string,
+  text: string,
+): Promise<InboxMessage> {
+  const { message } = await apiFetch<{ message: InboxMessage }>(
+    `/v1/inbox/conversations/${encodeURIComponent(conversationId)}/messages`,
+    { method: 'POST', body: JSON.stringify({ text }) },
+  );
+  return message;
+}
+
 export async function listOrganizations(
   accessToken?: string,
 ): Promise<OrganizationMembership[]> {

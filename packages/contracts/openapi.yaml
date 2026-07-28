@@ -1168,6 +1168,33 @@ paths:
       responses:
         '200':
           description: OK
+    post:
+      summary: Send a manual staff reply message in an inbox conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+      responses:
+        '201':
+          description: Message sent
+        '400':
+          description: Invalid request body, unsupported channel (Zalo), or channel connection inactive
   /v1/inbox/conversations/{id}/takeover:
     post:
       summary: Pause bot and take over an inbox conversation

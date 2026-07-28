@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   Param,
@@ -8,6 +9,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import type { z } from 'zod';
 
 import {
   CurrentUser,
@@ -16,6 +18,7 @@ import {
 import { OrgId } from '../../common/decorators/org-id.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { PermissionsGuard } from '../authz/permissions.guard';
+import { SendInboxMessageBodySchema } from './dto';
 import { InboxService } from './inbox.service';
 
 @Controller('v1/inbox')
@@ -37,6 +40,23 @@ export class InboxController {
     @Param('id', ParseUUIDPipe) conversationId: string,
   ) {
     return this.inbox.listMessages(requireOrgId(orgId), conversationId);
+  }
+
+  @Post('conversations/:id/messages')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('inbox.reply')
+  sendMessage(
+    @OrgId() orgId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser | undefined,
+    @Param('id', ParseUUIDPipe) conversationId: string,
+    @Body() body: unknown,
+  ) {
+    return this.inbox.sendMessage({
+      orgId: requireOrgId(orgId),
+      actorUserId: requireUserId(user),
+      conversationId,
+      body: parseBody(SendInboxMessageBodySchema, body),
+    });
   }
 
   @Post('conversations/:id/takeover')
@@ -90,4 +110,19 @@ function requireUserId(user: AuthenticatedUser | undefined) {
   }
 
   return user.id;
+}
+
+function parseBody<T extends z.ZodTypeAny>(
+  schema: T,
+  body: unknown,
+): z.output<T> {
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    throw new BadRequestException({
+      code: 'validation_error',
+      message: parsed.error.issues[0]?.message ?? 'Invalid request body',
+      details: parsed.error.flatten(),
+    });
+  }
+  return parsed.data;
 }

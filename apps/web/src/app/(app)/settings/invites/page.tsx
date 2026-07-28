@@ -23,6 +23,25 @@ import {
   type StoredOrganization,
 } from '../../../../lib/auth-session';
 import { getActiveOrgId } from '../../../../lib/org-context';
+import {
+  Button,
+  Card,
+  colorBackgroundSubtle,
+  colorBorderStrong,
+  colorTextBody,
+  colorTextHeading,
+  EmptyState,
+  ErrorText,
+  Input,
+  MutedText,
+  radiusSm,
+  SuccessText,
+  Table,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../../../../components/ui';
 
 const inviteRoles: Array<{ value: OrganizationRole; label: string }> = [
   { value: 'cskh', label: 'CSKH' },
@@ -169,33 +188,24 @@ export default function InvitesSettingsPage() {
         không cần email provider). Token thô chỉ hiện một lần khi tạo.
       </p>
 
-      <section
-        style={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: 14,
-          marginTop: 24,
-          maxWidth: 760,
-          padding: 24,
-        }}
-      >
+      <Card style={{ marginTop: 24, maxWidth: 760, padding: 24 }}>
         <h2 style={{ fontSize: 22, margin: 0 }}>Tạo lời mời</h2>
-        <p style={{ color: '#64748b', fontSize: 15 }}>
+        <MutedText>
           Tổ chức:{' '}
           <strong>
             {activeOrganization?.name ?? activeOrgId ?? 'Chưa chọn tổ chức'}
           </strong>
-        </p>
+        </MutedText>
 
         <form onSubmit={(event) => void handleSubmit(event)}>
           <label style={labelStyle}>
             Email
-            <input
+            <Input
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="nhanvien@congty.vn"
-              style={inputStyle}
+              style={{ maxWidth: 420 }}
             />
           </label>
 
@@ -206,7 +216,7 @@ export default function InvitesSettingsPage() {
               onChange={(event) =>
                 setRole(event.target.value as OrganizationRole)
               }
-              style={inputStyle}
+              style={selectStyle}
             >
               {inviteRoles.map((inviteRole) => (
                 <option key={inviteRole.value} value={inviteRole.value}>
@@ -216,32 +226,21 @@ export default function InvitesSettingsPage() {
             </select>
           </label>
 
-          <button
+          <Button
             type="submit"
             disabled={submitting || !activeOrgId}
-            style={{
-              background: '#2563eb',
-              border: 'none',
-              borderRadius: 10,
-              color: '#ffffff',
-              cursor: submitting || !activeOrgId ? 'not-allowed' : 'pointer',
-              fontSize: 16,
-              fontWeight: 800,
-              marginTop: 18,
-              opacity: submitting || !activeOrgId ? 0.7 : 1,
-              padding: '12px 18px',
-            }}
+            style={{ marginTop: 18 }}
           >
             {submitting ? 'Đang tạo...' : 'Tạo lời mời'}
-          </button>
+          </Button>
         </form>
 
         {lastToken ? (
           <div
             role="status"
             style={{
-              background: '#f8fafc',
-              border: '1px solid #cbd5e1',
+              background: colorBackgroundSubtle,
+              border: `1px solid ${colorBorderStrong}`,
               borderRadius: 10,
               marginTop: 16,
               padding: 12,
@@ -264,63 +263,37 @@ export default function InvitesSettingsPage() {
         ) : null}
 
         {success ? (
-          <p role="status" style={{ color: '#15803d', fontSize: 15 }}>
+          <SuccessText style={{ fontSize: 15, marginTop: 0 }}>
             {success}
-          </p>
+          </SuccessText>
         ) : null}
         {error ? (
-          <p role="alert" style={{ color: '#b91c1c', fontSize: 15 }}>
-            {error}
-          </p>
+          <ErrorText style={{ fontSize: 15, marginTop: 0 }}>{error}</ErrorText>
         ) : null}
-      </section>
+      </Card>
 
-      <section
-        style={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: 14,
-          marginTop: 24,
-          maxWidth: 760,
-          padding: 24,
-        }}
-      >
+      <Card style={{ marginTop: 24, maxWidth: 760, padding: 24 }}>
         <h2 style={{ fontSize: 22, margin: 0 }}>Chấp nhận lời mời</h2>
-        <p style={{ color: '#64748b', fontSize: 15 }}>
+        <MutedText>
           Đăng nhập bằng đúng email được mời, dán token, rồi chấp nhận. Không
           cần X-Org-Id.
-        </p>
+        </MutedText>
         <form onSubmit={(event) => void handleAccept(event)}>
           <label style={labelStyle}>
             Token
-            <input
+            <Input
               type="text"
               value={acceptToken}
               onChange={(event) => setAcceptToken(event.target.value)}
               placeholder="Dán token 64 ký tự hex"
-              style={{ ...inputStyle, maxWidth: '100%', fontFamily: 'monospace' }}
+              style={{ maxWidth: '100%', fontFamily: 'monospace' }}
             />
           </label>
-          <button
-            type="submit"
-            disabled={accepting}
-            style={{
-              background: '#0f766e',
-              border: 'none',
-              borderRadius: 10,
-              color: '#ffffff',
-              cursor: accepting ? 'not-allowed' : 'pointer',
-              fontSize: 16,
-              fontWeight: 800,
-              marginTop: 18,
-              opacity: accepting ? 0.7 : 1,
-              padding: '12px 18px',
-            }}
-          >
+          <Button type="submit" disabled={accepting} style={{ marginTop: 18 }}>
             {accepting ? 'Đang chấp nhận...' : 'Chấp nhận lời mời'}
-          </button>
+          </Button>
         </form>
-      </section>
+      </Card>
 
       <section style={{ marginTop: 36 }}>
         <h2 style={{ margin: '0 0 16px', fontSize: 22 }}>
@@ -329,51 +302,30 @@ export default function InvitesSettingsPage() {
         </h2>
 
         {pendingInvites.length === 0 ? (
-          <div
-            style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: 12,
-              color: '#475569',
-              maxWidth: 760,
-              padding: 16,
-            }}
-          >
+          <EmptyState style={{ color: '#475569', maxWidth: 760 }}>
             Không có lời mời đang chờ cho tổ chức này.
-          </div>
+          </EmptyState>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table
-              style={{
-                borderCollapse: 'collapse',
-                minWidth: 680,
-                width: '100%',
-              }}
-            >
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>Email</th>
-                  <th style={tableHeaderStyle}>Vai trò</th>
-                  <th style={tableHeaderStyle}>Hết hạn</th>
-                  <th style={tableHeaderStyle}>Tạo lúc</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingInvites.map((invite) => (
-                  <tr key={invite.id}>
-                    <td style={tableCellStyle}>{invite.email}</td>
-                    <td style={tableCellStyle}>{formatRole(invite.role)}</td>
-                    <td style={tableCellStyle}>
-                      {formatDateTime(invite.expiresAt)}
-                    </td>
-                    <td style={tableCellStyle}>
-                      {formatDateTime(invite.createdAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table style={{ minWidth: 680 }}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Email</TableHeaderCell>
+                <TableHeaderCell>Vai trò</TableHeaderCell>
+                <TableHeaderCell>Hết hạn</TableHeaderCell>
+                <TableHeaderCell>Tạo lúc</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <tbody>
+              {pendingInvites.map((invite) => (
+                <TableRow key={invite.id}>
+                  <TableCell>{invite.email}</TableCell>
+                  <TableCell>{formatRole(invite.role)}</TableCell>
+                  <TableCell>{formatDateTime(invite.expiresAt)}</TableCell>
+                  <TableCell>{formatDateTime(invite.createdAt)}</TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </Table>
         )}
       </section>
     </main>
@@ -392,7 +344,7 @@ function formatDateTime(value: string) {
 }
 
 const labelStyle: CSSProperties = {
-  color: '#334155',
+  color: colorTextHeading,
   display: 'flex',
   flexDirection: 'column',
   fontSize: 14,
@@ -401,27 +353,13 @@ const labelStyle: CSSProperties = {
   marginTop: 16,
 };
 
-const inputStyle: CSSProperties = {
-  border: '1px solid #cbd5e1',
-  borderRadius: 10,
-  color: '#0f172a',
+// No shared `Select` primitive exists yet, so the native <select> keeps a
+// local style, matching Input's canonical border/radius/color/font/padding.
+const selectStyle: CSSProperties = {
+  border: `1px solid ${colorBorderStrong}`,
+  borderRadius: radiusSm,
+  color: colorTextBody,
   font: 'inherit',
   maxWidth: 420,
   padding: '11px 12px',
-};
-
-const tableHeaderStyle: CSSProperties = {
-  borderBottom: '1px solid #e2e8f0',
-  color: '#334155',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '12px 16px',
-  textAlign: 'left' as const,
-};
-
-const tableCellStyle: CSSProperties = {
-  borderBottom: '1px solid #f1f5f9',
-  color: '#0f172a',
-  fontSize: 15,
-  padding: '12px 16px',
 };

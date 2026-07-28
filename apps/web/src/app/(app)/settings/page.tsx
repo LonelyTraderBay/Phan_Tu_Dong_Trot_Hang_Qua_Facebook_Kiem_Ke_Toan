@@ -21,6 +21,14 @@ import {
   type StoredOrganization,
 } from '../../../lib/auth-session';
 import { getActiveOrgId } from '../../../lib/org-context';
+import {
+  Button,
+  Card,
+  ErrorText,
+  MutedText,
+  SuccessText,
+  Toggle,
+} from '../../../components/ui';
 
 type UiSettings = {
   autoConfirm: boolean;
@@ -141,29 +149,23 @@ export default function SettingsPage() {
         </p>
       </header>
 
-      {error ? (
-        <p role="alert" style={alertStyle}>
-          {error}
-        </p>
-      ) : null}
-      {message ? (
-        <p role="status" style={successStyle}>
-          {message}
-        </p>
-      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
+      {message ? <SuccessText>{message}</SuccessText> : null}
 
-      <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Tổ chức</h2>
-        <p style={mutedStyle}>
+      <Card
+        title="Tổ chức"
+        style={{ marginTop: 24, maxWidth: 860, padding: 24 }}
+      >
+        <MutedText>
           Đang cấu hình:{' '}
           <strong>{activeOrganization?.name ?? activeOrgId ?? 'Chưa chọn'}</strong>
-        </p>
+        </MutedText>
 
         {loading ? (
-          <p style={mutedStyle}>Đang tải cài đặt...</p>
+          <MutedText>Đang tải cài đặt...</MutedText>
         ) : (
           <form onSubmit={(event) => void handleSubmit(event)}>
-            <ToggleRow
+            <Toggle
               title="Tự xác nhận đơn"
               description="Khi backend hỗ trợ lưu, đơn nháp hợp lệ sẽ được xác nhận tự động theo settings_json.auto_confirm."
               checked={settings.autoConfirm}
@@ -171,7 +173,7 @@ export default function SettingsPage() {
                 setSettings((current) => ({ ...current, autoConfirm: checked }))
               }
             />
-            <ToggleRow
+            <Toggle
               title="AI trả lời hội thoại"
               description="Cho phép AI đề xuất hoặc gửi phản hồi trong hộp thư theo chính sách vận hành."
               checked={settings.aiReplies}
@@ -179,7 +181,7 @@ export default function SettingsPage() {
                 setSettings((current) => ({ ...current, aiReplies: checked }))
               }
             />
-            <ToggleRow
+            <Toggle
               title="AI tạo nháp đơn"
               description="Cho phép AI gom sản phẩm trong hội thoại và tạo đơn nháp để nhân viên duyệt."
               checked={settings.aiDraftOrders}
@@ -187,7 +189,7 @@ export default function SettingsPage() {
                 setSettings((current) => ({ ...current, aiDraftOrders: checked }))
               }
             />
-            <ToggleRow
+            <Toggle
               title="AI gợi ý sản phẩm"
               description="Cho phép AI dùng danh mục để đề xuất sản phẩm phù hợp với nhu cầu khách."
               checked={settings.aiProductSuggestions}
@@ -199,50 +201,17 @@ export default function SettingsPage() {
               }
             />
 
-            <button
+            <Button
               type="submit"
               disabled={saving || !activeOrgId}
-              style={{
-                ...primaryButtonStyle,
-                cursor: saving || !activeOrgId ? 'not-allowed' : 'pointer',
-                opacity: saving || !activeOrgId ? 0.7 : 1,
-              }}
+              style={{ marginTop: 18 }}
             >
               {saving ? 'Đang lưu...' : 'Lưu cài đặt'}
-            </button>
+            </Button>
           </form>
         )}
-      </section>
+      </Card>
     </main>
-  );
-}
-
-function ToggleRow({
-  title,
-  description,
-  checked,
-  onChange,
-}: {
-  title: string;
-  description: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label style={toggleRowStyle}>
-      <span>
-        <strong style={{ color: '#0f172a', display: 'block', fontSize: 16 }}>
-          {title}
-        </strong>
-        <span style={mutedStyle}>{description}</span>
-      </span>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        style={{ height: 20, width: 20 }}
-      />
-    </label>
   );
 }
 
@@ -318,55 +287,4 @@ const descriptionStyle: CSSProperties = {
   color: '#475569',
   fontSize: 18,
   maxWidth: 760,
-};
-
-const panelStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
-  marginTop: 24,
-  maxWidth: 860,
-  padding: 24,
-};
-
-const sectionTitleStyle: CSSProperties = {
-  fontSize: 22,
-  margin: '0 0 16px',
-};
-
-const toggleRowStyle: CSSProperties = {
-  alignItems: 'center',
-  borderBottom: '1px solid #f1f5f9',
-  display: 'flex',
-  gap: 16,
-  justifyContent: 'space-between',
-  padding: '16px 0',
-};
-
-const primaryButtonStyle: CSSProperties = {
-  background: '#2563eb',
-  border: 'none',
-  borderRadius: 10,
-  color: '#ffffff',
-  fontSize: 15,
-  fontWeight: 800,
-  marginTop: 18,
-  padding: '11px 16px',
-};
-
-const mutedStyle: CSSProperties = {
-  color: '#64748b',
-  fontSize: 15,
-};
-
-const alertStyle: CSSProperties = {
-  color: '#b91c1c',
-  fontSize: 16,
-  marginTop: 20,
-};
-
-const successStyle: CSSProperties = {
-  color: '#15803d',
-  fontSize: 16,
-  marginTop: 20,
 };

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type CSSProperties, type ReactNode, useEffect, useState } from 'react';
 
 import {
   ApiClientError,
@@ -22,29 +22,99 @@ import {
   resolveActiveOrgId,
   setActiveOrgId,
 } from '../lib/org-context';
+import {
+  Button,
+  colorBackgroundCard,
+  colorBorder,
+  colorBorderStrong,
+  colorDanger,
+  colorPrimary,
+  colorTextBody,
+  colorTextHeading,
+  colorTextMuted,
+  radiusSm,
+} from './ui';
 
-const navItems = [
-  { href: '/dashboard', label: 'Tổng quan' },
-  { href: '/inbox', label: 'Hộp thư' },
-  { href: '/catalog', label: 'Sản phẩm' },
-  { href: '/inventory', label: 'Kho' },
-  { href: '/warehouses', label: 'Kho chi nhánh' },
-  { href: '/suppliers', label: 'Nhà cung cấp' },
-  { href: '/purchase-orders', label: 'PO' },
-  { href: '/orders', label: 'Đơn hàng' },
-  { href: '/cod', label: 'COD' },
-  { href: '/einvoice', label: 'Hóa đơn điện tử' },
-  { href: '/pnl', label: 'Lãi gộp' },
-  { href: '/m', label: 'Mobile staff' },
-  { href: '/ads', label: 'Ads' },
-  { href: '/attribution', label: 'Attribution' },
-  { href: '/advisor', label: 'Advisor' },
-  { href: '/calendar', label: 'Lịch nội dung' },
-  { href: '/settings/channels', label: 'Kênh' },
-  { href: '/settings/billing', label: 'Thanh toán' },
-  { href: '/settings', label: 'Cài đặt' },
-  { href: '/settings/invites', label: 'Lời mời' },
+// Standalone, always-first item — not part of any group (see `navGroups`
+// below), matching the sidebar spec's "Tổng quan" placement.
+const dashboardNavItem = { href: '/dashboard', label: 'Tổng quan' };
+
+// Same 20 hrefs/labels the flat `navItems` list used to hold, reorganized
+// into the sidebar's 4 named groups. Every href/label pair below is
+// unchanged from the previous flat list.
+const navGroups: Array<{
+  label: string;
+  items: Array<{ href: string; label: string }>;
+}> = [
+  {
+    label: 'Bán hàng',
+    items: [
+      { href: '/inbox', label: 'Hộp thư' },
+      { href: '/orders', label: 'Đơn hàng' },
+      { href: '/m', label: 'Mobile staff' },
+      { href: '/cod', label: 'COD' },
+      { href: '/einvoice', label: 'Hóa đơn điện tử' },
+      { href: '/pnl', label: 'Lãi gộp' },
+    ],
+  },
+  {
+    label: 'Kho & Sản phẩm',
+    items: [
+      { href: '/catalog', label: 'Sản phẩm' },
+      { href: '/inventory', label: 'Kho' },
+      { href: '/warehouses', label: 'Kho chi nhánh' },
+      { href: '/suppliers', label: 'Nhà cung cấp' },
+      { href: '/purchase-orders', label: 'PO' },
+    ],
+  },
+  {
+    label: 'Marketing & AI',
+    items: [
+      { href: '/ads', label: 'Ads' },
+      { href: '/attribution', label: 'Attribution' },
+      { href: '/advisor', label: 'Advisor' },
+      { href: '/calendar', label: 'Lịch nội dung' },
+    ],
+  },
+  {
+    label: 'Cài đặt',
+    items: [
+      { href: '/settings/channels', label: 'Kênh' },
+      { href: '/settings/billing', label: 'Thanh toán' },
+      { href: '/settings', label: 'Cài đặt' },
+      { href: '/settings/invites', label: 'Lời mời' },
+    ],
+  },
 ];
+
+// Unchanged active-route matching logic, lifted out so both the standalone
+// "Tổng quan" link and every grouped link share the exact same check.
+function isActiveNavItem(pathname: string, href: string) {
+  return (
+    pathname === href || (href !== '/settings' && pathname.startsWith(`${href}/`))
+  );
+}
+
+// Unchanged visual treatment (color/weight) for active vs inactive links,
+// just restyled for vertical stacking instead of a wrapping horizontal row.
+// `#475569` has no equivalent in `tokens.ts` (closest is `colorTextMuted` at
+// `#64748b`, a different value), so it stays a plain literal, same as before.
+function navLinkStyle(active: boolean): CSSProperties {
+  return {
+    color: active ? colorPrimary : '#475569',
+    fontSize: 14,
+    fontWeight: active ? 700 : 600,
+    textDecoration: 'none',
+  };
+}
+
+const groupLabelStyle: CSSProperties = {
+  color: colorTextMuted,
+  fontSize: 12,
+  fontWeight: 700,
+  letterSpacing: 0.6,
+  textTransform: 'uppercase',
+};
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -118,66 +188,76 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh' }}>
-      <header
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <aside
         style={{
-          alignItems: 'center',
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
+          background: colorBackgroundCard,
+          borderRight: `1px solid ${colorBorder}`,
+          boxSizing: 'border-box',
           display: 'flex',
-          flexWrap: 'wrap',
-          gap: 16,
-          justifyContent: 'space-between',
-          padding: '16px 32px',
+          flexDirection: 'column',
+          flexShrink: 0,
+          gap: 24,
+          padding: '20px 16px',
+          width: 240,
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <Link
+          href="/dashboard"
+          style={{
+            color: colorTextBody,
+            fontSize: 18,
+            fontWeight: 800,
+            textDecoration: 'none',
+          }}
+        >
+          Omni Commerce
+        </Link>
+
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <Link
-            href="/dashboard"
-            style={{
-              color: '#0f172a',
-              fontSize: 18,
-              fontWeight: 800,
-              textDecoration: 'none',
-            }}
+            href={dashboardNavItem.href}
+            style={navLinkStyle(isActiveNavItem(pathname, dashboardNavItem.href))}
           >
-            Omni Commerce
+            {dashboardNavItem.label}
           </Link>
-          <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-            {navItems.map((item) => {
-              const active =
-                pathname === item.href ||
-                (item.href !== '/settings' &&
-                  pathname.startsWith(`${item.href}/`));
-              return (
+
+          {navGroups.map((group) => (
+            <div
+              key={group.label}
+              style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+            >
+              <span style={groupLabelStyle}>{group.label}</span>
+              {group.items.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  style={{
-                    color: active ? '#2563eb' : '#475569',
-                    fontSize: 14,
-                    fontWeight: active ? 700 : 600,
-                    textDecoration: 'none',
-                  }}
+                  style={navLinkStyle(isActiveNavItem(pathname, item.href))}
                 >
                   {item.label}
                 </Link>
-              );
-            })}
-          </nav>
-        </div>
+              ))}
+            </div>
+          ))}
+        </nav>
+      </aside>
 
-        <div
+      <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minWidth: 0 }}>
+        <header
           style={{
             alignItems: 'center',
+            background: colorBackgroundCard,
+            borderBottom: `1px solid ${colorBorder}`,
             display: 'flex',
             flexWrap: 'wrap',
             gap: 10,
+            justifyContent: 'flex-end',
+            padding: '16px 32px',
           }}
         >
           <label
             style={{
-              color: '#334155',
+              color: colorTextHeading,
               display: 'flex',
               flexDirection: 'column',
               fontSize: 12,
@@ -190,9 +270,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               value={activeOrgId}
               onChange={(event) => handleOrgChange(event.target.value)}
               style={{
-                border: '1px solid #cbd5e1',
-                borderRadius: 8,
-                color: '#0f172a',
+                border: `1px solid ${colorBorderStrong}`,
+                borderRadius: radiusSm,
+                color: colorTextBody,
                 minWidth: 220,
                 padding: '8px 10px',
               }}
@@ -209,55 +289,38 @@ export function AppShell({ children }: { children: ReactNode }) {
             </select>
           </label>
 
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => void handleRefreshOrganizations()}
             disabled={refreshing}
-            style={secondaryButtonStyle}
           >
             {refreshing ? 'Đang tải...' : 'Tải tổ chức'}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
             onClick={handleSignOut}
-            style={dangerButtonStyle}
+            style={{ color: colorDanger }}
           >
             Đăng xuất
-          </button>
-        </div>
-      </header>
+          </Button>
+        </header>
 
-      {message ? (
-        <p
-          role="status"
-          style={{
-            background: '#eff6ff',
-            color: '#1d4ed8',
-            margin: 0,
-            padding: '10px 32px',
-          }}
-        >
-          {message}
-        </p>
-      ) : null}
+        {message ? (
+          <p
+            role="status"
+            style={{
+              background: '#eff6ff',
+              color: '#1d4ed8',
+              margin: 0,
+              padding: '10px 32px',
+            }}
+          >
+            {message}
+          </p>
+        ) : null}
 
-      <div style={{ padding: '32px' }}>{children}</div>
+        <div style={{ padding: '32px' }}>{children}</div>
+      </div>
     </div>
   );
 }
-
-const secondaryButtonStyle = {
-  background: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '9px 12px',
-};
-
-const dangerButtonStyle = {
-  ...secondaryButtonStyle,
-  color: '#b91c1c',
-};

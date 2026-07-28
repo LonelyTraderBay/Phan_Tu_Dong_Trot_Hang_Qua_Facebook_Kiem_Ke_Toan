@@ -1,5 +1,5 @@
 {
-  "$schema_comment": "LOCKED local ports for Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan (omni-commerce). Do not reuse 3000/3001/8000/54321 — those collide with other projects on this machine.",
+  "$schema_comment": "LOCKED local ports for omni-commerce-platform. Do not reuse 3000/3001/8000/54321 — those collide with other projects on this machine.",
   "projectId": "omni-commerce",
   "host": "127.0.0.1",
   "apps": {

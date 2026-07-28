@@ -2,7 +2,7 @@
 
 **SoT:** [`config/local-ports.json`](../../config/local-ports.json)
 
-Dải cổng **cố định** cho repo `Phan_Tu_Dong_Trot_Hang_Qua_Facebook_Kiem_Ke_Toan` để không trùng dự án khác trên cùng máy (Next mặc định `:3000`, FastAPI `:8000`, Supabase mặc định `:54321`, …).
+Dải cổng **cố định** cho repo `omni-commerce-platform` để không trùng dự án khác trên cùng máy (Next mặc định `:3000`, FastAPI `:8000`, Supabase mặc định `:54321`, …).
 
 ## Bảng cổng
 

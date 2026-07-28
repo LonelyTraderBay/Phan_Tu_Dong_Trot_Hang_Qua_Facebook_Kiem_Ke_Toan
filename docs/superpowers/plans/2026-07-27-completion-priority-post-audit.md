@@ -68,7 +68,7 @@ Không claim CPC/E100 khi còn undecided / BLOCKED owner.
 |--------|------|------|
 | Evidence còn nhắc cổng cũ 3000/54321 | `r0-r3-execution-evidence.md`, một số hàng `local-host.md` | Ghi chú “legacy evidence” + trỏ `local-ports.json` |
 | Baseline code-first còn tip L2 | `2026-07-26-completion-priority-code-first.md` | Trỏ SoT mới = file này |
-| CPC R2.4–R2.6 vẫn `undecided` | `cpc-checklist.md` | Owner ký REQUIRED \| AMBER_OK trước claim CPC |
+| ~~CPC R2.4–R2.6 vẫn `undecided`~~ **RESOLVED 2026-07-28** | `cpc-checklist.md` | Owner đã ký cả 3 dòng `AMBER_OK` (Zalo giữ token thủ công, e-invoice ngoài hệ thống, advisor giữ stub) |
 | OpenAPI description còn “stub” | `packages/contracts/openapi.yaml` | Optional: sửa wording khi codegen |
 
 ### 1.4 BLOCKED ngoài eng (không giải bằng code alone)
@@ -79,7 +79,7 @@ Không claim CPC/E100 khi còn undecided / BLOCKED owner.
 | Meta App Review + secrets | Owner | R0 Meta criteria |
 | Supabase Pro / PITR drill | Owner | R1 |
 | Carrier/COD tài khoản live | Owner | R2.1–2.3 |
-| Quyết định R2.4–R2.6 | Owner | CPC claim |
+| ~~Quyết định R2.4–R2.6~~ **DONE 2026-07-28** (cả 3 AMBER_OK) | Owner | ~~CPC claim~~ hết chặn |
 | SOC2 / pen-test vendor | Owner + vendor | I2 / I3 |
 | SLA legal approve | Legal/Owner | I6 |
 | SSO IdP / cam kết ≤90 ngày | Owner + Eng | I1 GREEN |
@@ -285,7 +285,7 @@ B6.7  R2.7 tick cpc-checklist → ★ CPC 100%
 [ ] B2  META_* + App Review submit
 [ ] B3  Staging walkthrough → Gate R0
 [ ] B4  R1 paid ops (+ kick-off C1 vendor)
-[ ] B5  R2.4–R2.6 hết undecided   ← R2.4 Zalo must be REQUIRED|AMBER_OK before CPC
+[x] B5  R2.4–R2.6 hết undecided (2026-07-28, cả 3 AMBER_OK) — làm sớm, trước B1–B4, không cần chờ đúng thứ tự wave
 [ ] B6  Carrier/COD/returns (+ stub REQUIRED) → ★ CPC
 ```
 

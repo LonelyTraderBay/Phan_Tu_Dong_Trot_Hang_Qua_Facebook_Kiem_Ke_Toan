@@ -74,6 +74,63 @@ function mockSupabase(results: QueryResult[]) {
   return { client, insertCalls, rpcCalls };
 }
 
+type OrgUpdateCall = {
+  values: unknown;
+  filters: Array<{ column: string; value: unknown }>;
+};
+
+/**
+ * Mocks the two-call sequence updateOrgSettings() makes against the
+ * `organizations` table: a plain select-by-id (fetchOrganization, reused
+ * as-is) followed by an update-and-return-the-new-row.
+ */
+function mockOrganizationSupabase(fixture: {
+  initial: unknown;
+  updated: unknown;
+}) {
+  const updateCalls: OrgUpdateCall[] = [];
+
+  const client = {
+    rpc() {
+      throw new Error("rpc() should not be called");
+    },
+    from(table: string) {
+      if (table !== "organizations") {
+        throw new Error(`Unexpected table ${table}`);
+      }
+      return {
+        select() {
+          const chain = {
+            eq() {
+              return chain;
+            },
+            maybeSingle: () =>
+              Promise.resolve({ data: fixture.initial, error: null }),
+          };
+          return chain;
+        },
+        update(values: unknown) {
+          const call: OrgUpdateCall = { values, filters: [] };
+          updateCalls.push(call);
+          const chain = {
+            eq(column: string, value: unknown) {
+              call.filters.push({ column, value });
+              return chain;
+            },
+            select: () => ({
+              maybeSingle: () =>
+                Promise.resolve({ data: fixture.updated, error: null }),
+            }),
+          };
+          return chain;
+        },
+      };
+    },
+  } as unknown as SupabaseLike;
+
+  return { client, updateCalls };
+}
+
 function auditMock() {
   return {
     writeAudit: vi.fn(async () => ({ audit: { id: "audit-id" } })),
@@ -392,6 +449,129 @@ describe("IdentityService", () => {
       entityType: "organization",
       entityId: ORG_ID,
       meta: result.deleteRequest,
+    });
+  });
+
+  it("merges a partial settings update onto existing settings_json using snake_case keys", async () => {
+    const initialRow = {
+      id: ORG_ID,
+      name: "Shop A",
+      slug: "shop-a",
+      plan: "free",
+      // aiDraftMaxAmountVnd / allowCskhApprove are the example keys called
+      // out in the settings_json column comment (supabase/migrations/
+      // 20260724120000_init_platform.sql) — this update must not know about
+      // them, but must not erase them either.
+      settings_json: { aiDraftMaxAmountVnd: 5_000_000, allowCskhApprove: false },
+      timezone: "Asia/Ho_Chi_Minh",
+      locale: "vi",
+      suspended_at: null,
+      created_at: "2026-07-24T10:00:00.000Z",
+      updated_at: "2026-07-24T10:00:00.000Z",
+    };
+    const updatedRow = {
+      ...initialRow,
+      settings_json: {
+        aiDraftMaxAmountVnd: 5_000_000,
+        allowCskhApprove: false,
+        auto_confirm: true,
+      },
+      updated_at: "2026-07-28T00:00:00.000Z",
+    };
+    const { client, updateCalls } = mockOrganizationSupabase({
+      initial: initialRow,
+      updated: updatedRow,
+    });
+    const service = new IdentityService(client);
+
+    const result = await service.updateOrgSettings(ORG_ID, {
+      autoConfirm: true,
+    });
+
+    expect(updateCalls).toHaveLength(1);
+    expect(updateCalls[0].values).toMatchObject({
+      settings_json: {
+        aiDraftMaxAmountVnd: 5_000_000,
+        allowCskhApprove: false,
+        auto_confirm: true,
+      },
+    });
+    // Only the provided field is written — no ai_replies/ai_draft_orders/
+    // ai_product_suggestions keys should appear from an undefined input.
+    expect(
+      Object.keys(
+        (updateCalls[0].values as { settings_json: Record<string, unknown> })
+          .settings_json,
+      ),
+    ).toEqual(['aiDraftMaxAmountVnd', 'allowCskhApprove', 'auto_confirm']);
+    expect(updateCalls[0].filters).toEqual([{ column: "id", value: ORG_ID }]);
+    // Response shape matches what listOrganizations/createOrganization already
+    // return for `organization` (same mapOrganization() mapping).
+    expect(result).toEqual({
+      organization: {
+        id: ORG_ID,
+        name: "Shop A",
+        slug: "shop-a",
+        plan: "free",
+        settingsJson: {
+          aiDraftMaxAmountVnd: 5_000_000,
+          allowCskhApprove: false,
+          auto_confirm: true,
+        },
+        timezone: "Asia/Ho_Chi_Minh",
+        locale: "vi",
+        suspendedAt: null,
+        createdAt: "2026-07-24T10:00:00.000Z",
+        updatedAt: "2026-07-28T00:00:00.000Z",
+      },
+    });
+  });
+
+  it("writes snake_case keys for every settings field when all four are provided", async () => {
+    const initialRow = {
+      id: ORG_ID,
+      name: "Shop A",
+      slug: "shop-a",
+      plan: "free",
+      settings_json: { locale: "vi" },
+      timezone: "Asia/Ho_Chi_Minh",
+      locale: "vi",
+      suspended_at: null,
+      created_at: "2026-07-24T10:00:00.000Z",
+      updated_at: "2026-07-24T10:00:00.000Z",
+    };
+    const updatedRow = {
+      ...initialRow,
+      settings_json: {
+        locale: "vi",
+        auto_confirm: true,
+        ai_replies: false,
+        ai_draft_orders: false,
+        ai_product_suggestions: true,
+      },
+      updated_at: "2026-07-28T01:00:00.000Z",
+    };
+    const { client, updateCalls } = mockOrganizationSupabase({
+      initial: initialRow,
+      updated: updatedRow,
+    });
+    const service = new IdentityService(client);
+
+    await service.updateOrgSettings(ORG_ID, {
+      autoConfirm: true,
+      aiReplies: false,
+      aiDraftOrders: false,
+      aiProductSuggestions: true,
+    });
+
+    expect(updateCalls[0].values).toMatchObject({
+      settings_json: {
+        locale: "vi",
+        auto_confirm: true,
+        ai_replies: false,
+        ai_draft_orders: false,
+        ai_product_suggestions: true,
+      },
     });
   });
 

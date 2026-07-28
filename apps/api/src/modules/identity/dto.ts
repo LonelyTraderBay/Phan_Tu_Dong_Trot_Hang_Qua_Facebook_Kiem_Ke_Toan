@@ -28,6 +28,18 @@ export const AcceptInviteBodySchema = z
   })
   .strict();
 
+export const UpdateOrgSettingsBodySchema = z
+  .object({
+    autoConfirm: z.boolean().optional(),
+    aiReplies: z.boolean().optional(),
+    aiDraftOrders: z.boolean().optional(),
+    aiProductSuggestions: z.boolean().optional(),
+  })
+  .refine((body) => Object.keys(body).length > 0, {
+    message: "At least one field is required",
+  });
+
 export type CreateOrgBody = z.infer<typeof CreateOrgBodySchema>;
 export type CreateInviteBody = z.infer<typeof CreateInviteBodySchema>;
 export type AcceptInviteBody = z.infer<typeof AcceptInviteBodySchema>;
+export type UpdateOrgSettingsBody = z.infer<typeof UpdateOrgSettingsBodySchema>;

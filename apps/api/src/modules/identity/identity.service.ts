@@ -17,7 +17,12 @@ import type { MembershipRole } from "../../common/guards/org.guard";
 import { AuditService, type WriteAuditInput } from "../audit/audit.service";
 import { EntitlementsService } from "../billing/entitlements.service";
 import { isPlanSlug, type PlanSlug } from "../billing/plan-catalog";
-import type { AcceptInviteBody, CreateInviteBody, CreateOrgBody } from "./dto";
+import type {
+  AcceptInviteBody,
+  CreateInviteBody,
+  CreateOrgBody,
+  UpdateOrgSettingsBody,
+} from "./dto";
 
 export const IDENTITY_SERVICE_SUPABASE = Symbol("IDENTITY_SERVICE_SUPABASE");
 export const IDENTITY_USER_SUPABASE_FACTORY = Symbol(
@@ -285,6 +290,55 @@ export class IdentityService {
           membership: ReturnType<typeof mapMembership>;
         } => row !== null,
       );
+  }
+
+  async updateOrgSettings(orgId: string, body: UpdateOrgSettingsBody) {
+    const current = await this.fetchOrganization(orgId);
+    // Always merge onto the existing settings_json (spread first) so keys
+    // this endpoint doesn't know about (e.g. aiDraftMaxAmountVnd,
+    // allowCskhApprove — see the migration's column comment) survive a
+    // partial toggle update instead of being wiped by it. Written keys are
+    // always snake_case to match every other column in this schema;
+    // orders.service.ts's autoConfirmEnabled() and the frontend's
+    // normalizeSettings() both already tolerate either case defensively, so
+    // this does not break anything still reading the old camelCase shape.
+    const nextSettings: Record<string, unknown> = {
+      ...current.settings_json,
+      ...(body.autoConfirm !== undefined
+        ? { auto_confirm: body.autoConfirm }
+        : {}),
+      ...(body.aiReplies !== undefined
+        ? { ai_replies: body.aiReplies }
+        : {}),
+      ...(body.aiDraftOrders !== undefined
+        ? { ai_draft_orders: body.aiDraftOrders }
+        : {}),
+      ...(body.aiProductSuggestions !== undefined
+        ? { ai_product_suggestions: body.aiProductSuggestions }
+        : {}),
+    };
+
+    const { data, error } = await this.serviceSupabase
+      .from("organizations")
+      .update({
+        settings_json: nextSettings,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", orgId)
+      .select(ORGANIZATION_SELECT)
+      .maybeSingle();
+
+    if (error) {
+      throwIdentityError(error, "Could not update organization settings");
+    }
+    if (!data) {
+      throw new NotFoundException({
+        code: "organization_not_found",
+        message: "Organization was not found",
+      });
+    }
+
+    return { organization: mapOrganization(data as OrganizationRow) };
   }
 
   async createInvite(orgId: string, body: CreateInviteBody) {

@@ -18,6 +18,18 @@ import {
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import { VariantPicker } from '../../../components/variant-picker';
+import {
+  Button,
+  ErrorText,
+  Input,
+  MutedText,
+  SuccessText,
+  Table,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../../../components/ui';
 
 export default function InventoryPage() {
   const [lowStock, setLowStock] = useState<CatalogVariant[]>([]);
@@ -93,15 +105,15 @@ export default function InventoryPage() {
     <main style={pageStyle}>
       <header style={{ marginBottom: 24 }}>
         <h1 style={{ margin: 0, fontSize: 32 }}>Kho hàng</h1>
-        <p style={mutedStyle}>
+        <MutedText style={{ marginTop: 8 }}>
           Điều chỉnh tồn có lý do, xem biến động và SKU dưới ngưỡng (
           {threshold}).
-        </p>
+        </MutedText>
       </header>
 
-      {error ? <p style={errorStyle}>{error}</p> : null}
-      {message ? <p style={okStyle}>{message}</p> : null}
-      {loading ? <p style={mutedStyle}>Đang tải...</p> : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
+      {message ? <SuccessText>{message}</SuccessText> : null}
+      {loading ? <MutedText style={{ marginTop: 8 }}>Đang tải...</MutedText> : null}
 
       <section style={sectionStyle}>
         <h2 style={sectionTitleStyle}>Điều chỉnh tồn</h2>
@@ -112,94 +124,88 @@ export default function InventoryPage() {
           </label>
           <label style={labelStyle}>
             Số lượng (+ nhập / − xuất)
-            <input
+            <Input
               type="number"
               value={qtyDelta}
               onChange={(event) => setQtyDelta(Number(event.target.value))}
-              style={inputStyle}
               required
             />
           </label>
           <label style={labelStyle}>
             Lý do
-            <input
+            <Input
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               placeholder="Kiểm kê / nhập hàng / hỏng..."
-              style={inputStyle}
             />
           </label>
-          <button type="submit" disabled={saving} style={primaryButtonStyle}>
+          <Button type="submit" disabled={saving} style={{ justifySelf: 'start' }}>
             {saving ? 'Đang lưu...' : 'Ghi sổ kho'}
-          </button>
+          </Button>
         </form>
       </section>
 
       <section style={sectionStyle}>
         <h2 style={sectionTitleStyle}>Sắp hết hàng</h2>
         {lowStock.length === 0 ? (
-          <p style={mutedStyle}>Không có SKU dưới ngưỡng.</p>
+          <MutedText style={{ marginTop: 8 }}>Không có SKU dưới ngưỡng.</MutedText>
         ) : (
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>SKU</th>
-                <th style={thStyle}>Tên</th>
-                <th style={thStyle}>Tồn</th>
-                <th style={thStyle}>Thao tác</th>
-              </tr>
-            </thead>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>SKU</TableHeaderCell>
+                <TableHeaderCell>Tên</TableHeaderCell>
+                <TableHeaderCell>Tồn</TableHeaderCell>
+                <TableHeaderCell>Thao tác</TableHeaderCell>
+              </TableRow>
+            </TableHead>
             <tbody>
               {lowStock.map((variant) => (
-                <tr key={variant.id}>
-                  <td style={tdStyle}>{variant.sku}</td>
-                  <td style={tdStyle}>{variant.title}</td>
-                  <td style={tdStyle}>{variant.stockQty}</td>
-                  <td style={tdStyle}>
-                    <button
-                      type="button"
-                      style={linkButtonStyle}
-                      onClick={() => setVariantId(variant.id)}
-                    >
+                <TableRow key={variant.id}>
+                  <TableCell>{variant.sku}</TableCell>
+                  <TableCell>{variant.title}</TableCell>
+                  <TableCell>{variant.stockQty}</TableCell>
+                  <TableCell>
+                    <Button variant="link" onClick={() => setVariantId(variant.id)}>
                       Chọn để điều chỉnh
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </section>
 
       <section style={sectionStyle}>
         <h2 style={sectionTitleStyle}>Biến động gần đây</h2>
         {movements.length === 0 ? (
-          <p style={mutedStyle}>Chưa có giao dịch kho.</p>
+          <MutedText style={{ marginTop: 8 }}>Chưa có giao dịch kho.</MutedText>
         ) : (
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Thời điểm</th>
-                <th style={thStyle}>Loại</th>
-                <th style={thStyle}>Δ</th>
-                <th style={thStyle}>Sau</th>
-                <th style={thStyle}>Lý do</th>
-              </tr>
-            </thead>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Thời điểm</TableHeaderCell>
+                <TableHeaderCell>Loại</TableHeaderCell>
+                <TableHeaderCell>Δ</TableHeaderCell>
+                <TableHeaderCell>Sau</TableHeaderCell>
+                <TableHeaderCell>Lý do</TableHeaderCell>
+              </TableRow>
+            </TableHead>
             <tbody>
               {movements.map((row) => (
-                <tr key={row.id}>
-                  <td style={tdStyle}>
+                <TableRow key={row.id}>
+                  <TableCell>
                     {new Date(row.createdAt).toLocaleString('vi-VN')}
-                  </td>
-                  <td style={tdStyle}>{row.movementType}</td>
-                  <td style={tdStyle}>{row.qtyDelta}</td>
-                  <td style={tdStyle}>{row.stockAfter}</td>
-                  <td style={tdStyle}>{row.reason ?? '—'}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell>{row.movementType}</TableCell>
+                  <TableCell>{row.qtyDelta}</TableCell>
+                  <TableCell>{row.stockAfter}</TableCell>
+                  <TableCell>{row.reason ?? '—'}</TableCell>
+                </TableRow>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </section>
     </main>
@@ -242,52 +248,3 @@ const labelStyle: CSSProperties = {
   gap: 6,
   fontSize: 14,
 };
-
-const inputStyle: CSSProperties = {
-  padding: '10px 12px',
-  border: '1px solid #d4d4d8',
-  borderRadius: 8,
-  fontSize: 15,
-};
-
-const primaryButtonStyle: CSSProperties = {
-  justifySelf: 'start',
-  padding: '10px 16px',
-  border: 0,
-  borderRadius: 8,
-  background: '#0f766e',
-  color: '#fff',
-  fontWeight: 600,
-  cursor: 'pointer',
-};
-
-const tableStyle: CSSProperties = {
-  width: '100%',
-  borderCollapse: 'collapse',
-};
-
-const thStyle: CSSProperties = {
-  textAlign: 'left',
-  padding: '8px 10px',
-  borderBottom: '1px solid #e4e4e7',
-  fontSize: 13,
-  color: '#52525b',
-};
-
-const tdStyle: CSSProperties = {
-  padding: '8px 10px',
-  borderBottom: '1px solid #f4f4f5',
-  fontSize: 14,
-};
-
-const linkButtonStyle: CSSProperties = {
-  border: 0,
-  background: 'transparent',
-  color: '#0f766e',
-  cursor: 'pointer',
-  padding: 0,
-};
-
-const mutedStyle: CSSProperties = { color: '#71717a', marginTop: 8 };
-const errorStyle: CSSProperties = { color: '#b91c1c' };
-const okStyle: CSSProperties = { color: '#047857' };

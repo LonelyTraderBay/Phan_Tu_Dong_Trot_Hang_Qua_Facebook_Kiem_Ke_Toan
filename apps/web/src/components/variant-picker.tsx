@@ -8,6 +8,17 @@ import {
   listProducts,
   type CatalogProduct,
 } from '../lib/api-client';
+import {
+  Button,
+  colorBackgroundCard,
+  colorBorder,
+  colorBorderStrong,
+  colorBorderSubtle,
+  colorTextMuted,
+  ErrorText,
+  Input,
+  MutedText,
+} from './ui';
 
 export type VariantPickerProps = {
   /** Selected variant id (uuid), or '' when nothing is selected yet. */
@@ -119,25 +130,21 @@ export function VariantPicker({ value, onChange, placeholder }: VariantPickerPro
         <span style={selectedLabelStyle}>
           {selected ? formatVariantLabel(selected) : value}
         </span>
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          style={changeButtonStyle}
-        >
+        <Button variant="link" style={{ flexShrink: 0 }} onClick={() => setEditing(true)}>
           Đổi
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
     <div style={wrapperStyle}>
-      <input
+      <Input
         type="text"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder={placeholder ?? 'Tìm theo tên sản phẩm hoặc SKU...'}
-        style={inputStyle}
+        style={inputOverrideStyle}
       />
       {value && editing ? (
         <button
@@ -152,12 +159,16 @@ export function VariantPicker({ value, onChange, placeholder }: VariantPickerPro
         </button>
       ) : null}
       {catalogLoading ? (
-        <p style={hintStyle}>Đang tải danh mục sản phẩm...</p>
+        <MutedText style={{ fontSize: 13, margin: 0 }}>
+          Đang tải danh mục sản phẩm...
+        </MutedText>
       ) : catalogError ? (
-        <p style={errorHintStyle}>{catalogError}</p>
+        <ErrorText style={{ fontSize: 13, margin: 0 }}>{catalogError}</ErrorText>
       ) : trimmedQuery ? (
         results.length === 0 ? (
-          <p style={hintStyle}>Không tìm thấy sản phẩm/SKU nào khớp.</p>
+          <MutedText style={{ fontSize: 13, margin: 0 }}>
+            Không tìm thấy sản phẩm/SKU nào khớp.
+          </MutedText>
         ) : (
           <ul style={listStyle}>
             {results.map((variant) => (
@@ -208,19 +219,15 @@ const wrapperStyle: CSSProperties = {
   gap: 6,
 };
 
-const inputStyle: CSSProperties = {
+const inputOverrideStyle: CSSProperties = {
   boxSizing: 'border-box',
-  border: '1px solid #d4d4d8',
-  borderRadius: 8,
-  font: 'inherit',
   fontSize: 15,
-  padding: '10px 12px',
   width: '100%',
 };
 
 const listStyle: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e4e4e7',
+  background: colorBackgroundCard,
+  border: `1px solid ${colorBorder}`,
   borderRadius: 8,
   display: 'grid',
   gap: 4,
@@ -234,7 +241,7 @@ const listStyle: CSSProperties = {
 const resultButtonStyle: CSSProperties = {
   background: 'transparent',
   border: 0,
-  borderBottom: '1px solid #f4f4f5',
+  borderBottom: `1px solid ${colorBorderSubtle}`,
   cursor: 'pointer',
   display: 'flex',
   flexDirection: 'column',
@@ -246,25 +253,13 @@ const resultButtonStyle: CSSProperties = {
 };
 
 const mutedResultStyle: CSSProperties = {
-  color: '#71717a',
+  color: colorTextMuted,
   fontSize: 13,
-};
-
-const hintStyle: CSSProperties = {
-  color: '#71717a',
-  fontSize: 13,
-  margin: 0,
-};
-
-const errorHintStyle: CSSProperties = {
-  color: '#b91c1c',
-  fontSize: 13,
-  margin: 0,
 };
 
 const selectedRowStyle: CSSProperties = {
   alignItems: 'center',
-  border: '1px solid #d4d4d8',
+  border: `1px solid ${colorBorderStrong}`,
   borderRadius: 8,
   display: 'flex',
   fontSize: 15,
@@ -279,20 +274,10 @@ const selectedLabelStyle: CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-const changeButtonStyle: CSSProperties = {
-  background: 'transparent',
-  border: 0,
-  color: '#0f766e',
-  cursor: 'pointer',
-  flexShrink: 0,
-  fontWeight: 600,
-  padding: 0,
-};
-
 const cancelLinkStyle: CSSProperties = {
   background: 'transparent',
   border: 0,
-  color: '#71717a',
+  color: colorTextMuted,
   cursor: 'pointer',
   fontSize: 13,
   justifySelf: 'start',

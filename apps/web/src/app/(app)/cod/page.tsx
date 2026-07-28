@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, useCallback, useEffect, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   ApiClientError,
@@ -11,7 +11,7 @@ import {
   type CodExpectation,
   type CodReport,
 } from '../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import {
   Button,
   Card,
@@ -40,25 +40,41 @@ export default function CodPage() {
   const [batching, setBatching] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bumped on every load; a resolved response is applied only while it is
+  // still the latest, so an older org's in-flight load can't overwrite the
+  // current org's data after a switch.
+  const loadSeqRef = useRef(0);
 
   const loadReport = useCallback(async () => {
+    const seq = ++loadSeqRef.current;
     setLoading(true);
     setError(null);
 
     try {
       const next = await getCodReport();
+      if (seq !== loadSeqRef.current) {
+        return; // a newer load started; drop this stale response
+      }
       setReport(next);
       setAmounts((current) => defaultAmounts(next.expectations, current));
     } catch (err) {
+      if (seq !== loadSeqRef.current) {
+        return; // a newer load started; drop this stale response
+      }
       setError(getApiErrorMessage(err, 'Không thể tải báo cáo COD.'));
       setReport(null);
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    function handleSessionChanged() {
+    function handleSessionChanged(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       void loadReport();
     }
 

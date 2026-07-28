@@ -18,7 +18,7 @@ import {
   revokeChannel,
   type ChannelConnection,
 } from '../../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../../lib/auth-session';
 import {
   Button,
   colorBorder,
@@ -95,7 +95,10 @@ function ChannelsSettingsContent() {
   }, [loadChannels]);
 
   useEffect(() => {
-    function handleSessionChanged() {
+    function handleSessionChanged(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       void loadChannels();
     }
 

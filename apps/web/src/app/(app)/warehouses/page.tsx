@@ -17,7 +17,7 @@ import {
   type Warehouse,
   type WarehouseStock,
 } from '../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import { VariantPicker } from '../../../components/variant-picker';
 import {
   Button,
@@ -91,7 +91,10 @@ export default function WarehousesPage() {
   );
 
   useEffect(() => {
-    function onSession() {
+    function onSession(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       void load();
     }
     void load();

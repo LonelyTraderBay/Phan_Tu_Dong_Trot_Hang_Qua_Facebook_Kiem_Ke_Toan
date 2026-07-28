@@ -19,7 +19,7 @@ import {
   type InboxConversation,
   type InboxMessage,
 } from '../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import {
   Button,
   Card,
@@ -59,6 +59,10 @@ export default function InboxPage() {
   const [takeoverMessage, setTakeoverMessage] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const selectedConversationIdRef = useRef<string | null>(null);
+  // Bumped on every conversations load; a resolved response is applied only
+  // while it is still the latest, so an older org's in-flight load can't
+  // overwrite the current org's data after a switch (or a newer poll).
+  const loadSeqRef = useRef(0);
 
   useEffect(() => {
     selectedConversationIdRef.current = selectedConversationId;
@@ -73,12 +77,16 @@ export default function InboxPage() {
   );
 
   const loadConversations = useCallback(async (options: LoadOptions = {}) => {
+    const seq = ++loadSeqRef.current;
     if (!options.silent) {
       setConversationsLoading(true);
     }
 
     try {
       const data = await listInboxConversations();
+      if (seq !== loadSeqRef.current) {
+        return; // a newer load started; drop this stale response
+      }
       setConversations(data);
       setSelectedConversationId((current) => {
         if (data.length === 0) {
@@ -93,13 +101,16 @@ export default function InboxPage() {
       setLastUpdatedAt(new Date());
       setError(null);
     } catch (err) {
+      if (seq !== loadSeqRef.current) {
+        return; // a newer load started; drop this stale response
+      }
       setError(getApiErrorMessage(err, 'Không thể tải danh sách hội thoại.'));
       if (!options.silent) {
         setConversations([]);
         setSelectedConversationId(null);
       }
     } finally {
-      if (!options.silent) {
+      if (!options.silent && seq === loadSeqRef.current) {
         setConversationsLoading(false);
       }
     }
@@ -138,7 +149,10 @@ export default function InboxPage() {
   );
 
   useEffect(() => {
-    function handleSessionChanged() {
+    function handleSessionChanged(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       setSelectedConversationId(null);
       setMessages([]);
       setTakeoverMessage(null);
@@ -246,15 +260,21 @@ export default function InboxPage() {
       return;
     }
 
+    const conversationId = selectedConversation.id;
     setSending(true);
     setError(null);
 
     try {
       const sentMessage = await sendInboxMessage(
-        selectedConversation.id,
+        conversationId,
         replyText.trim(),
       );
-      setMessages((current) => [...current, sentMessage]);
+      // Only append to the thread we sent to; if the user switched threads
+      // mid-send, skip the optimistic append (the poll reconciles the correct
+      // thread). replyText/sending are still reset below.
+      if (selectedConversationIdRef.current === conversationId) {
+        setMessages((current) => [...current, sentMessage]);
+      }
       setReplyText('');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Không thể gửi tin nhắn.'));

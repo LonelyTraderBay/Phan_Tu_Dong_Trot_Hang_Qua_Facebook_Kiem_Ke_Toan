@@ -18,6 +18,7 @@ import {
 } from '../../../../lib/api-client';
 import {
   getStoredOrganizations,
+  isForeignStorageEvent,
   SESSION_CHANGED_EVENT,
   type OrganizationRole,
   type StoredOrganization,
@@ -80,7 +81,10 @@ export default function InvitesSettingsPage() {
   }, []);
 
   useEffect(() => {
-    function loadOrgContext() {
+    function loadOrgContext(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       const orgId = getActiveOrgId();
       setActiveOrgId(orgId);
       setOrganizations(getStoredOrganizations());

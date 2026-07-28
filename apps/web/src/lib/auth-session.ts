@@ -1,8 +1,42 @@
-import { getActiveOrgId, resolveActiveOrgId, setActiveOrgId } from './org-context';
+import {
+  ACTIVE_ORG_ID_STORAGE_KEY,
+  getActiveOrgId,
+  resolveActiveOrgId,
+  setActiveOrgId,
+} from './org-context';
 
 export const ACCESS_TOKEN_STORAGE_KEY = 'omni.accessToken';
 export const ORGANIZATIONS_STORAGE_KEY = 'omni.organizations';
 export const SESSION_CHANGED_EVENT = 'omni:session-changed';
+
+// The localStorage keys that represent the signed-in session/org context.
+// A cross-tab `storage` event that doesn't touch one of these keys is not a
+// session change and must not trigger a data reload.
+export const SESSION_STORAGE_KEYS: readonly string[] = [
+  ACCESS_TOKEN_STORAGE_KEY,
+  ORGANIZATIONS_STORAGE_KEY,
+  ACTIVE_ORG_ID_STORAGE_KEY,
+];
+
+/**
+ * True when `event` is a cross-tab `storage` event whose key is NOT one of the
+ * app's own session keys — i.e. an unrelated localStorage write that a
+ * session-sync handler should ignore.
+ *
+ * Session-sync effects register the same callback for both the in-app
+ * `SESSION_CHANGED_EVENT` (a plain `Event`, never foreign) and the browser
+ * `storage` event. A `null` key means `localStorage.clear()` and is treated as
+ * relevant (not foreign) so a full sign-out still refreshes.
+ */
+export function isForeignStorageEvent(event: Event): boolean {
+  if (!(event instanceof StorageEvent)) {
+    return false;
+  }
+  if (event.key === null) {
+    return false;
+  }
+  return !SESSION_STORAGE_KEYS.includes(event.key);
+}
 
 export type OrganizationRole = 'owner' | 'cskh' | 'kho';
 

@@ -11,6 +11,26 @@ import {
   type AdSpendSummary,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import {
+  Button,
+  Card,
+  colorBackgroundCard,
+  colorBorderStrong,
+  colorTextBody,
+  colorTextHeading,
+  colorTextMuted,
+  EmptyState,
+  ErrorText,
+  Input,
+  MutedText,
+  radiusSm,
+  Table,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  Textarea,
+} from '../../../components/ui';
 
 type DateRange = {
   from: string;
@@ -101,34 +121,31 @@ export default function AdsPage() {
         <div style={filterRowStyle}>
           <label style={labelStyle}>
             Từ ngày
-            <input
+            <Input
               type="date"
               value={range.from}
               onChange={(event) =>
                 setRange((current) => ({ ...current, from: event.target.value }))
               }
-              style={inputStyle}
             />
           </label>
           <label style={labelStyle}>
             Đến ngày
-            <input
+            <Input
               type="date"
               value={range.to}
               onChange={(event) =>
                 setRange((current) => ({ ...current, to: event.target.value }))
               }
-              style={inputStyle}
             />
           </label>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => void loadAds()}
             disabled={loading}
-            style={secondaryButtonStyle}
           >
             {loading ? 'Đang tải...' : 'Tải lại'}
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -137,11 +154,7 @@ export default function AdsPage() {
           {message}
         </p>
       ) : null}
-      {error ? (
-        <p role="alert" style={alertStyle}>
-          {error}
-        </p>
-      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
 
       <section style={summaryGridStyle}>
         <SummaryCard
@@ -155,14 +168,14 @@ export default function AdsPage() {
         <SummaryCard label="Dòng gần đây" value={String(rows.length)} />
       </section>
 
-      <section style={panelStyle}>
+      <Card style={{ marginTop: 24 }}>
         <div style={sectionHeaderStyle}>
           <div>
             <h2 style={sectionTitleStyle}>Import CSV</h2>
-            <p style={mutedStyle}>
+            <MutedText style={{ fontSize: 14 }}>
               Header bắt buộc: <code>date,campaign,amount_vnd</code>. Có thể thêm
               <code> external_id</code> nếu dữ liệu đến từ nguồn ngoài.
-            </p>
+            </MutedText>
           </div>
           <label style={uploadButtonStyle}>
             Chọn file CSV
@@ -174,95 +187,87 @@ export default function AdsPage() {
             />
           </label>
         </div>
-        <textarea
+        <Textarea
           value={csv}
           onChange={(event) => setCsv(event.target.value)}
           rows={8}
-          style={textareaStyle}
+          style={csvTextareaStyle}
         />
         <div style={{ marginTop: 12 }}>
-          <button
-            type="button"
+          <Button
             onClick={() => void handleImport()}
             disabled={importing || !csv.trim()}
-            style={primaryButtonStyle}
           >
             {importing ? 'Đang import...' : 'Import chi phí ads'}
-          </button>
+          </Button>
         </div>
-      </section>
+      </Card>
 
-      <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Tổng theo ngày</h2>
+      <Card title="Tổng theo ngày" style={{ marginTop: 24 }}>
         {loading ? (
-          <p style={mutedStyle}>Đang tải tổng ads theo ngày...</p>
+          <MutedText style={{ fontSize: 14 }}>Đang tải tổng ads theo ngày...</MutedText>
         ) : !summary || summary.days.length === 0 ? (
-          <p style={emptyStyle}>Chưa có chi phí ads trong khoảng ngày này.</p>
+          <EmptyState>Chưa có chi phí ads trong khoảng ngày này.</EmptyState>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>Ngày</th>
-                  <th style={tableHeaderStyle}>Chi phí ads</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.days.map((day) => (
-                  <tr key={day.day}>
-                    <td style={tableCellStyle}>{formatDay(day.day)}</td>
-                    <td style={tableCellStyle}>{formatVnd(day.amountVnd)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table style={{ minWidth: 760 }}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Ngày</TableHeaderCell>
+                <TableHeaderCell>Chi phí ads</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <tbody>
+              {summary.days.map((day) => (
+                <TableRow key={day.day}>
+                  <TableCell>{formatDay(day.day)}</TableCell>
+                  <TableCell>{formatVnd(day.amountVnd)}</TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </Table>
         )}
-      </section>
+      </Card>
 
-      <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Dòng đã import</h2>
+      <Card title="Dòng đã import" style={{ marginTop: 24 }}>
         {loading ? (
-          <p style={mutedStyle}>Đang tải danh sách ads...</p>
+          <MutedText style={{ fontSize: 14 }}>Đang tải danh sách ads...</MutedText>
         ) : rows.length === 0 ? (
-          <p style={emptyStyle}>Chưa có dòng ads nào trong khoảng ngày này.</p>
+          <EmptyState>Chưa có dòng ads nào trong khoảng ngày này.</EmptyState>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>Ngày</th>
-                  <th style={tableHeaderStyle}>Campaign</th>
-                  <th style={tableHeaderStyle}>Nguồn</th>
-                  <th style={tableHeaderStyle}>Số tiền</th>
-                  <th style={tableHeaderStyle}>External ID</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td style={tableCellStyle}>{formatDay(row.date)}</td>
-                    <td style={tableCellStyle}>{row.campaignName}</td>
-                    <td style={tableCellStyle}>{formatSource(row.source)}</td>
-                    <td style={tableCellStyle}>{formatVnd(row.amountVnd)}</td>
-                    <td style={tableCellStyle}>{row.externalId ?? '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table style={{ minWidth: 760 }}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Ngày</TableHeaderCell>
+                <TableHeaderCell>Campaign</TableHeaderCell>
+                <TableHeaderCell>Nguồn</TableHeaderCell>
+                <TableHeaderCell>Số tiền</TableHeaderCell>
+                <TableHeaderCell>External ID</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <tbody>
+              {rows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell>{formatDay(row.date)}</TableCell>
+                  <TableCell>{row.campaignName}</TableCell>
+                  <TableCell>{formatSource(row.source)}</TableCell>
+                  <TableCell>{formatVnd(row.amountVnd)}</TableCell>
+                  <TableCell>{row.externalId ?? '-'}</TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </Table>
         )}
-      </section>
+      </Card>
     </main>
   );
 }
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div style={summaryCardStyle}>
+    <Card style={summaryCardStyle}>
       <span style={mutedStyle}>{label}</span>
-      <strong style={{ color: '#0f172a', fontSize: 22 }}>{value}</strong>
-    </div>
+      <strong style={{ color: colorTextBody, fontSize: 22 }}>{value}</strong>
+    </Card>
   );
 }
 
@@ -323,20 +328,12 @@ const filterRowStyle: CSSProperties = {
 };
 
 const labelStyle: CSSProperties = {
-  color: '#334155',
+  color: colorTextHeading,
   display: 'flex',
   flexDirection: 'column',
   fontSize: 13,
   fontWeight: 700,
   gap: 6,
-};
-
-const inputStyle: CSSProperties = {
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  font: 'inherit',
-  padding: '9px 10px',
 };
 
 const summaryGridStyle: CSSProperties = {
@@ -347,21 +344,10 @@ const summaryGridStyle: CSSProperties = {
 };
 
 const summaryCardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
   padding: 16,
-};
-
-const panelStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
-  marginTop: 24,
-  padding: 20,
 };
 
 const sectionHeaderStyle: CSSProperties = {
@@ -373,89 +359,49 @@ const sectionHeaderStyle: CSSProperties = {
 };
 
 const sectionTitleStyle: CSSProperties = {
-  color: '#0f172a',
   fontSize: 22,
   margin: '0 0 16px',
 };
 
-const textareaStyle: CSSProperties = {
-  border: '1px solid #cbd5e1',
-  borderRadius: 10,
-  color: '#0f172a',
+// Deliberate custom override on top of the shared `Textarea`: the CSV editor
+// needs a monospace font plus its own marginTop/width, which no primitive
+// captures. Border/radius/color/padding/resize now come from `Textarea`
+// itself (an intentional 10->8 radius and 12->'11px 12px' padding
+// convergence, matching the "resolve near-duplicates" approach used
+// throughout tokens.ts).
+const csvTextareaStyle: CSSProperties = {
   font: '14px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
   marginTop: 12,
-  padding: 12,
   width: '100%',
 };
 
-const tableStyle: CSSProperties = {
-  borderCollapse: 'collapse',
-  minWidth: 760,
-  width: '100%',
-};
-
-const tableHeaderStyle: CSSProperties = {
-  borderBottom: '1px solid #e2e8f0',
-  color: '#334155',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '12px 16px',
-  textAlign: 'left',
-};
-
-const tableCellStyle: CSSProperties = {
-  borderBottom: '1px solid #f1f5f9',
-  color: '#0f172a',
-  fontSize: 15,
-  padding: '12px 16px',
-};
-
-const primaryButtonStyle: CSSProperties = {
-  background: '#2563eb',
-  border: '1px solid #2563eb',
-  borderRadius: 8,
-  color: '#ffffff',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '9px 12px',
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '9px 12px',
-};
-
+// The upload control must stay a native <label> wrapping a hidden
+// <input type="file"> — only a <label> implicitly forwards its click to the
+// wrapped control to open the file picker; a `Button` (a <button>) would not
+// trigger the native file dialog. Styled to match `Button`'s secondary
+// variant via tokens.
 const uploadButtonStyle: CSSProperties = {
-  ...secondaryButtonStyle,
+  background: colorBackgroundCard,
+  border: `1px solid ${colorBorderStrong}`,
+  borderRadius: radiusSm,
+  color: colorTextBody,
+  cursor: 'pointer',
   display: 'inline-flex',
+  fontSize: 14,
+  fontWeight: 700,
+  padding: '9px 12px',
 };
 
 const mutedStyle: CSSProperties = {
-  color: '#64748b',
+  color: colorTextMuted,
   fontSize: 14,
 };
 
-const emptyStyle: CSSProperties = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: 12,
-  color: '#64748b',
-  padding: 16,
-};
-
-const alertStyle: CSSProperties = {
-  color: '#b91c1c',
-  fontSize: 16,
-  marginTop: 20,
-};
-
+// Tinted success banner (background + border), distinct from the shared
+// `SuccessText` primitive's plain colored-text treatment — none of its 3
+// colors (#ecfdf5/#bbf7d0/#047857) have an exact match in tokens.ts, so it
+// stays bespoke per the "tinted banner" carve-out (same pattern as the
+// tinted alert banners in attribution/advisor/calendar).
 const statusStyle: CSSProperties = {
   background: '#ecfdf5',
   border: '1px solid #bbf7d0',

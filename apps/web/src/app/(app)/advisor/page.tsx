@@ -7,6 +7,17 @@ import {
   getAdvisorSuggestion,
   type AdvisorSuggestion,
 } from '../../../lib/api-client';
+import {
+  Button,
+  Card,
+  colorBorder,
+  colorDanger,
+  colorTextBody,
+  colorTextHeading,
+  EmptyState,
+  Input,
+  MutedText,
+} from '../../../components/ui';
 
 export default function AdvisorPage() {
   const [goal, setGoal] = useState('Tăng doanh thu tuần này');
@@ -45,26 +56,20 @@ export default function AdvisorPage() {
         </div>
       </header>
 
-      <section style={panelStyle}>
+      <Card style={{ marginTop: 24 }}>
         <label style={labelStyle}>
           Mục tiêu
-          <input
+          <Input
             value={goal}
             onChange={(event) => setGoal(event.target.value)}
             maxLength={500}
             placeholder="Ví dụ: đẩy hàng tồn cuối tuần"
-            style={inputStyle}
           />
         </label>
-        <button
-          type="button"
-          onClick={() => void handleSuggest()}
-          disabled={loading}
-          style={primaryButtonStyle}
-        >
+        <Button onClick={() => void handleSuggest()} disabled={loading}>
           {loading ? 'Đang lấy gợi ý...' : 'Lấy gợi ý'}
-        </button>
-      </section>
+        </Button>
+      </Card>
 
       {error ? (
         <p role="alert" style={alertStyle}>
@@ -72,10 +77,10 @@ export default function AdvisorPage() {
         </p>
       ) : null}
 
-      <section style={panelStyle}>
+      <Card style={{ marginTop: 24 }}>
         <h2 style={sectionTitleStyle}>Gợi ý</h2>
         {!suggestion ? (
-          <p style={emptyStyle}>Bấm “Lấy gợi ý” để tạo đề xuất cho chủ shop.</p>
+          <EmptyState>Bấm “Lấy gợi ý” để tạo đề xuất cho chủ shop.</EmptyState>
         ) : (
           <>
             <p role="status" style={disclaimerStyle}>
@@ -83,13 +88,13 @@ export default function AdvisorPage() {
               phân quyền.
             </p>
             <pre style={suggestionStyle}>{suggestion.suggestionsText}</pre>
-            <p style={mutedStyle}>
+            <MutedText>
               Prompt: {suggestion.promptVersion} · Model: {suggestion.model}
-            </p>
-            <p style={mutedStyle}>{suggestion.entitlement.note}</p>
+            </MutedText>
+            <MutedText>{suggestion.entitlement.note}</MutedText>
           </>
         )}
-      </section>
+      </Card>
     </main>
   );
 }
@@ -112,16 +117,8 @@ const descriptionStyle: CSSProperties = {
   maxWidth: 860,
 };
 
-const panelStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 16,
-  marginTop: 24,
-  padding: 20,
-};
-
 const labelStyle: CSSProperties = {
-  color: '#334155',
+  color: colorTextHeading,
   display: 'flex',
   flexDirection: 'column',
   fontSize: 13,
@@ -130,32 +127,21 @@ const labelStyle: CSSProperties = {
   marginBottom: 12,
 };
 
-const inputStyle: CSSProperties = {
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  padding: '10px 12px',
-};
-
-const primaryButtonStyle: CSSProperties = {
-  background: '#2563eb',
-  border: 'none',
-  borderRadius: 8,
-  color: '#ffffff',
-  cursor: 'pointer',
-  fontWeight: 700,
-  padding: '10px 14px',
-};
-
+// Tinted danger banner (background + border) — kept bespoke like the other
+// pages in this wave; only `color` has an exact token match.
 const alertStyle: CSSProperties = {
   background: '#fef2f2',
   border: '1px solid #fecaca',
   borderRadius: 12,
-  color: '#b91c1c',
+  color: colorDanger,
   marginTop: 16,
   padding: 16,
 };
 
+// Tinted warning/disclaimer banner for the AI-advisor disclaimer text. Uses
+// the darker `#92400e` amber, which tokens.ts documents as a deliberately
+// separate, higher-contrast-on-tint color from `colorWarning` (#b45309) —
+// left as a raw literal on purpose, not folded into a token.
 const disclaimerStyle: CSSProperties = {
   background: '#fffbeb',
   border: '1px solid #fde68a',
@@ -164,10 +150,14 @@ const disclaimerStyle: CSSProperties = {
   padding: 16,
 };
 
+// Bespoke `<pre>` block rendering the raw AI advisor response — the one
+// visual element this wave's ground rules explicitly call out to keep
+// custom. `background`/`color` reuse `colorTextBody`/`colorBorder` since
+// those tokens happen to hold the exact hex values already used here.
 const suggestionStyle: CSSProperties = {
-  background: '#0f172a',
+  background: colorTextBody,
   borderRadius: 12,
-  color: '#e2e8f0',
+  color: colorBorder,
   fontFamily: 'inherit',
   lineHeight: 1.6,
   overflowX: 'auto',
@@ -175,19 +165,11 @@ const suggestionStyle: CSSProperties = {
   whiteSpace: 'pre-wrap',
 };
 
+// No bottom margin (matches attribution's identical case) — the content
+// that follows (EmptyState or the disclaimer block) sits flush under the
+// heading in the original, so this stays a manual <h2> in a bare `Card`
+// rather than using `Card`'s `title` prop (which would add a 16px gap).
 const sectionTitleStyle: CSSProperties = {
-  color: '#0f172a',
   fontSize: 22,
   margin: 0,
-};
-
-const mutedStyle: CSSProperties = {
-  color: '#64748b',
-};
-
-const emptyStyle: CSSProperties = {
-  background: '#f8fafc',
-  borderRadius: 12,
-  color: '#64748b',
-  padding: 16,
 };

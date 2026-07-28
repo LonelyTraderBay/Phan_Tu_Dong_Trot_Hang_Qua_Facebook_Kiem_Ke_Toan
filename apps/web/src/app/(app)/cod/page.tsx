@@ -12,6 +12,24 @@ import {
   type CodReport,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import {
+  Button,
+  Card,
+  colorDanger,
+  colorSuccess,
+  colorTextBody,
+  colorTextMuted,
+  EmptyState,
+  ErrorText,
+  Input,
+  MutedText,
+  SuccessText,
+  Table,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../../../components/ui';
 
 export default function CodPage() {
   const [report, setReport] = useState<CodReport | null>(null);
@@ -117,35 +135,25 @@ export default function CodPage() {
           </p>
         </div>
         <div style={buttonRowStyle}>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => void handleBatchReconcile()}
             disabled={batching || loading}
-            style={secondaryButtonStyle}
           >
             {batching ? 'Đang đối soát...' : 'Đối soát tất cả'}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
             onClick={() => void loadReport()}
             disabled={loading}
-            style={secondaryButtonStyle}
           >
             {loading ? 'Đang tải...' : 'Tải lại'}
-          </button>
+          </Button>
         </div>
       </header>
 
-      {error ? (
-        <p role="alert" style={alertStyle}>
-          {error}
-        </p>
-      ) : null}
-      {message ? (
-        <p role="status" style={successStyle}>
-          {message}
-        </p>
-      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
+      {message ? <SuccessText>{message}</SuccessText> : null}
 
       <section style={summaryGridStyle}>
         <SummaryCard label="COD mở" value={String(summary?.openCount ?? 0)} />
@@ -163,146 +171,138 @@ export default function CodPage() {
         />
       </section>
 
-      <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>COD đang mở</h2>
+      <Card title="COD đang mở" style={{ marginTop: 24 }}>
         {loading ? (
-          <p style={mutedStyle}>Đang tải danh sách COD...</p>
+          <MutedText style={{ fontSize: 14 }}>Đang tải danh sách COD...</MutedText>
         ) : !report || report.expectations.length === 0 ? (
-          <p style={emptyStyle}>Không có đơn COD cần đối soát.</p>
+          <EmptyState>Không có đơn COD cần đối soát.</EmptyState>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>Mã đơn</th>
-                  <th style={tableHeaderStyle}>Khách</th>
-                  <th style={tableHeaderStyle}>Trạng thái COD</th>
-                  <th style={tableHeaderStyle}>Dự kiến</th>
-                  <th style={tableHeaderStyle}>Đã thu</th>
-                  <th style={tableHeaderStyle}>Lệch</th>
-                  <th style={tableHeaderStyle}>Ghi nhận thu</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.expectations.map((expectation) => (
-                  <tr key={expectation.id}>
-                    <td style={tableCellStyle}>{shortId(expectation.orderId)}</td>
-                    <td style={tableCellStyle}>
-                      <strong>
-                        {expectation.order?.customerName ?? 'Khách chưa đặt tên'}
-                      </strong>
-                      <br />
-                      <span style={mutedStyle}>
-                        {expectation.order?.phoneE164 ?? 'Chưa có SĐT'}
-                      </span>
-                    </td>
-                    <td style={tableCellStyle}>{formatCodStatus(expectation.status)}</td>
-                    <td style={tableCellStyle}>
-                      {formatVnd(expectation.expectedVnd)}
-                    </td>
-                    <td style={tableCellStyle}>
-                      {formatVnd(expectation.collectedVnd)}
-                    </td>
-                    <td style={tableCellStyle}>
-                      <span style={deltaStyle(expectation.deltaVnd)}>
-                        {formatVnd(expectation.deltaVnd)}
-                      </span>
-                    </td>
-                    <td style={tableCellStyle}>
-                      <div style={collectionFormStyle}>
-                        <input
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={amounts[expectation.orderId] ?? ''}
-                          onChange={(event) =>
-                            setAmounts((current) => ({
-                              ...current,
-                              [expectation.orderId]: event.target.value,
-                            }))
-                          }
-                          style={inputStyle}
-                          aria-label={`Số tiền COD thu cho đơn ${shortId(
-                            expectation.orderId,
-                          )}`}
-                        />
-                        <input
-                          value={notes[expectation.orderId] ?? ''}
-                          onChange={(event) =>
-                            setNotes((current) => ({
-                              ...current,
-                              [expectation.orderId]: event.target.value,
-                            }))
-                          }
-                          placeholder="Ghi chú"
-                          style={inputStyle}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void handleRecordCollection(expectation)}
-                          disabled={busyOrderId === expectation.orderId}
-                          style={linkButtonStyle}
-                        >
-                          {busyOrderId === expectation.orderId
-                            ? 'Đang lưu...'
-                            : 'Ghi nhận'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table style={{ minWidth: 980 }}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Mã đơn</TableHeaderCell>
+                <TableHeaderCell>Khách</TableHeaderCell>
+                <TableHeaderCell>Trạng thái COD</TableHeaderCell>
+                <TableHeaderCell>Dự kiến</TableHeaderCell>
+                <TableHeaderCell>Đã thu</TableHeaderCell>
+                <TableHeaderCell>Lệch</TableHeaderCell>
+                <TableHeaderCell>Ghi nhận thu</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <tbody>
+              {report.expectations.map((expectation) => (
+                <TableRow key={expectation.id}>
+                  <TableCell>{shortId(expectation.orderId)}</TableCell>
+                  <TableCell>
+                    <strong>
+                      {expectation.order?.customerName ?? 'Khách chưa đặt tên'}
+                    </strong>
+                    <br />
+                    <span style={mutedStyle}>
+                      {expectation.order?.phoneE164 ?? 'Chưa có SĐT'}
+                    </span>
+                  </TableCell>
+                  <TableCell>{formatCodStatus(expectation.status)}</TableCell>
+                  <TableCell>
+                    {formatVnd(expectation.expectedVnd)}
+                  </TableCell>
+                  <TableCell>
+                    {formatVnd(expectation.collectedVnd)}
+                  </TableCell>
+                  <TableCell>
+                    <span style={deltaStyle(expectation.deltaVnd)}>
+                      {formatVnd(expectation.deltaVnd)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div style={collectionFormStyle}>
+                      <Input
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={amounts[expectation.orderId] ?? ''}
+                        onChange={(event) =>
+                          setAmounts((current) => ({
+                            ...current,
+                            [expectation.orderId]: event.target.value,
+                          }))
+                        }
+                        aria-label={`Số tiền COD thu cho đơn ${shortId(
+                          expectation.orderId,
+                        )}`}
+                      />
+                      <Input
+                        value={notes[expectation.orderId] ?? ''}
+                        onChange={(event) =>
+                          setNotes((current) => ({
+                            ...current,
+                            [expectation.orderId]: event.target.value,
+                          }))
+                        }
+                        placeholder="Ghi chú"
+                      />
+                      <Button
+                        variant="link"
+                        onClick={() => void handleRecordCollection(expectation)}
+                        disabled={busyOrderId === expectation.orderId}
+                        style={{ textAlign: 'left' }}
+                      >
+                        {busyOrderId === expectation.orderId
+                          ? 'Đang lưu...'
+                          : 'Ghi nhận'}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </Table>
         )}
-      </section>
+      </Card>
 
-      <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Hàng đợi lệch COD</h2>
+      <Card title="Hàng đợi lệch COD" style={{ marginTop: 24 }}>
         {!report || report.discrepancies.length === 0 ? (
-          <p style={emptyStyle}>Chưa có lệch COD mở.</p>
+          <EmptyState>Chưa có lệch COD mở.</EmptyState>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>Mã đơn</th>
-                  <th style={tableHeaderStyle}>Dự kiến</th>
-                  <th style={tableHeaderStyle}>Đã thu</th>
-                  <th style={tableHeaderStyle}>Lệch</th>
-                  <th style={tableHeaderStyle}>Ghi chú</th>
-                  <th style={tableHeaderStyle}>Tạo lúc</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.discrepancies.map((item) => (
-                  <tr key={item.id}>
-                    <td style={tableCellStyle}>{shortId(item.orderId)}</td>
-                    <td style={tableCellStyle}>{formatVnd(item.expectedVnd)}</td>
-                    <td style={tableCellStyle}>{formatVnd(item.collectedVnd)}</td>
-                    <td style={tableCellStyle}>
-                      <span style={deltaStyle(item.deltaVnd)}>
-                        {formatVnd(item.deltaVnd)}
-                      </span>
-                    </td>
-                    <td style={tableCellStyle}>{item.note ?? '-'}</td>
-                    <td style={tableCellStyle}>{formatDateTime(item.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table style={{ minWidth: 980 }}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Mã đơn</TableHeaderCell>
+                <TableHeaderCell>Dự kiến</TableHeaderCell>
+                <TableHeaderCell>Đã thu</TableHeaderCell>
+                <TableHeaderCell>Lệch</TableHeaderCell>
+                <TableHeaderCell>Ghi chú</TableHeaderCell>
+                <TableHeaderCell>Tạo lúc</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <tbody>
+              {report.discrepancies.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>{shortId(item.orderId)}</TableCell>
+                  <TableCell>{formatVnd(item.expectedVnd)}</TableCell>
+                  <TableCell>{formatVnd(item.collectedVnd)}</TableCell>
+                  <TableCell>
+                    <span style={deltaStyle(item.deltaVnd)}>
+                      {formatVnd(item.deltaVnd)}
+                    </span>
+                  </TableCell>
+                  <TableCell>{item.note ?? '-'}</TableCell>
+                  <TableCell>{formatDateTime(item.createdAt)}</TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </Table>
         )}
-      </section>
+      </Card>
     </main>
   );
 }
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div style={summaryCardStyle}>
+    <Card style={summaryCardStyle}>
       <span style={mutedStyle}>{label}</span>
-      <strong style={{ color: '#0f172a', fontSize: 22 }}>{value}</strong>
-    </div>
+      <strong style={{ color: colorTextBody, fontSize: 22 }}>{value}</strong>
+    </Card>
   );
 }
 
@@ -362,9 +362,9 @@ function formatVnd(value: string) {
 
 function deltaStyle(value: string): CSSProperties {
   if (value === '0') {
-    return { color: '#15803d', fontWeight: 800 };
+    return { color: colorSuccess, fontWeight: 800 };
   }
-  return { color: '#b91c1c', fontWeight: 800 };
+  return { color: colorDanger, fontWeight: 800 };
 }
 
 const headerStyle: CSSProperties = {
@@ -394,50 +394,10 @@ const summaryGridStyle: CSSProperties = {
 };
 
 const summaryCardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
   padding: 16,
-};
-
-const panelStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
-  marginTop: 24,
-  padding: 20,
-};
-
-const sectionTitleStyle: CSSProperties = {
-  color: '#0f172a',
-  fontSize: 22,
-  margin: '0 0 16px',
-};
-
-const tableStyle: CSSProperties = {
-  borderCollapse: 'collapse',
-  minWidth: 980,
-  width: '100%',
-};
-
-const tableHeaderStyle: CSSProperties = {
-  borderBottom: '1px solid #e2e8f0',
-  color: '#334155',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '12px 16px',
-  textAlign: 'left',
-};
-
-const tableCellStyle: CSSProperties = {
-  borderBottom: '1px solid #f1f5f9',
-  color: '#0f172a',
-  fontSize: 15,
-  padding: '12px 16px',
-  verticalAlign: 'top',
 };
 
 const collectionFormStyle: CSSProperties = {
@@ -446,57 +406,7 @@ const collectionFormStyle: CSSProperties = {
   minWidth: 220,
 };
 
-const inputStyle: CSSProperties = {
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  font: 'inherit',
-  padding: '8px 10px',
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '9px 12px',
-};
-
-const linkButtonStyle: CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: '#2563eb',
-  cursor: 'pointer',
-  font: 'inherit',
-  fontWeight: 800,
-  padding: 0,
-  textAlign: 'left',
-};
-
 const mutedStyle: CSSProperties = {
-  color: '#64748b',
+  color: colorTextMuted,
   fontSize: 14,
-};
-
-const emptyStyle: CSSProperties = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: 12,
-  color: '#64748b',
-  padding: 16,
-};
-
-const alertStyle: CSSProperties = {
-  color: '#b91c1c',
-  fontSize: 16,
-  marginTop: 20,
-};
-
-const successStyle: CSSProperties = {
-  color: '#15803d',
-  fontSize: 16,
-  marginTop: 20,
 };

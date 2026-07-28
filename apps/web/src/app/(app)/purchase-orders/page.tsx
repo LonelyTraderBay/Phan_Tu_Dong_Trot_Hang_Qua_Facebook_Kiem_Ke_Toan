@@ -15,6 +15,7 @@ import {
   type Warehouse,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { VariantPicker } from '../../../components/variant-picker';
 
 export default function PurchaseOrdersPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
@@ -164,7 +165,7 @@ export default function PurchaseOrdersPage() {
           </label>
           <label style={labelStyle}>
             Variant ID
-            <input value={variantId} onChange={(event) => setVariantId(event.target.value)} required style={inputStyle} />
+            <VariantPicker value={variantId} onChange={setVariantId} />
           </label>
           <label style={labelStyle}>
             Số lượng

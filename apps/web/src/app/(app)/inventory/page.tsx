@@ -17,6 +17,7 @@ import {
   type StockMovement,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { VariantPicker } from '../../../components/variant-picker';
 
 export default function InventoryPage() {
   const [lowStock, setLowStock] = useState<CatalogVariant[]>([]);
@@ -107,13 +108,7 @@ export default function InventoryPage() {
         <form onSubmit={(event) => void handleAdjust(event)} style={formStyle}>
           <label style={labelStyle}>
             Variant ID
-            <input
-              value={variantId}
-              onChange={(event) => setVariantId(event.target.value)}
-              placeholder="uuid phiên bản"
-              style={inputStyle}
-              required
-            />
+            <VariantPicker value={variantId} onChange={setVariantId} />
           </label>
           <label style={labelStyle}>
             Số lượng (+ nhập / − xuất)

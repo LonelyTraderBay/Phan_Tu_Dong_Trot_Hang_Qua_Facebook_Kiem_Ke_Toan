@@ -18,6 +18,7 @@ import {
   type WarehouseStock,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { VariantPicker } from '../../../components/variant-picker';
 
 export default function WarehousesPage() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -246,13 +247,7 @@ export default function WarehousesPage() {
           </label>
           <label style={labelStyle}>
             Variant ID
-            <input
-              value={variantId}
-              onChange={(event) => setVariantId(event.target.value)}
-              placeholder="uuid phiên bản"
-              style={inputStyle}
-              required
-            />
+            <VariantPicker value={variantId} onChange={setVariantId} />
           </label>
           <label style={labelStyle}>
             Số lượng

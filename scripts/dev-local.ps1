@@ -5,7 +5,8 @@ param(
   [switch]$NoAi,
   [switch]$NoInngest,
   [switch]$Stop,
-  [switch]$SkipPortCheck
+  [switch]$SkipPortCheck,
+  [switch]$FreshWeb
 )
 
 $ErrorActionPreference = "Stop"
@@ -209,6 +210,19 @@ if (-not $NoAi) {
 }
 
 if (-not $NoWeb) {
+  # Turbopack's on-disk cache (apps/web/.next) can go stale/corrupt after heavy
+  # branch switching while the dev server is running. Symptom: pages serve fine
+  # but the browser full-reloads every few seconds, and web.err.log fills with
+  # "FATAL: ... Turbopack ... Next.js package not found" panics from
+  # hmr_version_state. A plain restart does NOT fix it (the poisoned cache is on
+  # disk) - deleting .next does. Run `pnpm run dev:local:fresh` when this hits.
+  if ($FreshWeb) {
+    $webCache = Join-Path $Root "apps\web\.next"
+    if (Test-Path $webCache) {
+      Remove-Item $webCache -Recurse -Force
+      Write-Host "FreshWeb: deleted apps/web/.next (Turbopack cache reset)"
+    }
+  }
   $p = Start-Process -FilePath $pnpmCmd -ArgumentList @(
       "--dir", "apps/web", "exec", "next", "dev",
       "-H", $HostName, "-p", "$PortWeb"

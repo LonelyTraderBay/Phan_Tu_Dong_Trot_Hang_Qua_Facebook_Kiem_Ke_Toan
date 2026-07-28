@@ -6,6 +6,7 @@ import {
   Headers,
   HttpCode,
   Param,
+  Patch,
   Post,
   UnauthorizedException,
   UseGuards,
@@ -23,6 +24,7 @@ import {
   AcceptInviteBodySchema,
   CreateInviteBodySchema,
   CreateOrgBodySchema,
+  UpdateOrgSettingsBodySchema,
 } from "./dto";
 import { IdentityService } from "./identity.service";
 
@@ -78,6 +80,21 @@ export class IdentityController {
     return this.identity.createInvite(
       orgId,
       parseBody(CreateInviteBodySchema, body),
+    );
+  }
+
+  @Patch(":orgId/settings")
+  @UseGuards(PermissionsGuard)
+  @RequirePermission("org.settings.write")
+  updateSettings(
+    @Param("orgId") orgId: string,
+    @OrgId() guardOrgId: string | undefined,
+    @Body() body: unknown,
+  ) {
+    assertOrgRouteMatchesGuard(orgId, guardOrgId);
+    return this.identity.updateOrgSettings(
+      orgId,
+      parseBody(UpdateOrgSettingsBodySchema, body),
     );
   }
 

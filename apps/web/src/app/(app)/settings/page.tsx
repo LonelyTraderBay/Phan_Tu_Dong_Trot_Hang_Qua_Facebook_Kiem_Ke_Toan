@@ -12,6 +12,7 @@ import {
 import {
   ApiClientError,
   listOrganizations,
+  updateOrgSettings,
   type OrganizationMembership,
 } from '../../../lib/api-client';
 import {
@@ -111,12 +112,20 @@ export default function SettingsPage() {
     }
 
     try {
-      window.localStorage.setItem(storageKey(activeOrgId), JSON.stringify(settings));
-      setMessage(
-        'Đã lưu cài đặt trên trình duyệt này. Backend chưa có API PATCH để đồng bộ cấu hình tổ chức.',
-      );
-    } catch {
-      setError('Không thể lưu cài đặt vào trình duyệt.');
+      await updateOrgSettings(activeOrgId, settings);
+      setMessage('Đã lưu cài đặt lên máy chủ.');
+    } catch (err) {
+      try {
+        window.localStorage.setItem(storageKey(activeOrgId), JSON.stringify(settings));
+        setError(
+          getApiErrorMessage(
+            err,
+            'Không lưu được lên máy chủ, đã lưu tạm trên trình duyệt này.',
+          ),
+        );
+      } catch {
+        setError('Không thể lưu cài đặt vào trình duyệt.');
+      }
     } finally {
       setSaving(false);
     }
@@ -131,13 +140,6 @@ export default function SettingsPage() {
           này không đưa secret vào NEXT_PUBLIC.
         </p>
       </header>
-
-      <section style={noticeStyle}>
-        <strong>Ghi chú API:</strong> backend hiện chưa có endpoint PATCH cấu
-        hình tổ chức như /v1/orgs/:orgId/settings. Các thay đổi bên dưới được
-        lưu bằng localStorage để hoàn thiện UI và sẽ cần nối API khi endpoint
-        sẵn sàng.
-      </section>
 
       {error ? (
         <p role="alert" style={alertStyle}>
@@ -316,16 +318,6 @@ const descriptionStyle: CSSProperties = {
   color: '#475569',
   fontSize: 18,
   maxWidth: 760,
-};
-
-const noticeStyle: CSSProperties = {
-  background: '#fffbeb',
-  border: '1px solid #fde68a',
-  borderRadius: 12,
-  color: '#92400e',
-  marginTop: 24,
-  maxWidth: 860,
-  padding: 16,
 };
 
 const panelStyle: CSSProperties = {

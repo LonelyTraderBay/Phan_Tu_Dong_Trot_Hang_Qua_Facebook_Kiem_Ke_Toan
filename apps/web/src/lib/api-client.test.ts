@@ -18,7 +18,7 @@ vi.mock('./org-context', async (importOriginal) => {
   };
 });
 
-import { apiFetch, sendInboxMessage } from './api-client';
+import { apiFetch, sendInboxMessage, updateOrgSettings } from './api-client';
 
 describe('apiFetch error handling', () => {
   const originalFetch = global.fetch;
@@ -165,6 +165,86 @@ describe('sendInboxMessage', () => {
       code: 'message_send_failed',
       message:
         'Không gửi được tin nhắn — có thể đã quá 24 giờ kể từ tin nhắn cuối của khách, hoặc kênh kết nối gặp sự cố.',
+    });
+  });
+});
+
+describe('updateOrgSettings', () => {
+  const originalFetch = global.fetch;
+  const ORG_ID = '11111111-1111-1111-1111-111111111111';
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it('PATCHes /v1/orgs/:orgId/settings with the given patch and returns the updated organization', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          organization: {
+            id: ORG_ID,
+            name: 'Shop A',
+            slug: 'shop-a',
+            plan: 'free',
+            settingsJson: { auto_confirm: true, ai_replies: false },
+            timezone: 'Asia/Ho_Chi_Minh',
+            locale: 'vi',
+            suspendedAt: null,
+            createdAt: '2026-07-24T10:00:00.000Z',
+            updatedAt: '2026-07-28T00:00:00.000Z',
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const organization = await updateOrgSettings(ORG_ID, {
+      autoConfirm: true,
+      aiReplies: false,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `http://127.0.0.1:4701/v1/orgs/${ORG_ID}/settings`,
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ autoConfirm: true, aiReplies: false }),
+      }),
+    );
+    expect(organization).toEqual({
+      id: ORG_ID,
+      name: 'Shop A',
+      slug: 'shop-a',
+      plan: 'free',
+      settingsJson: { auto_confirm: true, ai_replies: false },
+      timezone: 'Asia/Ho_Chi_Minh',
+      locale: 'vi',
+      suspendedAt: null,
+      createdAt: '2026-07-24T10:00:00.000Z',
+      updatedAt: '2026-07-28T00:00:00.000Z',
+    });
+  });
+
+  it('surfaces the API error message when the save fails', async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          type: 'about:blank',
+          title: 'Forbidden',
+          status: 403,
+          detail: 'Missing permission: org.settings.write',
+          code: 'permission_denied',
+        }),
+        { status: 403 },
+      ),
+    ) as unknown as typeof fetch;
+
+    await expect(
+      updateOrgSettings(ORG_ID, { autoConfirm: true }),
+    ).rejects.toMatchObject({
+      code: 'permission_denied',
+      message: 'Missing permission: org.settings.write',
     });
   });
 });

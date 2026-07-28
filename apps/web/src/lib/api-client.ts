@@ -1315,6 +1315,24 @@ export async function listOrganizations(
   );
 }
 
+export async function updateOrgSettings(
+  orgId: string,
+  patch: Partial<{
+    autoConfirm: boolean;
+    aiReplies: boolean;
+    aiDraftOrders: boolean;
+    aiProductSuggestions: boolean;
+  }>,
+): Promise<OrganizationMembership['organization']> {
+  const { organization } = await apiFetch<{
+    organization: OrganizationMembership['organization'];
+  }>(`/v1/orgs/${encodeURIComponent(orgId)}/settings`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+  return organization;
+}
+
 export function mapOrganizationMemberships(
   memberships: OrganizationMembership[],
 ): StoredOrganization[] {

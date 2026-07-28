@@ -12,6 +12,21 @@ import {
   type BillingUsage,
 } from '../../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../../lib/auth-session';
+import {
+  Card,
+  ErrorText,
+  MutedText,
+  Table,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  WarningText,
+  colorBackgroundSubtle,
+  colorBorder,
+  colorTextBody,
+  colorTextMuted,
+} from '../../../../components/ui';
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Miễn phí',
@@ -93,14 +108,11 @@ export default function BillingSettingsPage() {
         thống chưa thu tiền tự động qua Stripe/PayOS.
       </p>
 
-      {loading ? (
-        <p style={noticeStyle}>Đang tải thanh toán...</p>
-      ) : null}
-      {error ? <p style={errorStyle}>{error}</p> : null}
+      {loading ? <MutedText>Đang tải thanh toán...</MutedText> : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
 
       {plan ? (
-        <section style={cardStyle}>
-          <h2 style={sectionTitleStyle}>Gói dịch vụ</h2>
+        <Card title="Gói dịch vụ" style={{ marginTop: 24 }}>
           <div style={gridStyle}>
             <MetricCard label="Gói" value={formatPlan(plan.plan)} />
             <MetricCard
@@ -118,17 +130,16 @@ export default function BillingSettingsPage() {
           </div>
 
           {plan.billingStatus === 'past_due' ? (
-            <p style={warningStyle}>
+            <WarningText>
               Trạng thái quá hạn đang chặn tự động xác nhận đơn. Chủ shop vẫn
               có thể xử lý thủ công trong lúc đối soát hóa đơn.
-            </p>
+            </WarningText>
           ) : null}
-        </section>
+        </Card>
       ) : null}
 
       {plan ? (
-        <section style={cardStyle}>
-          <h2 style={sectionTitleStyle}>Quyền lợi gói</h2>
+        <Card title="Quyền lợi gói" style={{ marginTop: 24 }}>
           <div style={gridStyle}>
             <MetricCard
               label="Số kênh tối đa"
@@ -147,15 +158,14 @@ export default function BillingSettingsPage() {
               value={formatDateTime(plan.entitlements.updatedAt)}
             />
           </div>
-        </section>
+        </Card>
       ) : null}
 
       {usage ? (
-        <section style={cardStyle}>
-          <h2 style={sectionTitleStyle}>Mức sử dụng tháng này</h2>
-          <p style={{ color: '#64748b', marginTop: 0 }}>
+        <Card title="Mức sử dụng tháng này" style={{ marginTop: 24 }}>
+          <MutedText style={{ marginTop: 0 }}>
             Kỳ bắt đầu: {formatDateTime(usage.periodStart)}
-          </p>
+          </MutedText>
           <div style={gridStyle}>
             <MetricCard
               label="Kênh đang kết nối"
@@ -170,45 +180,42 @@ export default function BillingSettingsPage() {
               value={formatNumber(usage.ordersCountMonth)}
             />
           </div>
-        </section>
+        </Card>
       ) : null}
 
-      <section style={cardStyle}>
-        <h2 style={sectionTitleStyle}>Hóa đơn</h2>
+      <Card title="Hóa đơn" style={{ marginTop: 24 }}>
         {invoices.length === 0 ? (
-          <p style={{ color: '#64748b' }}>Chưa có hóa đơn.</p>
+          <MutedText>Chưa có hóa đơn.</MutedText>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Kỳ</th>
-                  <th style={thStyle}>Số tiền</th>
-                  <th style={thStyle}>Trạng thái</th>
-                  <th style={thStyle}>Phát hành</th>
-                  <th style={thStyle}>Ghi chú</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((invoice) => (
-                  <tr key={invoice.id}>
-                    <td style={tdStyle}>
-                      {formatDate(invoice.periodStart)} -{' '}
-                      {formatDate(invoice.periodEnd)}
-                    </td>
-                    <td style={tdStyle}>{formatVnd(invoice.amountVnd)}</td>
-                    <td style={tdStyle}>
-                      {formatInvoiceStatus(invoice.status)}
-                    </td>
-                    <td style={tdStyle}>{formatDateTime(invoice.issuedAt)}</td>
-                    <td style={tdStyle}>{invoice.note ?? '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table style={{ minWidth: 760 }}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Kỳ</TableHeaderCell>
+                <TableHeaderCell>Số tiền</TableHeaderCell>
+                <TableHeaderCell>Trạng thái</TableHeaderCell>
+                <TableHeaderCell>Phát hành</TableHeaderCell>
+                <TableHeaderCell>Ghi chú</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <tbody>
+              {invoices.map((invoice) => (
+                <TableRow key={invoice.id}>
+                  <TableCell>
+                    {formatDate(invoice.periodStart)} -{' '}
+                    {formatDate(invoice.periodEnd)}
+                  </TableCell>
+                  <TableCell>{formatVnd(invoice.amountVnd)}</TableCell>
+                  <TableCell>
+                    {formatInvoiceStatus(invoice.status)}
+                  </TableCell>
+                  <TableCell>{formatDateTime(invoice.issuedAt)}</TableCell>
+                  <TableCell>{invoice.note ?? '-'}</TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </Table>
         )}
-      </section>
+      </Card>
     </main>
   );
 }
@@ -216,10 +223,10 @@ export default function BillingSettingsPage() {
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <div style={metricStyle}>
-      <div style={{ color: '#64748b', fontSize: 13, fontWeight: 700 }}>
+      <div style={{ color: colorTextMuted, fontSize: 13, fontWeight: 700 }}>
         {label}
       </div>
-      <div style={{ color: '#0f172a', fontSize: 22, fontWeight: 800 }}>
+      <div style={{ color: colorTextBody, fontSize: 22, fontWeight: 800 }}>
         {value}
       </div>
     </div>
@@ -262,18 +269,6 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-const cardStyle = {
-  border: '1px solid #e2e8f0',
-  borderRadius: 12,
-  marginTop: 24,
-  padding: 20,
-};
-
-const sectionTitleStyle = {
-  fontSize: 22,
-  margin: '0 0 16px',
-};
-
 const gridStyle = {
   display: 'grid',
   gap: 12,
@@ -281,55 +276,11 @@ const gridStyle = {
 };
 
 const metricStyle = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
+  background: colorBackgroundSubtle,
+  border: `1px solid ${colorBorder}`,
   borderRadius: 10,
   display: 'flex',
   flexDirection: 'column' as const,
   gap: 8,
   padding: 16,
-};
-
-const noticeStyle = {
-  background: '#eff6ff',
-  borderRadius: 8,
-  color: '#1d4ed8',
-  marginTop: 20,
-  padding: 12,
-};
-
-const errorStyle = {
-  background: '#fef2f2',
-  borderRadius: 8,
-  color: '#b91c1c',
-  marginTop: 20,
-  padding: 12,
-};
-
-const warningStyle = {
-  background: '#fffbeb',
-  borderRadius: 8,
-  color: '#92400e',
-  margin: '16px 0 0',
-  padding: 12,
-};
-
-const tableStyle = {
-  borderCollapse: 'collapse' as const,
-  minWidth: 760,
-  width: '100%',
-};
-
-const thStyle = {
-  borderBottom: '1px solid #cbd5e1',
-  color: '#475569',
-  fontSize: 13,
-  padding: '10px 8px',
-  textAlign: 'left' as const,
-};
-
-const tdStyle = {
-  borderBottom: '1px solid #e2e8f0',
-  color: '#0f172a',
-  padding: '12px 8px',
 };

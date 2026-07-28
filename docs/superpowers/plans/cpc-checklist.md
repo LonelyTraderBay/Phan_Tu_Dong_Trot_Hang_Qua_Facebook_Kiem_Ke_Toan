@@ -54,11 +54,13 @@ Cross-link: [completion-step-by-step § Pha Local / E0.4](./2026-07-25-completio
 
 | Item | Decision | Owner date | Notes |
 |------|----------|------------|-------|
-| R2.4 Zalo OA | undecided | | OAuth/token + inbound worker vs Meta-only · Wave P0: left undecided (A7 deferred to Pha B **B5**); **must** REQUIRED/AMBER_OK before CPC claim — do not forge |
-| R2.5 E-invoice | undecided | | Real provider sandbox vs invoicing outside system · local-phase OK undecided; **must** REQUIRED/AMBER_OK before CPC claim |
-| R2.6 Advisor | undecided | | Live LLM/eval vs stub acceptable · local-phase OK undecided; **must** REQUIRED/AMBER_OK before CPC claim |
+| R2.4 Zalo OA | **AMBER_OK** | 2026-07-28 | OAuth/token + inbound worker vs Meta-only · Wave P0 left undecided (A7 deferred to Pha B **B5**); **decided 2026-07-28** — Meta is the primary channel, Zalo keeps the existing manual token-paste + inbound worker. Revisit if Zalo volume grows enough to justify building full OAuth. |
+| R2.5 E-invoice | **AMBER_OK** | 2026-07-28 | Real provider sandbox vs invoicing outside system · **decided 2026-07-28** — merchants issue invoices through their own accounting/provider for now; Omni only tracks order state. Owner acknowledged this may carry tax/legal implications depending on actual revenue scale and should be revisited with an accountant before scaling, not treated as a permanent eng-only call. |
+| R2.6 Advisor | **AMBER_OK** | 2026-07-28 | Live LLM/eval vs stub acceptable · **decided 2026-07-28** — ship with `advisor-stub` fallback; enable a real Gemini key once there's paying-customer revenue to justify the LLM spend. |
 
 Allowed values: `REQUIRED` · `AMBER_OK` · `undecided`
+
+All three rows resolved 2026-07-28 — no more `undecided` cells. This does **not** unblock CPC by itself: Render Starter, Meta App Review, Supabase Pro/PITR, and live carrier/COD accounts (all owner-run, see `2026-07-27-completion-priority-post-audit.md` §1.4) are unrelated blockers that remain open.
 
 ## Verdict
 

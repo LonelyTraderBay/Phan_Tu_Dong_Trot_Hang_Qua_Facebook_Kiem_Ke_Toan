@@ -7,6 +7,7 @@
 | `cross-tenant.org.spec.ts` | Nest `OrgGuard` — API cannot use another tenant's `X-Org-Id` before writes |
 | `cross-tenant.channels.spec.ts` | Channels + inbox routes respect the same org membership gate |
 | `cross-tenant.rls.spec.ts` | **(A4)** Migration proof (always-on) + Docker Supabase Data API: user A cannot UPDATE org B `memberships` / `entitlements` / `feature_flags`, and cannot SELECT org B memberships |
+| `cross-tenant.control-writes.spec.ts` | Migration proof (always-on) + Docker Supabase Data API: an authenticated member cannot INSERT `api_keys` / `outbound_webhooks` / `content_calendar_items` (writes go through `service_role` only), but can still SELECT its own org rows |
 
 ## Prerequisites for RLS E2E
 

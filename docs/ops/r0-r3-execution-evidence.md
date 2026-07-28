@@ -1020,3 +1020,24 @@ Ran a fresh audit comparing current code against the official SoT docs (`cpc-che
 **Test counts after this follow-up:** API **212/212** (was 198/198) — +14 across 3 modified spec files + 1 new spec file (6 tests). Lint and `tsc --noEmit` both clean.
 
 No CPC/E100 change — Public API webhooks were already counted as "Khớp/DONE" in the Jul-27 audit; this closes a real functional gap inside that same row rather than adding new scope. Everything else in the Jul-27 audit's "BLOCKED ngoài eng" table (Render payment, Meta App Review, Supabase Pro, live carrier accounts, SOC2/pen-test, legal SLA/subprocessors) remains genuinely owner/vendor-blocked — confirmed unchanged, not re-derived from memory.
+
+### Follow-up (2026-07-29) — dev-only reload loop: Turbopack persistent cache corruption (bug #15)
+
+Owner hit a real blocker using the app in a real browser: **every page full-reloaded every few seconds**, making form input impossible (first visible on `/login`). This same symptom had been flagged by a subagent during Wave 6c verification and was wrongly dismissed at the time as a sandbox/branch-switching artifact — the owner's report proved it was a persistent, real defect.
+
+**Root cause (verified, not guessed):** Turbopack's on-disk persistent cache (`apps/web/.next`, `VersionedContentMap`) was corrupted — most plausibly by ~12 git branch switches performed while the dev server was running and watching files (the Wave 1–6 PR sequence). The server still served pages fine (`GET /login 200`), but **every HMR version-state computation panicked** (`FATAL: ... Failed to write app endpoint /page — Caused by: Next.js package not found`, from `Project::hmr_version_state`), so each connected browser's HMR client saw a dead sync and full-reloaded, reconnected, re-panicked — an infinite loop. Because the poisoned cache lives on disk, **restarting the server did not fix it** (confirmed: the loop survived a full `dev:local:stop`/`dev:local` cycle).
+
+**Measured evidence:**
+
+| Metric | Corrupted cache | After `rm -rf apps/web/.next` |
+|---|---|---|
+| `FATAL` panics in `web.err.log` | 1,658 in ~40 min | **0** (75s observation window) |
+| Page lifetime probe (browser `performance.now()` + window marker) | reset to ~50ms repeatedly (reload loop) | **104s continuous**, marker intact |
+| `GET /login` request rate | dozens/min (self-reloading) | 1 |
+
+**Fix + self-heal shipped:**
+- `scripts/dev-local.ps1`: new `-FreshWeb` switch — deletes `apps/web/.next` before starting web, with a comment documenting the exact symptom/signature.
+- `package.json`: new `dev:local:fresh` script wrapping it.
+- `docs/ops/local-ports.md`: new "Sự cố thường gặp" section (symptom → root cause → remedy) so the owner can self-heal without eng help.
+
+Dev-only issue — production builds don't run HMR or the dev persistent cache, so no CPC/E100 impact. Lesson recorded: a "reload loop" flagged by one verification agent was dismissed as environmental without direct disproof; the correct move was to check `web.err.log` then, not after the owner hit it.

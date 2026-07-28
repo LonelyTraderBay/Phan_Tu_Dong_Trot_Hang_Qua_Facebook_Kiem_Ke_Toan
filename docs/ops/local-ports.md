@@ -49,6 +49,23 @@ pnpm run dev:local        # fail nếu cổng app bị chiếm
 4. `pnpm run ports:sync`
 5. `npx supabase stop` → `npx supabase start` → `pnpm run dev:local`
 
+## Sự cố thường gặp
+
+### Trang web tự tải lại liên tục, không nhập liệu được
+
+**Triệu chứng:** mọi trang render bình thường nhưng cứ vài giây lại tự reload; `.local-secrets\logs\web.err.log` đầy lỗi lặp `FATAL: An unexpected Turbopack error ... Next.js package not found` (panic trong `hmr_version_state`).
+
+**Nguyên nhân:** cache Turbopack trên đĩa (`apps/web/.next`) bị hỏng — thường sau khi đổi git branch nhiều lần trong khi dev server đang chạy. Restart server thường **không** chữa được vì cache hỏng nằm trên đĩa.
+
+**Cách sửa:**
+
+```powershell
+pnpm run dev:local:stop
+pnpm run dev:local:fresh   # = dev:local nhưng xoá apps/web/.next trước khi start web
+```
+
+(Đã gặp và xác minh 2026-07-29: 1.658 panic/40 phút → 0 sau khi xoá cache; trang sống ổn định >100 giây thay vì reload mỗi vài giây.)
+
 ## CI
 
 Isolation workflow dùng `SUPABASE_URL=http://127.0.0.1:54721` (khớp `config.toml` khi `supabase start` trên runner).

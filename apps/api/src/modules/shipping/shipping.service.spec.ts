@@ -90,6 +90,34 @@ function shipmentRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
+// createShipment now enqueues an `order.shipped` outbox event through
+// `this.supabase.from('outbox_events')` when it ships a confirmed order (the
+// same event OrdersService.shipOrder emits). This returns the insert handler
+// that table expects and records each inserted row into `sink`.
+function outboxInsertHandler(sink: Array<Record<string, unknown>>) {
+  return {
+    insert(values: Record<string, unknown>) {
+      sink.push(values);
+      return {
+        select() {
+          return {
+            single: async () => ({
+              data: {
+                id: `outbox-${sink.length}`,
+                created_at: CREATED_AT,
+                published_at: null,
+                attempts: 0,
+                ...values,
+              },
+              error: null,
+            }),
+          };
+        },
+      };
+    },
+  };
+}
+
 describe('shipping providers', () => {
   it('manual provider creates a deterministic tracking code with configured fee', async () => {
     const provider = new ManualShippingProvider();
@@ -180,6 +208,7 @@ describe('ShippingService', () => {
   it('creates a manual shipment, stores fee on the order, and ships confirmed order', async () => {
     const inserts: unknown[] = [];
     const updates: unknown[] = [];
+    const outboxInserts: Array<Record<string, unknown>> = [];
     const rpc = vi.fn(async () => ({
       data: {
         order: {
@@ -194,6 +223,10 @@ describe('ShippingService', () => {
     const client = {
       rpc,
       from(table: string) {
+        if (table === 'outbox_events') {
+          return outboxInsertHandler(outboxInserts);
+        }
+
         if (table === 'orders') {
           return {
             select() {
@@ -306,15 +339,34 @@ describe('ShippingService', () => {
     });
     expect(result.shipment.trackingCode).toBe('MANUAL-22222222');
     expect(result.order).toMatchObject({ status: 'shipped' });
+    // The carrier/shipment fulfilment path must emit the same `order.shipped`
+    // outbound event OrdersService.shipOrder does, so webhook subscribers get
+    // it regardless of which path transitioned the order to `shipped`.
+    expect(outboxInserts).toEqual([
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'order.shipped',
+        payload_json: expect.objectContaining({
+          event: 'order.shipped',
+          orderId: ORDER_ID,
+          status: 'shipped',
+        }),
+      }),
+    ]);
   });
 
   it('never lets a mock shipment touch the order fee, status, or COD', async () => {
     const inserts: Array<Record<string, unknown>> = [];
     const updates: unknown[] = [];
+    const outboxInserts: Array<Record<string, unknown>> = [];
     const rpc = vi.fn(async () => ({ data: null, error: null }));
     const client = {
       rpc,
       from(table: string) {
+        if (table === 'outbox_events') {
+          return outboxInsertHandler(outboxInserts);
+        }
+
         if (table === 'orders') {
           return {
             select() {
@@ -421,6 +473,110 @@ describe('ShippingService', () => {
     expect(rpc).not.toHaveBeenCalled();
     expect(cod.ensureExpectationForOrder).not.toHaveBeenCalled();
     expect(result).toMatchObject({ mock: true });
+    expect(result).not.toHaveProperty('order');
+    // The order never transitioned to `shipped`, so no `order.shipped` event
+    // may be emitted — the mock is a traceability record only.
+    expect(outboxInserts).toEqual([]);
+  });
+
+  it('does not emit order.shipped when the order is not confirmed', async () => {
+    // An already-`shipped` order may still receive further shipment records, but
+    // `shipConfirmedOrder` is not called and no status transition happens — so
+    // it must NOT re-emit `order.shipped`.
+    const inserts: Array<Record<string, unknown>> = [];
+    const updates: unknown[] = [];
+    const outboxInserts: Array<Record<string, unknown>> = [];
+    const rpc = vi.fn(async () => ({ data: null, error: null }));
+    const client = {
+      rpc,
+      from(table: string) {
+        if (table === 'outbox_events') {
+          return outboxInsertHandler(outboxInserts);
+        }
+
+        if (table === 'orders') {
+          return {
+            select() {
+              return {
+                eq() {
+                  return {
+                    eq() {
+                      return {
+                        maybeSingle: async () => ({
+                          data: orderRow('shipped'),
+                          error: null,
+                        }),
+                      };
+                    },
+                  };
+                },
+              };
+            },
+            update(values: unknown) {
+              updates.push(values);
+              return {
+                eq() {
+                  return { eq: async () => ({ error: null }) };
+                },
+              };
+            },
+          };
+        }
+
+        if (table === 'carrier_connections') {
+          return {
+            select() {
+              return {
+                eq() {
+                  return {
+                    eq() {
+                      return {
+                        maybeSingle: async () => ({ data: null, error: null }),
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        }
+
+        if (table === 'shipments') {
+          return {
+            insert(values: Record<string, unknown>) {
+              inserts.push(values);
+              return {
+                select() {
+                  return {
+                    single: async () => ({
+                      data: shipmentRow(),
+                      error: null,
+                    }),
+                  };
+                },
+              };
+            },
+          };
+        }
+
+        throw new Error(`unexpected table ${table}`);
+      },
+    } as unknown as SupabaseLike;
+    const cod = { ensureExpectationForOrder: vi.fn(async () => null) };
+    const service = new ShippingService(client, env, undefined, undefined, cod);
+
+    const result = await service.createShipment({
+      orgId: ORG_ID,
+      actorUserId: USER_ID,
+      body: { orderId: ORDER_ID, provider: 'manual' },
+    });
+
+    // The shipment row is still written and the fee recorded...
+    expect(inserts).toHaveLength(1);
+    expect(updates).toHaveLength(1);
+    // ...but ship_order never runs and no `order.shipped` event is emitted.
+    expect(rpc).not.toHaveBeenCalled();
+    expect(outboxInserts).toEqual([]);
     expect(result).not.toHaveProperty('order');
   });
 

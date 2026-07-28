@@ -14,6 +14,7 @@ import {
   encryptToken,
 } from '../../common/crypto/token-crypto';
 import { loadEnv, type Env } from '../../config/env';
+import { enqueueOutbox } from '../../jobs/outbox.publisher';
 import { AuditService, type WriteAuditInput } from '../audit/audit.service';
 import { CodService } from '../cod/cod.service';
 import type {
@@ -315,6 +316,18 @@ export class ShippingService {
         meta: {
           via: 'shipping.createShipment',
           shipmentId: shipment.id,
+        },
+      });
+      // Fire the same `order.shipped` outbound event the orders ship path emits
+      // (OrdersService.shipOrder), so subscribers get identical outbox rows no
+      // matter which fulfilment path transitioned the order to `shipped`.
+      await enqueueOutbox(this.supabase, {
+        orgId: input.orgId,
+        eventName: 'order.shipped',
+        payload: {
+          event: 'order.shipped',
+          orderId: order.id,
+          status: 'shipped',
         },
       });
     }

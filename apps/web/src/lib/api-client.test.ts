@@ -18,7 +18,12 @@ vi.mock('./org-context', async (importOriginal) => {
   };
 });
 
-import { apiFetch, sendInboxMessage, updateOrgSettings } from './api-client';
+import {
+  apiFetch,
+  revokeChannel,
+  sendInboxMessage,
+  updateOrgSettings,
+} from './api-client';
 
 describe('apiFetch error handling', () => {
   const originalFetch = global.fetch;
@@ -245,6 +250,70 @@ describe('updateOrgSettings', () => {
     ).rejects.toMatchObject({
       code: 'permission_denied',
       message: 'Missing permission: org.settings.write',
+    });
+  });
+});
+
+describe('revokeChannel', () => {
+  const originalFetch = global.fetch;
+  const CHANNEL_ID = '44444444-4444-4444-4444-444444444444';
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it('POSTs to /v1/channels/:id/revoke with no body and returns the revoked connection', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          connection: {
+            id: CHANNEL_ID,
+            provider: 'meta_page',
+            externalPageId: '1234567890',
+            status: 'revoked',
+            createdAt: '2026-07-01T00:00:00.000Z',
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await revokeChannel(CHANNEL_ID);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `http://127.0.0.1:4701/v1/channels/${CHANNEL_ID}/revoke`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(result).toEqual({
+      connection: {
+        id: CHANNEL_ID,
+        provider: 'meta_page',
+        externalPageId: '1234567890',
+        status: 'revoked',
+        createdAt: '2026-07-01T00:00:00.000Z',
+      },
+    });
+  });
+
+  it('surfaces the API error message when the revoke fails', async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          type: 'about:blank',
+          title: 'Not Found',
+          status: 404,
+          detail: 'Channel connection was not found',
+          code: 'channel_connection_not_found',
+        }),
+        { status: 404 },
+      ),
+    ) as unknown as typeof fetch;
+
+    await expect(revokeChannel(CHANNEL_ID)).rejects.toMatchObject({
+      code: 'channel_connection_not_found',
+      message: 'Channel connection was not found',
     });
   });
 });

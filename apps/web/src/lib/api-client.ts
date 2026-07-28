@@ -1421,6 +1421,15 @@ export async function connectZalo(input: {
   );
 }
 
+export async function revokeChannel(
+  channelId: string,
+): Promise<{ connection: ChannelConnection }> {
+  return apiFetch<{ connection: ChannelConnection }>(
+    `/v1/channels/${encodeURIComponent(channelId)}/revoke`,
+    { method: 'POST' },
+  );
+}
+
 function dateRangeQuery(input: { from?: string; to?: string; format?: string }) {
   const params = new URLSearchParams();
   if (input.from) {

@@ -14,6 +14,18 @@ const env = {
   ZALO_WEBHOOK_SECRET: "zalo-secret",
 } satisfies ZaloWebhookEnv;
 
+// Deployments where Zalo is not configured: the secret is either absent from
+// the env or present but empty. Both must fail closed (see verifySecret).
+const envWithoutSecret = {
+  SUPABASE_SERVICE_ROLE_KEY: "service-role",
+  SUPABASE_URL: "https://supabase.example.com",
+} satisfies ZaloWebhookEnv;
+
+const envWithEmptySecret = {
+  ...envWithoutSecret,
+  ZALO_WEBHOOK_SECRET: "",
+} satisfies ZaloWebhookEnv;
+
 type SupabaseCall = {
   args?: unknown;
   columns?: string;
@@ -163,7 +175,58 @@ describe("ZaloWebhookService", () => {
         ...request(zaloPayload()),
         secretHeader: "bad-secret",
       }),
-    ).rejects.toMatchObject({ status: 401 });
+    ).rejects.toMatchObject({
+      response: { code: "zalo_webhook_secret_invalid" },
+      status: 401,
+    });
+    expect(calls).toEqual([]);
+  });
+
+  it("rejects a missing header when a secret is configured, before database writes", async () => {
+    const { calls, client } = mockSupabase({});
+    const service = new ZaloWebhookService(client, env);
+
+    await expect(
+      service.ingest({
+        ...request(zaloPayload()),
+        secretHeader: undefined,
+      }),
+    ).rejects.toMatchObject({
+      response: { code: "zalo_webhook_secret_invalid" },
+      status: 401,
+    });
+    expect(calls).toEqual([]);
+  });
+
+  it("fails closed when the secret is configured as an empty string, never touching Supabase", async () => {
+    const { calls, client } = mockSupabase({});
+    const service = new ZaloWebhookService(client, envWithEmptySecret);
+
+    await expect(
+      service.ingest({
+        ...request(zaloPayload()),
+        secretHeader: undefined,
+      }),
+    ).rejects.toMatchObject({
+      response: { code: "zalo_webhook_not_configured" },
+      status: 401,
+    });
+    expect(calls).toEqual([]);
+  });
+
+  it("fails closed when ZALO_WEBHOOK_SECRET is absent from the env, even if a header is supplied", async () => {
+    const { calls, client } = mockSupabase({});
+    const service = new ZaloWebhookService(client, envWithoutSecret);
+
+    await expect(
+      service.ingest({
+        ...request(zaloPayload()),
+        secretHeader: "attacker-supplied-anything",
+      }),
+    ).rejects.toMatchObject({
+      response: { code: "zalo_webhook_not_configured" },
+      status: 401,
+    });
     expect(calls).toEqual([]);
   });
 });

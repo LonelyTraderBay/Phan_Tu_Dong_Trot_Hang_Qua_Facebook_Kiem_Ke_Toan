@@ -71,9 +71,19 @@ export class ZaloWebhookService {
   }
 
   private verifySecret(secretHeader: string | undefined) {
+    // TODO(security): This authenticates the caller with a static shared-secret
+    // header (x-zalo-webhook-secret). If/when Zalo OA documents a body-bound
+    // HMAC signing scheme, upgrade this to verify a signature over rawBody like
+    // the Meta webhook does, so requests can't be replayed.
     const expected = this.env.ZALO_WEBHOOK_SECRET?.trim();
     if (!expected) {
-      return;
+      // Fail closed: without a configured secret we cannot authenticate the
+      // caller, so we must not process (and pay for) attacker-controllable work.
+      throw new UnauthorizedException({
+        code: "zalo_webhook_not_configured",
+        message:
+          "Zalo webhook secret is not configured — the webhook endpoint is disabled until ZALO_WEBHOOK_SECRET is set.",
+      });
     }
 
     if (!secretHeader || !safeEqual(secretHeader.trim(), expected)) {

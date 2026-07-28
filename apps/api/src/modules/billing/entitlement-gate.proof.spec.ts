@@ -262,6 +262,7 @@ describe("R1 eng prep — entitlement gate proof", () => {
   });
 
   it("keeps draft (auto_confirm blocked) when org wants auto_confirm but plan disallows", async () => {
+    const outboxInserts: Record<string, unknown>[] = [];
     const client = {
       rpc: vi.fn(async (fn: string) => {
         expect(fn).toBe("create_draft_order");
@@ -283,6 +284,30 @@ describe("R1 eng prep — entitlement gate proof", () => {
         };
       }),
       from(table: string) {
+        if (table === "outbox_events") {
+          return {
+            insert(values: Record<string, unknown>) {
+              outboxInserts.push(values);
+              return {
+                select() {
+                  return {
+                    single: async () => ({
+                      data: {
+                        id: "outbox-1",
+                        created_at: "2026-07-25T00:00:00.000Z",
+                        published_at: null,
+                        attempts: 0,
+                        ...values,
+                      },
+                      error: null,
+                    }),
+                  };
+                },
+              };
+            },
+          };
+        }
+
         const chain = {
           select() {
             return chain;
@@ -364,5 +389,16 @@ describe("R1 eng prep — entitlement gate proof", () => {
       expect.anything(),
     );
     expect(audit.writeAudit).not.toHaveBeenCalled();
+    expect(outboxInserts).toEqual([
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: "order.created",
+        payload_json: expect.objectContaining({
+          event: "order.created",
+          orderId: ORDER_ID,
+          status: "draft",
+        }),
+      }),
+    ]);
   });
 });

@@ -52,6 +52,40 @@ function auditMock() {
   } satisfies AuditWriter;
 }
 
+// Lifecycle methods that don't touch `orders`/`product_variants`/etc directly
+// now also enqueue an outbox event through `this.supabase.from('outbox_events')`.
+// This returns a `from()` implementation that only accepts that table (still
+// throwing for anything else, preserving the "no other table access" intent
+// of the pre-existing tests) and records each inserted row into `sink`.
+function outboxOnlyFrom(sink: Record<string, unknown>[]) {
+  return (table: string) => {
+    if (table !== 'outbox_events') {
+      throw new Error(`from() should not be called for ${table}`);
+    }
+    return {
+      insert(values: Record<string, unknown>) {
+        sink.push(values);
+        return {
+          select() {
+            return {
+              single: async () => ({
+                data: {
+                  id: `outbox-${sink.length}`,
+                  created_at: '2026-07-24T10:00:00.000Z',
+                  published_at: null,
+                  attempts: 0,
+                  ...values,
+                },
+                error: null,
+              }),
+            };
+          },
+        };
+      },
+    };
+  };
+}
+
 function entitlementsMock(input: { autoConfirmAllowed: boolean }) {
   return {
     getEntitlements: vi.fn(async () => ({
@@ -67,6 +101,7 @@ function entitlementsMock(input: { autoConfirmAllowed: boolean }) {
 function autoConfirmClient(input: { stockQty: number }) {
   let stockQty = input.stockQty;
   const orders: Array<Record<string, unknown>> = [];
+  const outboxInserts: Record<string, unknown>[] = [];
   const idempotentResponses = new Map<
     string,
     ReturnType<typeof orderPayload>
@@ -102,6 +137,10 @@ function autoConfirmClient(input: { stockQty: number }) {
       };
     }),
     from(table: string) {
+      if (table === 'outbox_events') {
+        return outboxOnlyFrom(outboxInserts)(table);
+      }
+
       const chain = {
         select() {
           return chain;
@@ -147,6 +186,7 @@ function autoConfirmClient(input: { stockQty: number }) {
   return {
     client,
     orders,
+    outboxInserts,
     get stockQty() {
       return stockQty;
     },
@@ -156,6 +196,7 @@ function autoConfirmClient(input: { stockQty: number }) {
 describe('OrdersService lifecycle stock handling', () => {
   it('does not oversell when two orders concurrently confirm against one stock unit', async () => {
     let stockQty = 1;
+    const outboxInserts: Record<string, unknown>[] = [];
     const client = {
       rpc: vi.fn(async (fn: string, args: Record<string, string>) => {
         expect(fn).toBe('confirm_order');
@@ -172,9 +213,7 @@ describe('OrdersService lifecycle stock handling', () => {
           error: { code: 'P0001', hint: 'insufficient_stock' },
         };
       }),
-      from() {
-        throw new Error('from() should not be called');
-      },
+      from: outboxOnlyFrom(outboxInserts),
     } as unknown as SupabaseLike;
     const audit = auditMock();
     const service = new OrdersService(client, audit);
@@ -201,6 +240,17 @@ describe('OrdersService lifecycle stock handling', () => {
     expect(stockQty).toBe(0);
     expect(client.rpc).toHaveBeenCalledTimes(2);
     expect(audit.writeAudit).toHaveBeenCalledTimes(1);
+    expect(outboxInserts).toEqual([
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'order.confirmed',
+        payload_json: expect.objectContaining({
+          event: 'order.confirmed',
+          orderId: ORDER_ID,
+          status: 'confirmed',
+        }),
+      }),
+    ]);
   });
 
   it('maps insufficient stock from the confirm RPC to a 400 problem', async () => {
@@ -253,6 +303,7 @@ describe('OrdersService lifecycle stock handling', () => {
 
   it('uses the cancel RPC that restores confirmed unshipped stock', async () => {
     let stockQty = 0;
+    const outboxInserts: Record<string, unknown>[] = [];
     const client = {
       rpc: vi.fn(async (fn: string) => {
         expect(fn).toBe('cancel_order');
@@ -262,9 +313,7 @@ describe('OrdersService lifecycle stock handling', () => {
           error: null,
         };
       }),
-      from() {
-        throw new Error('from() should not be called');
-      },
+      from: outboxOnlyFrom(outboxInserts),
     } as unknown as SupabaseLike;
     const audit = auditMock();
     const service = new OrdersService(client, audit);
@@ -287,10 +336,68 @@ describe('OrdersService lifecycle stock handling', () => {
         entityId: ORDER_ID,
       }),
     );
+    expect(outboxInserts).toEqual([
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'order.cancelled',
+        payload_json: expect.objectContaining({
+          event: 'order.cancelled',
+          orderId: ORDER_ID,
+          status: 'cancelled',
+        }),
+      }),
+    ]);
+  });
+
+  it('uses the ship RPC and enqueues an order.shipped outbox event', async () => {
+    const outboxInserts: Record<string, unknown>[] = [];
+    const client = {
+      rpc: vi.fn(async (fn: string, args: Record<string, unknown>) => {
+        expect(fn).toBe('ship_order');
+        expect(args).toMatchObject({
+          p_org_id: ORG_ID,
+          p_order_id: ORDER_ID,
+          p_shipped_at: expect.any(String),
+        });
+        return {
+          data: orderPayload(ORDER_ID, 'shipped'),
+          error: null,
+        };
+      }),
+      from: outboxOnlyFrom(outboxInserts),
+    } as unknown as SupabaseLike;
+    const audit = auditMock();
+    const service = new OrdersService(client, audit);
+
+    const result = await service.shipOrder({
+      orgId: ORG_ID,
+      orderId: ORDER_ID,
+      actorUserId: USER_ID,
+    });
+
+    expect(result.order.status).toBe('shipped');
+    expect(audit.writeAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'order.shipped',
+        entityId: ORDER_ID,
+      }),
+    );
+    expect(outboxInserts).toEqual([
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'order.shipped',
+        payload_json: expect.objectContaining({
+          event: 'order.shipped',
+          orderId: ORDER_ID,
+          status: 'shipped',
+        }),
+      }),
+    ]);
   });
 
   it('uses the return RPC to restock shipped orders and clear COD state', async () => {
     let stockQty = 0;
+    const outboxInserts: Record<string, unknown>[] = [];
     const client = {
       rpc: vi.fn(async (fn: string, args: Record<string, unknown>) => {
         expect(fn).toBe('return_order');
@@ -308,9 +415,7 @@ describe('OrdersService lifecycle stock handling', () => {
           error: null,
         };
       }),
-      from() {
-        throw new Error('from() should not be called');
-      },
+      from: outboxOnlyFrom(outboxInserts),
     } as unknown as SupabaseLike;
     const audit = auditMock();
     const cod = {
@@ -348,9 +453,21 @@ describe('OrdersService lifecycle stock handling', () => {
         },
       }),
     );
+    expect(outboxInserts).toEqual([
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'order.returned',
+        payload_json: expect.objectContaining({
+          event: 'order.returned',
+          orderId: ORDER_ID,
+          status: 'returned',
+        }),
+      }),
+    ]);
   });
 
   it('uses the done RPC to mark a shipped order complete', async () => {
+    const outboxInserts: Record<string, unknown>[] = [];
     const client = {
       rpc: vi.fn(async (fn: string, args: Record<string, unknown>) => {
         expect(fn).toBe('done_order');
@@ -364,9 +481,7 @@ describe('OrdersService lifecycle stock handling', () => {
           error: null,
         };
       }),
-      from() {
-        throw new Error('from() should not be called');
-      },
+      from: outboxOnlyFrom(outboxInserts),
     } as unknown as SupabaseLike;
     const audit = auditMock();
     const service = new OrdersService(client, audit);
@@ -385,6 +500,17 @@ describe('OrdersService lifecycle stock handling', () => {
         meta: {},
       }),
     );
+    expect(outboxInserts).toEqual([
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'order.done',
+        payload_json: expect.objectContaining({
+          event: 'order.done',
+          orderId: ORDER_ID,
+          status: 'done',
+        }),
+      }),
+    ]);
   });
 
   it('rejects marking an order done from a non-shipped status', async () => {
@@ -453,6 +579,7 @@ describe('OrdersService auto-confirm create', () => {
       }),
     );
     expect(audit.writeAudit).not.toHaveBeenCalled();
+    expect(db.outboxInserts).toHaveLength(0);
   });
 
   it('confirms once when auto-confirm create is replayed with the same idempotency key', async () => {
@@ -488,15 +615,44 @@ describe('OrdersService auto-confirm create', () => {
         meta: { autoConfirm: true },
       }),
     );
+    // Both order.created and order.confirmed fire exactly once for the
+    // auto-confirm create — the replay (same idempotency key) must not
+    // double-enqueue either event.
+    expect(db.outboxInserts).toHaveLength(2);
+    expect(db.outboxInserts).toEqual([
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'order.created',
+        payload_json: expect.objectContaining({
+          event: 'order.created',
+          orderId: ORDER_ID,
+          status: 'draft',
+        }),
+      }),
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'order.confirmed',
+        payload_json: expect.objectContaining({
+          event: 'order.confirmed',
+          orderId: ORDER_ID,
+          status: 'confirmed',
+        }),
+      }),
+    ]);
   });
 
   it('keeps a draft when org setting enables auto-confirm but entitlement is disabled', async () => {
+    const outboxInserts: Record<string, unknown>[] = [];
     const client = {
       rpc: vi.fn(async (fn: string) => {
         expect(fn).toBe('create_draft_order');
         return { data: orderPayload(ORDER_ID, 'draft'), error: null };
       }),
       from(table: string) {
+        if (table === 'outbox_events') {
+          return outboxOnlyFrom(outboxInserts)(table);
+        }
+
         const chain = {
           select() {
             return chain;
@@ -577,6 +733,17 @@ describe('OrdersService auto-confirm create', () => {
       }),
     );
     expect(audit.writeAudit).not.toHaveBeenCalled();
+    expect(outboxInserts).toEqual([
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'order.created',
+        payload_json: expect.objectContaining({
+          event: 'order.created',
+          orderId: ORDER_ID,
+          status: 'draft',
+        }),
+      }),
+    ]);
   });
 });
 
@@ -587,6 +754,7 @@ describe('OrdersService idempotency', () => {
       releaseRpc = resolve;
     });
     const idempotencyRows = new Map<string, Record<string, unknown>>();
+    const outboxInserts: Record<string, unknown>[] = [];
     const client = {
       rpc: vi.fn(async () => {
         await rpcGate;
@@ -596,6 +764,9 @@ describe('OrdersService idempotency', () => {
         };
       }),
       from(table: string) {
+        if (table === 'outbox_events') {
+          return outboxOnlyFrom(outboxInserts)(table);
+        }
         if (table !== 'idempotency_keys') {
           throw new Error(`unexpected table ${table}`);
         }
@@ -706,6 +877,17 @@ describe('OrdersService idempotency', () => {
     }
     expect(client.rpc).toHaveBeenCalledTimes(1);
     expect(audit.writeAudit).toHaveBeenCalledTimes(1);
+    expect(outboxInserts).toEqual([
+      expect.objectContaining({
+        org_id: ORG_ID,
+        event_name: 'order.confirmed',
+        payload_json: expect.objectContaining({
+          event: 'order.confirmed',
+          orderId: ORDER_ID,
+          status: 'confirmed',
+        }),
+      }),
+    ]);
   });
 });
 

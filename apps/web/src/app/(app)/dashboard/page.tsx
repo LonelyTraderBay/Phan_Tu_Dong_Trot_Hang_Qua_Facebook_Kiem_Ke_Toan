@@ -13,6 +13,20 @@ import {
   type Order,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import {
+  Button,
+  Card,
+  colorBackgroundCard,
+  colorBackgroundSubtle,
+  colorBorder,
+  colorDanger,
+  colorPrimary,
+  colorTextBody,
+  EmptyState,
+  ErrorText,
+  MutedText,
+  radiusMd,
+} from '../../../components/ui';
 
 type DashboardState = {
   orders: Order[];
@@ -89,26 +103,21 @@ export default function DashboardPage() {
             chọn.
           </p>
           {lastUpdatedAt ? (
-            <p style={mutedStyle}>
+            <MutedText>
               Cập nhật lần cuối: {formatDateTime(lastUpdatedAt.toISOString())}
-            </p>
+            </MutedText>
           ) : null}
         </div>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() => void loadDashboard()}
           disabled={loading}
-          style={secondaryButtonStyle}
         >
           {loading ? 'Đang tải...' : 'Tải lại'}
-        </button>
+        </Button>
       </header>
 
-      {error ? (
-        <p role="alert" style={alertStyle}>
-          {error}
-        </p>
-      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
 
       <section style={gridStyle}>
         <MetricCard
@@ -128,12 +137,11 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Việc cần làm</h2>
+      <Card title="Việc cần làm" style={{ marginTop: 28 }}>
         {loading ? (
-          <p style={mutedStyle}>Đang tải dữ liệu...</p>
+          <MutedText>Đang tải dữ liệu...</MutedText>
         ) : needsAttention === 0 ? (
-          <p style={emptyStyle}>Chưa có mục cần chú ý.</p>
+          <EmptyState>Chưa có mục cần chú ý.</EmptyState>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
             {newOrders.slice(0, 5).map((order) => (
@@ -157,14 +165,14 @@ export default function DashboardPage() {
               <Link
                 key={channel.id}
                 href="/settings/channels"
-                style={{ ...itemLinkStyle, color: '#b91c1c' }}
+                style={{ ...itemLinkStyle, color: colorDanger }}
               >
                 Kênh {channel.externalPageId} đang ở trạng thái {channel.status}
               </Link>
             ))}
           </div>
         )}
-      </section>
+      </Card>
     </main>
   );
 }
@@ -221,11 +229,6 @@ const descriptionStyle: CSSProperties = {
   maxWidth: 760,
 };
 
-const mutedStyle: CSSProperties = {
-  color: '#64748b',
-  fontSize: 15,
-};
-
 const gridStyle: CSSProperties = {
   display: 'grid',
   gap: 16,
@@ -234,10 +237,10 @@ const gridStyle: CSSProperties = {
 };
 
 const metricCardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
-  color: '#0f172a',
+  background: colorBackgroundCard,
+  border: `1px solid ${colorBorder}`,
+  borderRadius: radiusMd,
+  color: colorTextBody,
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
@@ -256,50 +259,12 @@ const metricLabelStyle: CSSProperties = {
   fontWeight: 700,
 };
 
-const panelStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
-  marginTop: 28,
-  padding: 20,
-};
-
-const sectionTitleStyle: CSSProperties = {
-  fontSize: 22,
-  margin: '0 0 16px',
-};
-
 const itemLinkStyle: CSSProperties = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
+  background: colorBackgroundSubtle,
+  border: `1px solid ${colorBorder}`,
   borderRadius: 10,
-  color: '#2563eb',
+  color: colorPrimary,
   fontWeight: 700,
   padding: 12,
   textDecoration: 'none',
-};
-
-const emptyStyle: CSSProperties = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: 12,
-  color: '#64748b',
-  padding: 16,
-};
-
-const alertStyle: CSSProperties = {
-  color: '#b91c1c',
-  fontSize: 16,
-  marginTop: 20,
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '9px 12px',
 };

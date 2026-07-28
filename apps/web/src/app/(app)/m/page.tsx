@@ -11,6 +11,15 @@ import {
   type Order,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import {
+  Button,
+  Card,
+  colorPrimaryText,
+  colorTextMuted,
+  ErrorText,
+  MutedText,
+  SuccessText,
+} from '../../../components/ui';
 
 export default function StaffMobilePage() {
   const [conversations, setConversations] = useState<InboxConversation[]>([]);
@@ -67,27 +76,27 @@ export default function StaffMobilePage() {
       <header style={headerStyle}>
         <div>
           <h1 style={{ margin: 0, fontSize: 28 }}>Mobile staff</h1>
-          <p style={mutedStyle}>Màn hình mỏng cho CSKH/kho: inbox mới và nút ship đơn confirmed.</p>
+          <MutedText>Màn hình mỏng cho CSKH/kho: inbox mới và nút ship đơn confirmed.</MutedText>
         </div>
-        <button type="button" onClick={() => void load()} disabled={loading} style={buttonStyle}>
+        <Button variant="secondary" onClick={() => void load()} disabled={loading}>
           {loading ? 'Đang tải...' : 'Tải lại'}
-        </button>
+        </Button>
       </header>
-      {error ? <p style={errorStyle}>{error}</p> : null}
-      {message ? <p style={okStyle}>{message}</p> : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
+      {message ? <SuccessText style={{ color: '#047857' }}>{message}</SuccessText> : null}
 
       <section style={sectionStyle}>
         <h2 style={sectionTitleStyle}>Inbox</h2>
         {conversations.length === 0 ? (
-          <p style={mutedStyle}>Không có hội thoại gần đây.</p>
+          <MutedText>Không có hội thoại gần đây.</MutedText>
         ) : (
           <div style={cardListStyle}>
             {conversations.map((conversation) => (
-              <article key={conversation.id} style={cardStyle}>
+              <Card key={conversation.id} style={cardStyle}>
                 <strong>{conversation.contact?.displayName ?? 'Khách chưa tên'}</strong>
                 <span style={mutedStyle}>{conversation.channel} · {conversation.status}</span>
                 <span style={mutedStyle}>{conversation.lastMessageAt ? new Date(conversation.lastMessageAt).toLocaleString('vi-VN') : 'Chưa có tin'}</span>
-              </article>
+              </Card>
             ))}
           </div>
         )}
@@ -96,17 +105,22 @@ export default function StaffMobilePage() {
       <section style={sectionStyle}>
         <h2 style={sectionTitleStyle}>Đơn chờ ship</h2>
         {orders.length === 0 ? (
-          <p style={mutedStyle}>Không có đơn confirmed.</p>
+          <MutedText>Không có đơn confirmed.</MutedText>
         ) : (
           <div style={cardListStyle}>
             {orders.map((order) => (
-              <article key={order.id} style={cardStyle}>
+              <Card key={order.id} style={cardStyle}>
                 <strong>{order.customerName ?? order.id.slice(0, 8)}</strong>
                 <span style={mutedStyle}>{formatVnd(order.totalVnd)} · {order.phoneE164 ?? 'no phone'}</span>
-                <button type="button" disabled={busyOrderId === order.id} onClick={() => void handleShip(order)} style={shipButtonStyle}>
+                <Button
+                  variant="secondary"
+                  disabled={busyOrderId === order.id}
+                  onClick={() => void handleShip(order)}
+                  style={shipButtonStyle}
+                >
                   {busyOrderId === order.id ? 'Đang ship...' : 'Tạo vận đơn'}
-                </button>
-              </article>
+                </Button>
+              </Card>
             ))}
           </div>
         )}
@@ -128,9 +142,6 @@ const headerStyle: CSSProperties = { alignItems: 'center', display: 'flex', gap:
 const sectionStyle: CSSProperties = { marginTop: 24 };
 const sectionTitleStyle: CSSProperties = { fontSize: 20, margin: '0 0 12px' };
 const cardListStyle: CSSProperties = { display: 'grid', gap: 12 };
-const cardStyle: CSSProperties = { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, display: 'grid', gap: 6, padding: 14 };
-const buttonStyle: CSSProperties = { background: '#fff', border: '1px solid #cbd5e1', borderRadius: 8, color: '#0f172a', fontWeight: 700, padding: '9px 12px' };
-const shipButtonStyle: CSSProperties = { ...buttonStyle, background: '#0f766e', color: '#fff', justifySelf: 'start' };
-const mutedStyle: CSSProperties = { color: '#64748b' };
-const errorStyle: CSSProperties = { color: '#b91c1c' };
-const okStyle: CSSProperties = { color: '#047857' };
+const cardStyle: CSSProperties = { display: 'grid', gap: 6, padding: 14 };
+const shipButtonStyle: CSSProperties = { background: '#0f766e', color: colorPrimaryText, justifySelf: 'start' };
+const mutedStyle: CSSProperties = { color: colorTextMuted };

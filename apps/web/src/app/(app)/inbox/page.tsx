@@ -20,6 +20,22 @@ import {
   type InboxMessage,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import {
+  Button,
+  Card,
+  colorBackgroundCard,
+  colorBackgroundSubtle,
+  colorBorder,
+  colorPrimary,
+  colorTextBody,
+  colorTextMuted,
+  EmptyState,
+  ErrorText,
+  MutedText,
+  radiusMd,
+  SuccessText,
+  Textarea,
+} from '../../../components/ui';
 
 const POLL_INTERVAL_MS = 4000;
 
@@ -256,41 +272,32 @@ export default function InboxPage() {
           tải lại mỗi 4 giây khi đang mở.
         </p>
         {lastUpdatedAt ? (
-          <p style={{ color: '#64748b', fontSize: 14 }}>
+          <MutedText>
             Đồng bộ lần cuối: {formatDateTime(lastUpdatedAt.toISOString())}
-          </p>
+          </MutedText>
         ) : null}
       </header>
 
-      {error ? (
-        <p role="alert" style={alertStyle}>
-          {error}
-        </p>
-      ) : null}
-      {takeoverMessage ? (
-        <p role="status" style={successStyle}>
-          {takeoverMessage}
-        </p>
-      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
+      {takeoverMessage ? <SuccessText>{takeoverMessage}</SuccessText> : null}
 
       <div style={layoutStyle}>
-        <section style={panelStyle}>
+        <Card>
           <div style={panelHeaderStyle}>
             <h2 style={{ fontSize: 22, margin: 0 }}>Cuộc hội thoại</h2>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => void loadConversations()}
               disabled={conversationsLoading}
-              style={secondaryButtonStyle}
             >
               {conversationsLoading ? 'Đang tải...' : 'Tải lại'}
-            </button>
+            </Button>
           </div>
 
           {conversationsLoading ? (
-            <p style={mutedTextStyle}>Đang tải hội thoại...</p>
+            <MutedText>Đang tải hội thoại...</MutedText>
           ) : conversations.length === 0 ? (
-            <p style={emptyStateStyle}>Chưa có hội thoại nào.</p>
+            <EmptyState style={{ fontSize: 15 }}>Chưa có hội thoại nào.</EmptyState>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {conversations.map((conversation) => {
@@ -303,8 +310,8 @@ export default function InboxPage() {
                     onClick={() => setSelectedConversationId(conversation.id)}
                     style={{
                       ...conversationButtonStyle,
-                      borderColor: active ? '#2563eb' : '#e2e8f0',
-                      background: active ? '#eff6ff' : '#ffffff',
+                      borderColor: active ? colorPrimary : colorBorder,
+                      background: active ? '#eff6ff' : colorBackgroundCard,
                     }}
                   >
                     <span style={conversationTitleStyle}>
@@ -324,9 +331,9 @@ export default function InboxPage() {
               })}
             </div>
           )}
-        </section>
+        </Card>
 
-        <section style={{ ...panelStyle, minHeight: 520 }}>
+        <Card style={{ minHeight: 520 }}>
           {selectedConversation ? (
             <>
               <div style={threadHeaderStyle}>
@@ -334,54 +341,42 @@ export default function InboxPage() {
                   <h2 style={{ fontSize: 22, margin: 0 }}>
                     {getConversationName(selectedConversation)}
                   </h2>
-                  <p style={{ color: '#64748b', margin: '6px 0 0' }}>
+                  <p style={{ color: colorTextMuted, margin: '6px 0 0' }}>
                     {formatChannel(selectedConversation.channel)} · Trạng thái:{' '}
                     {selectedConversation.status} ·{' '}
                     {getContactHandle(selectedConversation)}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
                     onClick={() => void handleTakeover()}
                     disabled={takingOver || selectedConversation.botPaused}
-                    style={{
-                      ...primaryButtonStyle,
-                      cursor:
-                        takingOver || selectedConversation.botPaused
-                          ? 'not-allowed'
-                          : 'pointer',
-                      opacity:
-                        takingOver || selectedConversation.botPaused ? 0.7 : 1,
-                    }}
                   >
                     {takingOver
                       ? 'Đang tiếp quản...'
                       : selectedConversation.botPaused
                         ? 'Đã tiếp quản'
                         : 'Tiếp quản'}
-                  </button>
+                  </Button>
                   {selectedConversation.botPaused ? (
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
                       onClick={() => void handleResume()}
                       disabled={resuming}
-                      style={{
-                        ...secondaryButtonStyle,
-                        cursor: resuming ? 'not-allowed' : 'pointer',
-                        opacity: resuming ? 0.7 : 1,
-                      }}
                     >
                       {resuming ? 'Đang bật bot...' : 'Bật lại bot'}
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               </div>
 
               {messagesLoading ? (
-                <p style={mutedTextStyle}>Đang tải tin nhắn...</p>
+                <MutedText>Đang tải tin nhắn...</MutedText>
               ) : messages.length === 0 ? (
-                <p style={emptyStateStyle}>Chưa có tin nhắn trong hội thoại.</p>
+                <EmptyState style={{ fontSize: 15 }}>
+                  Chưa có tin nhắn trong hội thoại.
+                </EmptyState>
               ) : (
                 <div style={messagesStyle}>
                   {messages.map((message) => {
@@ -398,8 +393,8 @@ export default function InboxPage() {
                         <article
                           style={{
                             ...messageBubbleStyle,
-                            background: outbound ? '#dbeafe' : '#f8fafc',
-                            borderColor: outbound ? '#bfdbfe' : '#e2e8f0',
+                            background: outbound ? '#dbeafe' : colorBackgroundSubtle,
+                            borderColor: outbound ? '#bfdbfe' : colorBorder,
                           }}
                         >
                           <p style={messageMetaStyle}>
@@ -417,7 +412,7 @@ export default function InboxPage() {
               )}
 
               <div style={composeRowStyle}>
-                <textarea
+                <Textarea
                   value={replyText}
                   onChange={(event) => setReplyText(event.target.value)}
                   onKeyDown={(event) => {
@@ -428,21 +423,15 @@ export default function InboxPage() {
                   }}
                   rows={2}
                   placeholder="Nhập tin nhắn trả lời khách..."
-                  style={composeInputStyle}
+                  style={{ flex: 1 }}
                 />
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
                   onClick={() => void handleSendMessage()}
                   disabled={sending || !replyText.trim()}
-                  style={{
-                    ...primaryButtonStyle,
-                    cursor:
-                      sending || !replyText.trim() ? 'not-allowed' : 'pointer',
-                    opacity: sending || !replyText.trim() ? 0.7 : 1,
-                  }}
                 >
                   {sending ? 'Đang gửi...' : 'Gửi'}
-                </button>
+                </Button>
               </div>
               {!selectedConversation.botPaused ? (
                 <p style={hintTextStyle}>
@@ -452,11 +441,11 @@ export default function InboxPage() {
               ) : null}
             </>
           ) : (
-            <p style={emptyStateStyle}>
+            <EmptyState style={{ fontSize: 15 }}>
               Chọn một hội thoại bên trái để xem tin nhắn.
-            </p>
+            </EmptyState>
           )}
-        </section>
+        </Card>
       </div>
     </main>
   );
@@ -529,13 +518,6 @@ const layoutStyle: CSSProperties = {
   marginTop: 28,
 };
 
-const panelStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
-  padding: 20,
-};
-
 const panelHeaderStyle: CSSProperties = {
   alignItems: 'center',
   display: 'flex',
@@ -546,7 +528,7 @@ const panelHeaderStyle: CSSProperties = {
 
 const threadHeaderStyle: CSSProperties = {
   alignItems: 'flex-start',
-  borderBottom: '1px solid #e2e8f0',
+  borderBottom: `1px solid ${colorBorder}`,
   display: 'flex',
   gap: 16,
   justifyContent: 'space-between',
@@ -555,9 +537,9 @@ const threadHeaderStyle: CSSProperties = {
 };
 
 const conversationButtonStyle: CSSProperties = {
-  border: '1px solid #e2e8f0',
+  border: `1px solid ${colorBorder}`,
   borderRadius: 12,
-  color: '#0f172a',
+  color: colorTextBody,
   cursor: 'pointer',
   display: 'flex',
   flexDirection: 'column',
@@ -572,7 +554,7 @@ const conversationTitleStyle: CSSProperties = {
 };
 
 const conversationMetaStyle: CSSProperties = {
-  color: '#64748b',
+  color: colorTextMuted,
   fontSize: 13,
 };
 
@@ -583,87 +565,30 @@ const messagesStyle: CSSProperties = {
 };
 
 const messageBubbleStyle: CSSProperties = {
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
-  color: '#0f172a',
+  border: `1px solid ${colorBorder}`,
+  borderRadius: radiusMd,
+  color: colorTextBody,
   maxWidth: 'min(680px, 82%)',
   padding: '10px 12px',
 };
 
 const messageMetaStyle: CSSProperties = {
-  color: '#64748b',
+  color: colorTextMuted,
   fontSize: 12,
   fontWeight: 700,
   margin: 0,
 };
 
 const composeRowStyle: CSSProperties = {
-  borderTop: '1px solid #e2e8f0',
+  borderTop: `1px solid ${colorBorder}`,
   display: 'flex',
   gap: 10,
   marginTop: 16,
   paddingTop: 16,
 };
 
-const composeInputStyle: CSSProperties = {
-  border: '1px solid #cbd5e1',
-  borderRadius: 10,
-  color: '#0f172a',
-  flex: 1,
-  font: 'inherit',
-  padding: '11px 12px',
-  resize: 'vertical',
-};
-
 const hintTextStyle: CSSProperties = {
   color: '#94a3b8',
   fontSize: 13,
   marginTop: 8,
-};
-
-const primaryButtonStyle: CSSProperties = {
-  background: '#2563eb',
-  border: 'none',
-  borderRadius: 10,
-  color: '#ffffff',
-  fontSize: 15,
-  fontWeight: 800,
-  padding: '11px 16px',
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '9px 12px',
-};
-
-const mutedTextStyle: CSSProperties = {
-  color: '#64748b',
-  fontSize: 15,
-};
-
-const emptyStateStyle: CSSProperties = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: 12,
-  color: '#64748b',
-  fontSize: 15,
-  padding: 16,
-};
-
-const alertStyle: CSSProperties = {
-  color: '#b91c1c',
-  fontSize: 16,
-  marginTop: 20,
-};
-
-const successStyle: CSSProperties = {
-  color: '#15803d',
-  fontSize: 16,
-  marginTop: 20,
 };

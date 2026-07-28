@@ -12,6 +12,19 @@ import {
   type ContentCalendarStatus,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import {
+  Button,
+  Card,
+  colorBorderStrong,
+  colorDanger,
+  colorSuccess,
+  colorTextBody,
+  colorTextHeading,
+  EmptyState,
+  Input,
+  MutedText,
+  Textarea,
+} from '../../../components/ui';
 
 const statusOptions: Array<{ value: ContentCalendarStatus | ''; label: string }> = [
   { value: '', label: 'Tất cả trạng thái' },
@@ -139,14 +152,13 @@ export default function CalendarPage() {
             thì hệ thống chỉ lưu cờ để owner kiểm tra, chưa đăng Meta tự động.
           </p>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() => void loadItems()}
           disabled={loading}
-          style={secondaryButtonStyle}
         >
           {loading ? 'Đang tải...' : 'Tải lại'}
-        </button>
+        </Button>
       </header>
 
       <p role="status" style={warningStyle}>
@@ -165,36 +177,32 @@ export default function CalendarPage() {
         </p>
       ) : null}
 
-      <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Tạo lịch mới</h2>
+      <Card title="Tạo lịch mới" style={{ marginTop: 24 }}>
         <div style={formGridStyle}>
           <label style={labelStyle}>
             Tiêu đề
-            <input
+            <Input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               maxLength={300}
               placeholder="Ví dụ: Flash sale cuối tuần"
-              style={inputStyle}
             />
           </label>
           <label style={labelStyle}>
             Thời gian dự kiến
-            <input
+            <Input
               value={plannedAt}
               onChange={(event) => setPlannedAt(event.target.value)}
               type="datetime-local"
-              style={inputStyle}
             />
           </label>
           <label style={labelStyle}>
             Kênh gợi ý
-            <input
+            <Input
               value={channelHint}
               onChange={(event) => setChannelHint(event.target.value)}
               maxLength={120}
               placeholder="facebook, instagram, zalo..."
-              style={inputStyle}
             />
           </label>
           <label style={{ ...labelStyle, justifyContent: 'end' }}>
@@ -210,26 +218,32 @@ export default function CalendarPage() {
         </div>
         <label style={labelStyle}>
           Nội dung nháp
-          <textarea
+          <Textarea
             value={body}
             onChange={(event) => setBody(event.target.value)}
             maxLength={10000}
             placeholder="Nội dung bài viết..."
             rows={5}
-            style={textareaStyle}
           />
         </label>
-        <button
-          type="button"
+        <Button
           onClick={() => void handleCreate()}
           disabled={saving || title.trim().length === 0}
-          style={primaryButtonStyle}
         >
           {saving ? 'Đang lưu...' : 'Thêm vào lịch'}
-        </button>
-      </section>
+        </Button>
+      </Card>
 
-      <section style={toolbarStyle}>
+      <Card
+        style={{
+          alignItems: 'end',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 16,
+          justifyContent: 'space-between',
+          marginTop: 24,
+        }}
+      >
         <label style={labelStyle}>
           Lọc trạng thái
           <select
@@ -237,7 +251,7 @@ export default function CalendarPage() {
             onChange={(event) =>
               setStatus(event.target.value as ContentCalendarStatus | '')
             }
-            style={inputStyle}
+            style={selectStyle}
           >
             {statusOptions.map((option) => (
               <option key={option.value || 'all'} value={option.value}>
@@ -246,24 +260,24 @@ export default function CalendarPage() {
             ))}
           </select>
         </label>
-      </section>
+      </Card>
 
-      <section style={panelStyle}>
+      <Card style={{ marginTop: 24 }}>
         {loading ? (
-          <p style={mutedStyle}>Đang tải lịch nội dung...</p>
+          <MutedText style={{ fontSize: 14 }}>Đang tải lịch nội dung...</MutedText>
         ) : items.length === 0 ? (
-          <p style={emptyStyle}>Chưa có nội dung phù hợp bộ lọc.</p>
+          <EmptyState>Chưa có nội dung phù hợp bộ lọc.</EmptyState>
         ) : (
           <div style={itemGridStyle}>
             {items.map((item) => (
-              <article key={item.id} style={cardStyle}>
+              <Card key={item.id} style={itemCardStyle}>
                 <div style={cardHeaderStyle}>
                   <div>
                     <h3 style={{ margin: 0 }}>{item.title}</h3>
-                    <p style={mutedStyle}>
+                    <MutedText style={{ fontSize: 14 }}>
                       {formatDateTime(item.plannedAt)} ·{' '}
                       {item.channelHint ?? 'Chưa chọn kênh'}
-                    </p>
+                    </MutedText>
                   </div>
                   <strong>{formatStatus(item.status)}</strong>
                 </div>
@@ -277,31 +291,29 @@ export default function CalendarPage() {
                   {(['idea', 'scheduled', 'posted', 'cancelled'] as const).map(
                     (nextStatus) =>
                       nextStatus !== item.status ? (
-                        <button
+                        <Button
                           key={nextStatus}
-                          type="button"
+                          variant="link"
                           onClick={() => void updateStatus(item, nextStatus)}
                           disabled={busyItemId === item.id}
-                          style={linkButtonStyle}
                         >
                           {formatStatus(nextStatus)}
-                        </button>
+                        </Button>
                       ) : null,
                   )}
-                  <button
-                    type="button"
+                  <Button
+                    variant="danger"
                     onClick={() => void removeItem(item)}
                     disabled={busyItemId === item.id}
-                    style={{ ...linkButtonStyle, color: '#b91c1c' }}
                   >
                     Xoá
-                  </button>
+                  </Button>
                 </div>
-              </article>
+              </Card>
             ))}
           </div>
         )}
-      </section>
+      </Card>
     </main>
   );
 }
@@ -340,29 +352,6 @@ const descriptionStyle: CSSProperties = {
   maxWidth: 820,
 };
 
-const panelStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 16,
-  marginTop: 24,
-  padding: 20,
-};
-
-const toolbarStyle: CSSProperties = {
-  ...panelStyle,
-  alignItems: 'end',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 16,
-  justifyContent: 'space-between',
-};
-
-const sectionTitleStyle: CSSProperties = {
-  color: '#0f172a',
-  fontSize: 22,
-  margin: '0 0 16px',
-};
-
 const formGridStyle: CSSProperties = {
   display: 'grid',
   gap: 14,
@@ -370,7 +359,7 @@ const formGridStyle: CSSProperties = {
 };
 
 const labelStyle: CSSProperties = {
-  color: '#334155',
+  color: colorTextHeading,
   display: 'flex',
   flexDirection: 'column',
   fontSize: 13,
@@ -379,38 +368,17 @@ const labelStyle: CSSProperties = {
   marginBottom: 12,
 };
 
-const inputStyle: CSSProperties = {
-  border: '1px solid #cbd5e1',
+// No shared `Select` primitive exists yet, so the native <select> keeps a
+// local style with only the border/text color literals swapped for their
+// tokens (radius stays a raw 8, matching the native-<select> precedent in
+// orders/page.tsx and catalog/page.tsx, even though it numerically equals
+// `radiusSm` here).
+const selectStyle: CSSProperties = {
+  border: `1px solid ${colorBorderStrong}`,
   borderRadius: 8,
-  color: '#0f172a',
+  color: colorTextBody,
   font: 'inherit',
   padding: '10px 12px',
-};
-
-const textareaStyle: CSSProperties = {
-  ...inputStyle,
-  resize: 'vertical',
-};
-
-const primaryButtonStyle: CSSProperties = {
-  background: '#2563eb',
-  border: 'none',
-  borderRadius: 8,
-  color: '#ffffff',
-  cursor: 'pointer',
-  fontWeight: 700,
-  padding: '10px 14px',
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '9px 12px',
 };
 
 const itemGridStyle: CSSProperties = {
@@ -419,9 +387,7 @@ const itemGridStyle: CSSProperties = {
   gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
 };
 
-const cardStyle: CSSProperties = {
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
+const itemCardStyle: CSSProperties = {
   padding: 16,
 };
 
@@ -433,7 +399,7 @@ const cardHeaderStyle: CSSProperties = {
 };
 
 const bodyStyle: CSSProperties = {
-  color: '#0f172a',
+  color: colorTextBody,
   lineHeight: 1.6,
   whiteSpace: 'pre-wrap',
 };
@@ -444,46 +410,34 @@ const actionRowStyle: CSSProperties = {
   gap: 10,
 };
 
-const linkButtonStyle: CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: '#2563eb',
-  cursor: 'pointer',
-  font: 'inherit',
-  fontWeight: 800,
-  padding: 0,
-};
-
-const mutedStyle: CSSProperties = {
-  color: '#64748b',
-  fontSize: 14,
-};
-
-const emptyStyle: CSSProperties = {
-  background: '#f8fafc',
-  borderRadius: 12,
-  color: '#64748b',
-  padding: 16,
-};
-
+// Tinted danger banner — kept bespoke like the other pages in this wave;
+// only `color` has an exact token match (folded in via `alertStyle` below).
 const alertStyle: CSSProperties = {
   background: '#fef2f2',
   border: '1px solid #fecaca',
   borderRadius: 12,
-  color: '#b91c1c',
+  color: colorDanger,
   marginTop: 16,
   padding: 16,
 };
 
+// Tinted success banner — same bespoke treatment as `alertStyle`.
 const successStyle: CSSProperties = {
   background: '#f0fdf4',
   border: '1px solid #bbf7d0',
   borderRadius: 12,
-  color: '#15803d',
+  color: colorSuccess,
   marginTop: 16,
   padding: 16,
 };
 
+// Tinted warning banner used for the Meta auto-post disclosure (both the
+// page-level notice and the per-item flag notice). Uses the darker
+// `#92400e` amber that tokens.ts documents as deliberately NOT folded into
+// `colorWarning` — this is the highest-prominence treatment already
+// available (tinted background + border), so it is left fully unchanged:
+// same colors, same wording, same structure, per this wave's explicit
+// instruction not to weaken/soften/reposition the auto-post warning copy.
 const warningStyle: CSSProperties = {
   background: '#fffbeb',
   border: '1px solid #fde68a',

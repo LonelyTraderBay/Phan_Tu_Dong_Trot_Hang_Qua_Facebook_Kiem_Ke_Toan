@@ -8,6 +8,22 @@ import {
   type AttributionSummary,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import {
+  Button,
+  Card,
+  colorDanger,
+  colorTextBody,
+  colorTextHeading,
+  colorTextMuted,
+  EmptyState,
+  Input,
+  MutedText,
+  Table,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../../../components/ui';
 
 type DateRange = {
   from: string;
@@ -63,7 +79,7 @@ export default function AttributionPage() {
         <div style={filterRowStyle}>
           <label style={labelStyle}>
             Từ ngày
-            <input
+            <Input
               type="date"
               value={range.from}
               onChange={(event) =>
@@ -72,28 +88,25 @@ export default function AttributionPage() {
                   from: event.target.value,
                 }))
               }
-              style={inputStyle}
             />
           </label>
           <label style={labelStyle}>
             Đến ngày
-            <input
+            <Input
               type="date"
               value={range.to}
               onChange={(event) =>
                 setRange((current) => ({ ...current, to: event.target.value }))
               }
-              style={inputStyle}
             />
           </label>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => void loadSummary()}
             disabled={loading}
-            style={secondaryButtonStyle}
           >
             {loading ? 'Đang tải...' : 'Tải lại'}
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -118,47 +131,45 @@ export default function AttributionPage() {
         />
       </section>
 
-      <section style={panelStyle}>
+      <Card style={{ marginTop: 24 }}>
         <h2 style={sectionTitleStyle}>Nguồn tạo đơn</h2>
         {loading ? (
-          <p style={mutedStyle}>Đang tải attribution...</p>
+          <MutedText>Đang tải attribution...</MutedText>
         ) : !summary || summary.sources.length === 0 ? (
-          <p style={emptyStyle}>Chưa có đơn hàng trong khoảng ngày này.</p>
+          <EmptyState>Chưa có đơn hàng trong khoảng ngày này.</EmptyState>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>utm_source</th>
-                  <th style={tableHeaderStyle}>Số đơn</th>
-                  <th style={tableHeaderStyle}>Giá trị đơn</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.sources.map((source) => (
-                  <tr key={source.utmSource ?? 'unknown'}>
-                    <td style={tableCellStyle}>{source.label}</td>
-                    <td style={tableCellStyle}>{source.orderCount}</td>
-                    <td style={tableCellStyle}>
-                      {formatVnd(source.revenueVnd)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table style={{ marginTop: 16, minWidth: 640 }}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>utm_source</TableHeaderCell>
+                <TableHeaderCell>Số đơn</TableHeaderCell>
+                <TableHeaderCell>Giá trị đơn</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <tbody>
+              {summary.sources.map((source) => (
+                <TableRow key={source.utmSource ?? 'unknown'}>
+                  <TableCell>{source.label}</TableCell>
+                  <TableCell>{source.orderCount}</TableCell>
+                  <TableCell>
+                    {formatVnd(source.revenueVnd)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </Table>
         )}
-      </section>
+      </Card>
     </main>
   );
 }
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div style={summaryCardStyle}>
+    <Card style={summaryCardStyle}>
       <span style={mutedStyle}>{label}</span>
-      <strong style={{ color: '#0f172a', fontSize: 22 }}>{value}</strong>
-    </div>
+      <strong style={{ color: colorTextBody, fontSize: 22 }}>{value}</strong>
+    </Card>
   );
 }
 
@@ -209,7 +220,7 @@ const filterRowStyle: CSSProperties = {
 };
 
 const labelStyle: CSSProperties = {
-  color: '#334155',
+  color: colorTextHeading,
   display: 'flex',
   flexDirection: 'column',
   fontSize: 13,
@@ -217,28 +228,16 @@ const labelStyle: CSSProperties = {
   gap: 6,
 };
 
-const inputStyle: CSSProperties = {
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  padding: '10px 12px',
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  cursor: 'pointer',
-  fontWeight: 700,
-  padding: '10px 14px',
-};
-
+// Tinted danger banner (background + border), distinct from the shared
+// `ErrorText` primitive's plain colored-text treatment. Only `color` has an
+// exact token match (`colorDanger`); the tint colors (#fef2f2/#fecaca) don't
+// match anything in tokens.ts, so this stays bespoke — same "tinted banner"
+// carve-out as advisor/calendar.
 const alertStyle: CSSProperties = {
   background: '#fef2f2',
   border: '1px solid #fecaca',
   borderRadius: 12,
-  color: '#b91c1c',
+  color: colorDanger,
   marginTop: 16,
   padding: 16,
 };
@@ -251,57 +250,22 @@ const summaryGridStyle: CSSProperties = {
 };
 
 const summaryCardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 16,
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
   padding: 20,
 };
 
-const panelStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 16,
-  marginTop: 24,
-  padding: 20,
-};
-
+// No bottom margin (unlike the other pages' section titles, which use
+// `'0 0 16px'` and so map cleanly onto `Card`'s `title` prop) — the table
+// below supplies its own `marginTop: 16`, while the loading/empty states
+// sit flush under the heading. Kept as a manual <h2> inside a bare `Card` so
+// that flush spacing is preserved exactly instead of double-gapping.
 const sectionTitleStyle: CSSProperties = {
-  color: '#0f172a',
   fontSize: 22,
   margin: 0,
 };
 
 const mutedStyle: CSSProperties = {
-  color: '#64748b',
-};
-
-const emptyStyle: CSSProperties = {
-  background: '#f8fafc',
-  borderRadius: 12,
-  color: '#64748b',
-  padding: 16,
-};
-
-const tableStyle: CSSProperties = {
-  borderCollapse: 'collapse',
-  marginTop: 16,
-  minWidth: 640,
-  width: '100%',
-};
-
-const tableHeaderStyle: CSSProperties = {
-  borderBottom: '1px solid #e2e8f0',
-  color: '#475569',
-  fontSize: 13,
-  padding: '10px 8px',
-  textAlign: 'left',
-};
-
-const tableCellStyle: CSSProperties = {
-  borderBottom: '1px solid #f1f5f9',
-  color: '#0f172a',
-  padding: '12px 8px',
+  color: colorTextMuted,
 };

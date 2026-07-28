@@ -11,6 +11,24 @@ import {
   type PnlSummary,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import {
+  Button,
+  Card,
+  colorDanger,
+  colorSuccess,
+  colorTextBody,
+  colorTextHeading,
+  colorTextMuted,
+  EmptyState,
+  ErrorText,
+  Input,
+  MutedText,
+  Table,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../../../components/ui';
 
 type DateRange = {
   from: string;
@@ -133,58 +151,49 @@ export default function PnlPage() {
         <div style={filterRowStyle}>
           <label style={labelStyle}>
             Từ ngày
-            <input
+            <Input
               type="date"
               value={range.from}
               onChange={(event) =>
                 setRange((current) => ({ ...current, from: event.target.value }))
               }
-              style={inputStyle}
             />
           </label>
           <label style={labelStyle}>
             Đến ngày
-            <input
+            <Input
               type="date"
               value={range.to}
               onChange={(event) =>
                 setRange((current) => ({ ...current, to: event.target.value }))
               }
-              style={inputStyle}
             />
           </label>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => void loadReport()}
             disabled={loading}
-            style={secondaryButtonStyle}
           >
             {loading ? 'Đang tải...' : 'Tải lại'}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
             onClick={handleDownloadCsv}
             disabled={loading || (!summary && skuRows.length === 0)}
-            style={secondaryButtonStyle}
           >
             Tải CSV
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
             onClick={() => void handleAccountingExport()}
             disabled={loading || accountingExporting}
-            style={secondaryButtonStyle}
           >
             {accountingExporting ? 'Đang tải...' : 'Export kế toán'}
-          </button>
+          </Button>
         </div>
       </header>
 
-      {error ? (
-        <p role="alert" style={alertStyle}>
-          {error}
-        </p>
-      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
 
       <section style={summaryGridStyle}>
         <SummaryCard
@@ -211,103 +220,97 @@ export default function PnlPage() {
         <SummaryCard label="Đơn đã bán" value={String(summary?.orderCount ?? 0)} />
       </section>
 
-      <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Theo ngày</h2>
+      <Card title="Theo ngày" style={{ marginTop: 24 }}>
         {loading ? (
-          <p style={mutedStyle}>Đang tải lãi gộp theo ngày...</p>
+          <MutedText style={{ fontSize: 14 }}>Đang tải lãi gộp theo ngày...</MutedText>
         ) : !summary || summary.days.length === 0 ? (
-          <p style={emptyStyle}>Chưa có đơn shipped/done trong khoảng ngày này.</p>
+          <EmptyState>Chưa có đơn shipped/done trong khoảng ngày này.</EmptyState>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>Ngày</th>
-                  <th style={tableHeaderStyle}>Đơn</th>
-                  <th style={tableHeaderStyle}>Doanh thu</th>
-                  <th style={tableHeaderStyle}>COGS</th>
-                  <th style={tableHeaderStyle}>Lãi gộp</th>
-                  <th style={tableHeaderStyle}>Ship</th>
-                  <th style={tableHeaderStyle}>Ads</th>
-                  <th style={tableHeaderStyle}>Lãi ròng</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.days.map((day) => (
-                  <tr key={day.day}>
-                    <td style={tableCellStyle}>{formatDay(day.day)}</td>
-                    <td style={tableCellStyle}>{day.orderCount}</td>
-                    <td style={tableCellStyle}>{formatVnd(day.revenueVnd)}</td>
-                    <td style={tableCellStyle}>{formatVnd(day.cogsVnd)}</td>
-                    <td style={tableCellStyle}>
-                      <span style={profitStyle(day.grossProfitVnd)}>
-                        {formatVnd(day.grossProfitVnd)}
-                      </span>
-                    </td>
-                    <td style={tableCellStyle}>{formatVnd(day.shippingVnd)}</td>
-                    <td style={tableCellStyle}>{formatVnd(day.adSpendVnd)}</td>
-                    <td style={tableCellStyle}>
-                      <span style={profitStyle(day.netProfitVnd)}>
-                        {formatVnd(day.netProfitVnd)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table style={{ minWidth: 860 }}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Ngày</TableHeaderCell>
+                <TableHeaderCell>Đơn</TableHeaderCell>
+                <TableHeaderCell>Doanh thu</TableHeaderCell>
+                <TableHeaderCell>COGS</TableHeaderCell>
+                <TableHeaderCell>Lãi gộp</TableHeaderCell>
+                <TableHeaderCell>Ship</TableHeaderCell>
+                <TableHeaderCell>Ads</TableHeaderCell>
+                <TableHeaderCell>Lãi ròng</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <tbody>
+              {summary.days.map((day) => (
+                <TableRow key={day.day}>
+                  <TableCell>{formatDay(day.day)}</TableCell>
+                  <TableCell>{day.orderCount}</TableCell>
+                  <TableCell>{formatVnd(day.revenueVnd)}</TableCell>
+                  <TableCell>{formatVnd(day.cogsVnd)}</TableCell>
+                  <TableCell>
+                    <span style={profitStyle(day.grossProfitVnd)}>
+                      {formatVnd(day.grossProfitVnd)}
+                    </span>
+                  </TableCell>
+                  <TableCell>{formatVnd(day.shippingVnd)}</TableCell>
+                  <TableCell>{formatVnd(day.adSpendVnd)}</TableCell>
+                  <TableCell>
+                    <span style={profitStyle(day.netProfitVnd)}>
+                      {formatVnd(day.netProfitVnd)}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </Table>
         )}
-      </section>
+      </Card>
 
-      <section style={panelStyle}>
-        <h2 style={sectionTitleStyle}>Theo SKU</h2>
+      <Card title="Theo SKU" style={{ marginTop: 24 }}>
         {loading ? (
-          <p style={mutedStyle}>Đang tải lãi gộp theo SKU...</p>
+          <MutedText style={{ fontSize: 14 }}>Đang tải lãi gộp theo SKU...</MutedText>
         ) : skuRows.length === 0 ? (
-          <p style={emptyStyle}>Chưa có SKU bán trong khoảng ngày này.</p>
+          <EmptyState>Chưa có SKU bán trong khoảng ngày này.</EmptyState>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>SKU</th>
-                  <th style={tableHeaderStyle}>SL</th>
-                  <th style={tableHeaderStyle}>Đơn</th>
-                  <th style={tableHeaderStyle}>Doanh thu dòng</th>
-                  <th style={tableHeaderStyle}>COGS</th>
-                  <th style={tableHeaderStyle}>Lãi gộp</th>
-                </tr>
-              </thead>
-              <tbody>
-                {skuRows.map((sku) => (
-                  <tr key={sku.sku}>
-                    <td style={tableCellStyle}>{sku.sku}</td>
-                    <td style={tableCellStyle}>{sku.qty}</td>
-                    <td style={tableCellStyle}>{sku.orderCount}</td>
-                    <td style={tableCellStyle}>{formatVnd(sku.revenueVnd)}</td>
-                    <td style={tableCellStyle}>{formatVnd(sku.cogsVnd)}</td>
-                    <td style={tableCellStyle}>
-                      <span style={profitStyle(sku.grossProfitVnd)}>
-                        {formatVnd(sku.grossProfitVnd)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table style={{ minWidth: 860 }}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>SKU</TableHeaderCell>
+                <TableHeaderCell>SL</TableHeaderCell>
+                <TableHeaderCell>Đơn</TableHeaderCell>
+                <TableHeaderCell>Doanh thu dòng</TableHeaderCell>
+                <TableHeaderCell>COGS</TableHeaderCell>
+                <TableHeaderCell>Lãi gộp</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <tbody>
+              {skuRows.map((sku) => (
+                <TableRow key={sku.sku}>
+                  <TableCell>{sku.sku}</TableCell>
+                  <TableCell>{sku.qty}</TableCell>
+                  <TableCell>{sku.orderCount}</TableCell>
+                  <TableCell>{formatVnd(sku.revenueVnd)}</TableCell>
+                  <TableCell>{formatVnd(sku.cogsVnd)}</TableCell>
+                  <TableCell>
+                    <span style={profitStyle(sku.grossProfitVnd)}>
+                      {formatVnd(sku.grossProfitVnd)}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </Table>
         )}
-      </section>
+      </Card>
     </main>
   );
 }
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div style={summaryCardStyle}>
+    <Card style={summaryCardStyle}>
       <span style={mutedStyle}>{label}</span>
-      <strong style={{ color: '#0f172a', fontSize: 22 }}>{value}</strong>
-    </div>
+      <strong style={{ color: colorTextBody, fontSize: 22 }}>{value}</strong>
+    </Card>
   );
 }
 
@@ -344,7 +347,7 @@ function formatVnd(value: string) {
 
 function profitStyle(value: string): CSSProperties {
   return {
-    color: value.startsWith('-') ? '#b91c1c' : '#15803d',
+    color: value.startsWith('-') ? colorDanger : colorSuccess,
     fontWeight: 800,
   };
 }
@@ -388,20 +391,12 @@ const filterRowStyle: CSSProperties = {
 };
 
 const labelStyle: CSSProperties = {
-  color: '#334155',
+  color: colorTextHeading,
   display: 'flex',
   flexDirection: 'column',
   fontSize: 13,
   fontWeight: 700,
   gap: 6,
-};
-
-const inputStyle: CSSProperties = {
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  font: 'inherit',
-  padding: '9px 10px',
 };
 
 const summaryGridStyle: CSSProperties = {
@@ -412,77 +407,13 @@ const summaryGridStyle: CSSProperties = {
 };
 
 const summaryCardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
   padding: 16,
 };
 
-const panelStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
-  marginTop: 24,
-  padding: 20,
-};
-
-const sectionTitleStyle: CSSProperties = {
-  color: '#0f172a',
-  fontSize: 22,
-  margin: '0 0 16px',
-};
-
-const tableStyle: CSSProperties = {
-  borderCollapse: 'collapse',
-  minWidth: 860,
-  width: '100%',
-};
-
-const tableHeaderStyle: CSSProperties = {
-  borderBottom: '1px solid #e2e8f0',
-  color: '#334155',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '12px 16px',
-  textAlign: 'left',
-};
-
-const tableCellStyle: CSSProperties = {
-  borderBottom: '1px solid #f1f5f9',
-  color: '#0f172a',
-  fontSize: 15,
-  padding: '12px 16px',
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  color: '#0f172a',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 700,
-  padding: '9px 12px',
-};
-
 const mutedStyle: CSSProperties = {
-  color: '#64748b',
+  color: colorTextMuted,
   fontSize: 14,
-};
-
-const emptyStyle: CSSProperties = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: 12,
-  color: '#64748b',
-  padding: 16,
-};
-
-const alertStyle: CSSProperties = {
-  color: '#b91c1c',
-  fontSize: 16,
-  marginTop: 20,
 };

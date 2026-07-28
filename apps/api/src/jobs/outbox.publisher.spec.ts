@@ -364,6 +364,67 @@ describe("outbox publisher", () => {
     ]);
   });
 
+  it("maps every order.* outbox event to the shared order webhook dispatch Inngest event", async () => {
+    const { client } = mockSupabase({
+      selectResults: [
+        {
+          data: [
+            outboxRow({
+              event_name: "order.confirmed",
+              payload_json: {
+                event: "order.confirmed",
+                orderId: "33333333-3333-3333-3333-333333333333",
+                status: "confirmed",
+              },
+            }),
+            outboxRow({
+              id: "55555555-5555-5555-5555-555555555555",
+              event_name: "order.shipped",
+              payload_json: {
+                event: "order.shipped",
+                orderId: "33333333-3333-3333-3333-333333333333",
+                status: "shipped",
+              },
+            }),
+          ],
+          error: null,
+        },
+      ],
+    });
+    const sentEvents: unknown[] = [];
+    const publisher = new OutboxPublisher(client, {
+      send: async (event) => {
+        sentEvents.push(event);
+        return { ids: ["evt_1"] };
+      },
+    });
+
+    await publisher.publishPending(10);
+
+    expect(sentEvents).toEqual([
+      {
+        name: "order/webhook_dispatch",
+        data: {
+          event: "order.confirmed",
+          orderId: "33333333-3333-3333-3333-333333333333",
+          status: "confirmed",
+          orgId: ORG_ID,
+          outboxEventId: OUTBOX_ID,
+        },
+      },
+      {
+        name: "order/webhook_dispatch",
+        data: {
+          event: "order.shipped",
+          orderId: "33333333-3333-3333-3333-333333333333",
+          status: "shipped",
+          orgId: ORG_ID,
+          outboxEventId: "55555555-5555-5555-5555-555555555555",
+        },
+      },
+    ]);
+  });
+
   it("increments attempts and dead-letters exhausted events", async () => {
     const { calls, client } = mockSupabase({
       selectResults: [{ data: [outboxRow()], error: null }],

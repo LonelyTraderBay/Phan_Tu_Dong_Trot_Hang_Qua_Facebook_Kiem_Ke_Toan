@@ -17,7 +17,10 @@ export const ListPublicOrdersQuerySchema = z.object({
 export const WebhookEventSchema = z.enum([
   'order.created',
   'order.updated',
+  'order.confirmed',
   'order.cancelled',
+  'order.shipped',
+  'order.done',
   'order.returned',
   'webhook.test',
 ]);

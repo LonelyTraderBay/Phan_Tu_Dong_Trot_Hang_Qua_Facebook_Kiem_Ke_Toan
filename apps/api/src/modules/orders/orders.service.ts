@@ -10,6 +10,7 @@ import {
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { loadEnv } from '../../config/env';
+import { enqueueOutbox } from '../../jobs/outbox.publisher';
 import { AuditService, type WriteAuditInput } from '../audit/audit.service';
 import { EntitlementsService } from '../billing/entitlements.service';
 import { CodService } from '../cod/cod.service';
@@ -287,11 +288,23 @@ export class OrdersService {
         items,
       );
       if (!payload.replayed) {
+        await this.enqueueOrderEvent({
+          orgId: input.orgId,
+          orderId: payload.response.order.id,
+          event: 'order.created',
+          status: 'draft',
+        });
         await this.writeOrderConfirmedAudit({
           orgId: input.orgId,
           orderId: payload.response.order.id,
           actorUserId: input.actorUserId,
           autoConfirm: true,
+        });
+        await this.enqueueOrderEvent({
+          orgId: input.orgId,
+          orderId: payload.response.order.id,
+          event: 'order.confirmed',
+          status: 'confirmed',
         });
       }
       return payload.response;
@@ -306,7 +319,17 @@ export class OrdersService {
         statusCode: 201,
       },
       async () => {
-        return this.createDraftOrderRpc({ ...input, idempotencyKey }, items);
+        const payload = await this.createDraftOrderRpc(
+          { ...input, idempotencyKey },
+          items,
+        );
+        await this.enqueueOrderEvent({
+          orgId: input.orgId,
+          orderId: payload.order.id,
+          event: 'order.created',
+          status: 'draft',
+        });
+        return payload;
       },
     );
   }
@@ -341,6 +364,12 @@ export class OrdersService {
           actorUserId: input.actorUserId,
           autoConfirm: input.autoConfirm === true,
         });
+        await this.enqueueOrderEvent({
+          orgId: input.orgId,
+          orderId: input.orderId,
+          event: 'order.confirmed',
+          status: 'confirmed',
+        });
 
         return payload;
       },
@@ -367,6 +396,12 @@ export class OrdersService {
       entityType: 'order',
       entityId: input.orderId,
       meta: {},
+    });
+    await this.enqueueOrderEvent({
+      orgId: input.orgId,
+      orderId: input.orderId,
+      event: 'order.cancelled',
+      status: 'cancelled',
     });
 
     return payload;
@@ -399,6 +434,12 @@ export class OrdersService {
       entityType: 'order',
       entityId: input.orderId,
       meta: {},
+    });
+    await this.enqueueOrderEvent({
+      orgId: input.orgId,
+      orderId: input.orderId,
+      event: 'order.shipped',
+      status: 'shipped',
     });
 
     return payload;
@@ -442,6 +483,12 @@ export class OrdersService {
         reason,
       },
     });
+    await this.enqueueOrderEvent({
+      orgId: input.orgId,
+      orderId: input.orderId,
+      event: 'order.returned',
+      status: 'returned',
+    });
 
     return payload;
   }
@@ -466,6 +513,12 @@ export class OrdersService {
       entityType: 'order',
       entityId: input.orderId,
       meta: {},
+    });
+    await this.enqueueOrderEvent({
+      orgId: input.orgId,
+      orderId: input.orderId,
+      event: 'order.done',
+      status: 'done',
     });
 
     return payload;
@@ -777,6 +830,29 @@ export class OrdersService {
       entityId: input.orderId,
       meta: {
         autoConfirm: input.autoConfirm,
+      },
+    });
+  }
+
+  private async enqueueOrderEvent(input: {
+    orgId: string;
+    orderId: string;
+    event:
+      | 'order.created'
+      | 'order.confirmed'
+      | 'order.cancelled'
+      | 'order.shipped'
+      | 'order.returned'
+      | 'order.done';
+    status: OrderStatus;
+  }) {
+    await enqueueOutbox(this.supabase, {
+      orgId: input.orgId,
+      eventName: input.event,
+      payload: {
+        event: input.event,
+        orderId: input.orderId,
+        status: input.status,
       },
     });
   }

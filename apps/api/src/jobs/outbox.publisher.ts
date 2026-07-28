@@ -273,6 +273,9 @@ function toInngestEventName(eventName: string) {
   if (eventName === "meta.send") {
     return "meta/send";
   }
+  if (eventName.startsWith("order.")) {
+    return "order/webhook_dispatch";
+  }
 
   return eventName.replaceAll(".", "/");
 }

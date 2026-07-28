@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import {
+  Fragment,
   Suspense,
   type CSSProperties,
   useCallback,
@@ -15,12 +16,16 @@ import {
   confirmOrder,
   createShipment,
   downloadOrdersExport,
+  getOrder,
   listOrders,
+  listShipments,
   markOrderDone,
   returnOrder,
   type Order,
+  type OrderItem,
   type OrdersExportFormat,
   type OrderStatus,
+  type Shipment,
 } from '../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 
@@ -44,6 +49,12 @@ function OrdersContent() {
   const [exporting, setExporting] = useState<OrdersExportFormat | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [orderDetails, setOrderDetails] = useState<
+    Record<string, { items: OrderItem[]; shipments: Shipment[] }>
+  >({});
+  const [detailLoading, setDetailLoading] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -144,6 +155,33 @@ function OrdersContent() {
     }
   }
 
+  async function handleToggleDetail(orderId: string) {
+    if (expandedOrderId === orderId) {
+      setExpandedOrderId(null);
+      return;
+    }
+    setExpandedOrderId(orderId);
+    setDetailError(null);
+    if (orderDetails[orderId]) {
+      return; // already cached, no need to refetch
+    }
+    setDetailLoading(orderId);
+    try {
+      const [order, shipments] = await Promise.all([
+        getOrder(orderId),
+        listShipments(orderId),
+      ]);
+      setOrderDetails((current) => ({
+        ...current,
+        [orderId]: { items: order.items ?? [], shipments },
+      }));
+    } catch (err) {
+      setDetailError(getApiErrorMessage(err, 'Không thể tải chi tiết đơn hàng.'));
+    } finally {
+      setDetailLoading(null);
+    }
+  }
+
   return (
     <main>
       <header style={headerStyle}>
@@ -225,76 +263,218 @@ function OrdersContent() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id}>
-                    <td style={tableCellStyle}>{shortId(order.id)}</td>
-                    <td style={tableCellStyle}>
-                      <strong>{order.customerName ?? 'Khách chưa đặt tên'}</strong>
-                      <br />
-                      <span style={mutedStyle}>{order.phoneE164 ?? 'Chưa có SĐT'}</span>
-                    </td>
-                    <td style={tableCellStyle}>{formatStatus(order.status)}</td>
-                    <td style={tableCellStyle}>
-                      {formatPaymentMethod(order.paymentMethod)}
-                    </td>
-                    <td style={tableCellStyle}>{formatMoney(order.totalVnd)}</td>
-                    <td style={tableCellStyle}>{formatDateTime(order.createdAt)}</td>
-                    <td style={tableCellStyle}>
-                      <div style={actionRowStyle}>
-                        {order.status === 'draft' ? (
+                {orders.map((order) => {
+                  const isExpanded = expandedOrderId === order.id;
+                  const detail = orderDetails[order.id];
+
+                  return (
+                    <Fragment key={order.id}>
+                      <tr>
+                        <td style={tableCellStyle}>
                           <button
                             type="button"
-                            onClick={() => void runOrderAction(order, 'confirm')}
-                            disabled={busyOrderId === order.id}
-                            style={linkButtonStyle}
+                            onClick={() => void handleToggleDetail(order.id)}
+                            style={detailToggleButtonStyle}
                           >
-                            Xác nhận
+                            <span aria-hidden="true">
+                              {isExpanded ? '▾' : '▸'}
+                            </span>
+                            {shortId(order.id)}
                           </button>
-                        ) : null}
-                        {order.status === 'confirmed' ? (
-                          <button
-                            type="button"
-                            onClick={() => void runOrderAction(order, 'shipment')}
-                            disabled={busyOrderId === order.id}
-                            style={linkButtonStyle}
-                          >
-                            Tạo vận đơn
-                          </button>
-                        ) : null}
-                        {order.status === 'draft' || order.status === 'confirmed' ? (
-                          <button
-                            type="button"
-                            onClick={() => void runOrderAction(order, 'cancel')}
-                            disabled={busyOrderId === order.id}
-                            style={{ ...linkButtonStyle, color: '#b91c1c' }}
-                          >
-                            Huỷ
-                          </button>
-                        ) : null}
-                        {order.status === 'shipped' ? (
-                          <button
-                            type="button"
-                            onClick={() => void runOrderAction(order, 'done')}
-                            disabled={busyOrderId === order.id}
-                            style={{ ...linkButtonStyle, color: '#15803d' }}
-                          >
-                            Hoàn tất
-                          </button>
-                        ) : null}
-                        {order.status === 'shipped' || order.status === 'done' ? (
-                          <button
-                            type="button"
-                            onClick={() => void runOrderAction(order, 'return')}
-                            disabled={busyOrderId === order.id}
-                            style={{ ...linkButtonStyle, color: '#b45309' }}
-                          >
-                            Hoàn hàng
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </td>
+                        <td style={tableCellStyle}>
+                          <strong>{order.customerName ?? 'Khách chưa đặt tên'}</strong>
+                          <br />
+                          <span style={mutedStyle}>{order.phoneE164 ?? 'Chưa có SĐT'}</span>
+                        </td>
+                        <td style={tableCellStyle}>{formatStatus(order.status)}</td>
+                        <td style={tableCellStyle}>
+                          {formatPaymentMethod(order.paymentMethod)}
+                        </td>
+                        <td style={tableCellStyle}>{formatMoney(order.totalVnd)}</td>
+                        <td style={tableCellStyle}>{formatDateTime(order.createdAt)}</td>
+                        <td style={tableCellStyle}>
+                          <div style={actionRowStyle}>
+                            {order.status === 'draft' ? (
+                              <button
+                                type="button"
+                                onClick={() => void runOrderAction(order, 'confirm')}
+                                disabled={busyOrderId === order.id}
+                                style={linkButtonStyle}
+                              >
+                                Xác nhận
+                              </button>
+                            ) : null}
+                            {order.status === 'confirmed' ? (
+                              <button
+                                type="button"
+                                onClick={() => void runOrderAction(order, 'shipment')}
+                                disabled={busyOrderId === order.id}
+                                style={linkButtonStyle}
+                              >
+                                Tạo vận đơn
+                              </button>
+                            ) : null}
+                            {order.status === 'draft' || order.status === 'confirmed' ? (
+                              <button
+                                type="button"
+                                onClick={() => void runOrderAction(order, 'cancel')}
+                                disabled={busyOrderId === order.id}
+                                style={{ ...linkButtonStyle, color: '#b91c1c' }}
+                              >
+                                Huỷ
+                              </button>
+                            ) : null}
+                            {order.status === 'shipped' ? (
+                              <button
+                                type="button"
+                                onClick={() => void runOrderAction(order, 'done')}
+                                disabled={busyOrderId === order.id}
+                                style={{ ...linkButtonStyle, color: '#15803d' }}
+                              >
+                                Hoàn tất
+                              </button>
+                            ) : null}
+                            {order.status === 'shipped' || order.status === 'done' ? (
+                              <button
+                                type="button"
+                                onClick={() => void runOrderAction(order, 'return')}
+                                disabled={busyOrderId === order.id}
+                                style={{ ...linkButtonStyle, color: '#b45309' }}
+                              >
+                                Hoàn hàng
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded ? (
+                        <tr>
+                          <td style={detailCellStyle} colSpan={7}>
+                            {detailLoading === order.id ? (
+                              <p style={mutedStyle}>Đang tải chi tiết...</p>
+                            ) : detailError ? (
+                              <p role="alert" style={alertStyle}>
+                                {detailError}
+                              </p>
+                            ) : detail ? (
+                              <div style={detailContentStyle}>
+                                <div>
+                                  <h3 style={detailHeadingStyle}>Sản phẩm</h3>
+                                  {detail.items.length === 0 ? (
+                                    <p style={mutedStyle}>Chưa có sản phẩm nào.</p>
+                                  ) : (
+                                    <div style={{ overflowX: 'auto' }}>
+                                      <table style={detailTableStyle}>
+                                        <thead>
+                                          <tr>
+                                            <th style={detailTableHeaderStyle}>
+                                              Sản phẩm/SKU
+                                            </th>
+                                            <th style={detailTableHeaderStyle}>
+                                              Số lượng
+                                            </th>
+                                            <th style={detailTableHeaderStyle}>
+                                              Đơn giá
+                                            </th>
+                                            <th style={detailTableHeaderStyle}>
+                                              Thành tiền
+                                            </th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {detail.items.map((item) => (
+                                            <tr key={item.id}>
+                                              <td style={detailTableCellStyle}>
+                                                {item.titleSnapshot}
+                                                <br />
+                                                <span style={mutedStyle}>
+                                                  {item.skuSnapshot}
+                                                </span>
+                                              </td>
+                                              <td style={detailTableCellStyle}>
+                                                {item.qty}
+                                              </td>
+                                              <td style={detailTableCellStyle}>
+                                                {formatMoney(item.unitPriceVnd)}
+                                              </td>
+                                              <td style={detailTableCellStyle}>
+                                                {formatMoney(item.lineTotalVnd)}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <h3 style={detailHeadingStyle}>Vận đơn</h3>
+                                  {detail.shipments.length === 0 ? (
+                                    <p style={mutedStyle}>Chưa có vận đơn nào.</p>
+                                  ) : (
+                                    <div style={{ overflowX: 'auto' }}>
+                                      <table style={detailTableStyle}>
+                                        <thead>
+                                          <tr>
+                                            <th style={detailTableHeaderStyle}>
+                                              Đơn vị
+                                            </th>
+                                            <th style={detailTableHeaderStyle}>
+                                              Mã vận đơn
+                                            </th>
+                                            <th style={detailTableHeaderStyle}>
+                                              Trạng thái
+                                            </th>
+                                            <th style={detailTableHeaderStyle}>
+                                              Vận đơn
+                                            </th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {detail.shipments.map((shipment) => (
+                                            <tr key={shipment.id}>
+                                              <td style={detailTableCellStyle}>
+                                                {formatShippingProvider(
+                                                  shipment.provider,
+                                                )}
+                                              </td>
+                                              <td style={detailTableCellStyle}>
+                                                {shipment.trackingCode ??
+                                                  'Chưa có mã vận đơn'}
+                                              </td>
+                                              <td style={detailTableCellStyle}>
+                                                {shipment.status}
+                                              </td>
+                                              <td style={detailTableCellStyle}>
+                                                {shipment.labelUrl ? (
+                                                  <a
+                                                    href={shipment.labelUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    style={linkButtonStyle}
+                                                  >
+                                                    Xem vận đơn
+                                                  </a>
+                                                ) : (
+                                                  '—'
+                                                )}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -346,6 +526,15 @@ function formatPaymentMethod(method: string) {
   };
 
   return labels[method] ?? method;
+}
+
+function formatShippingProvider(provider: string) {
+  const labels: Record<string, string> = {
+    ghn: 'GHN',
+    manual: 'Thủ công',
+  };
+
+  return labels[provider] ?? provider;
 }
 
 function formatDateTime(value: string) {
@@ -468,6 +657,54 @@ const linkButtonStyle: CSSProperties = {
   font: 'inherit',
   fontWeight: 800,
   padding: 0,
+};
+
+const detailToggleButtonStyle: CSSProperties = {
+  ...linkButtonStyle,
+  alignItems: 'center',
+  display: 'inline-flex',
+  gap: 6,
+};
+
+const detailCellStyle: CSSProperties = {
+  ...tableCellStyle,
+  background: '#f8fafc',
+  padding: 16,
+};
+
+const detailContentStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 16,
+};
+
+const detailHeadingStyle: CSSProperties = {
+  color: '#334155',
+  fontSize: 14,
+  fontWeight: 700,
+  margin: '0 0 8px',
+};
+
+const detailTableStyle: CSSProperties = {
+  borderCollapse: 'collapse',
+  width: '100%',
+};
+
+const detailTableHeaderStyle: CSSProperties = {
+  borderBottom: '1px solid #e2e8f0',
+  color: '#334155',
+  fontSize: 13,
+  fontWeight: 700,
+  padding: '8px 12px',
+  textAlign: 'left',
+};
+
+const detailTableCellStyle: CSSProperties = {
+  borderBottom: '1px solid #e2e8f0',
+  color: '#0f172a',
+  fontSize: 14,
+  padding: '8px 12px',
+  verticalAlign: 'top',
 };
 
 const mutedStyle: CSSProperties = {

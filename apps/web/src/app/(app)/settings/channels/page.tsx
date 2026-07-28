@@ -1,13 +1,21 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { type FormEvent, Suspense, useCallback, useEffect, useState } from 'react';
+import {
+  type FormEvent,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   ApiClientError,
   connectZalo,
   getMetaOAuthUrl,
   listChannels,
+  revokeChannel,
   type ChannelConnection,
 } from '../../../../lib/api-client';
 import { SESSION_CHANGED_EVENT } from '../../../../lib/auth-session';
@@ -44,6 +52,8 @@ function ChannelsSettingsContent() {
   const [zaloDisplayName, setZaloDisplayName] = useState('');
   const [zaloOaId, setZaloOaId] = useState('');
   const [zaloSaving, setZaloSaving] = useState(false);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const zaloSectionRef = useRef<HTMLElement>(null);
 
   const loadChannels = useCallback(async () => {
     setLoading(true);
@@ -145,6 +155,37 @@ function ChannelsSettingsContent() {
     }
   }
 
+  async function handleDisconnect(channel: ChannelConnection) {
+    if (
+      !window.confirm(
+        `Ngắt kết nối ${formatProvider(channel.provider)} (${channel.externalPageId})? Bot sẽ ngừng nhận/gửi tin nhắn qua kênh này cho đến khi kết nối lại.`,
+      )
+    ) {
+      return;
+    }
+    setDisconnecting(channel.id);
+    setError(null);
+    setSuccess(null);
+    try {
+      await revokeChannel(channel.id);
+      setSuccess(`Đã ngắt kết nối ${formatProvider(channel.provider)}.`);
+      await loadChannels();
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError
+          ? err.message
+          : 'Không thể ngắt kết nối kênh.',
+      );
+    } finally {
+      setDisconnecting(null);
+    }
+  }
+
+  function handleZaloReconnectPrefill(channel: ChannelConnection) {
+    setZaloOaId(channel.externalPageId);
+    zaloSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }
+
   return (
     <main>
       <h1 style={{ margin: 0, fontSize: 32 }}>Kết nối kênh</h1>
@@ -176,6 +217,7 @@ function ChannelsSettingsContent() {
       </div>
 
       <section
+        ref={zaloSectionRef}
         style={{
           border: '1px solid #e2e8f0',
           borderRadius: 12,
@@ -289,20 +331,98 @@ function ChannelsSettingsContent() {
                   <th style={tableHeaderStyle}>Nhà cung cấp</th>
                   <th style={tableHeaderStyle}>Page ID</th>
                   <th style={tableHeaderStyle}>Trạng thái</th>
+                  <th style={tableHeaderStyle}>Hành động</th>
                 </tr>
               </thead>
               <tbody>
-                {channels.map((channel) => (
-                  <tr key={channel.id}>
-                    <td style={tableCellStyle}>
-                      {formatProvider(channel.provider)}
-                    </td>
-                    <td style={tableCellStyle}>{channel.externalPageId}</td>
-                    <td style={tableCellStyle}>
-                      {formatStatus(channel.status)}
-                    </td>
-                  </tr>
-                ))}
+                {channels.map((channel) => {
+                  const needsReconnect =
+                    channel.status === 'needs_reauth' ||
+                    channel.status === 'revoked';
+                  const isDisconnecting = disconnecting === channel.id;
+
+                  return (
+                    <tr key={channel.id}>
+                      <td style={tableCellStyle}>
+                        {formatProvider(channel.provider)}
+                      </td>
+                      <td style={tableCellStyle}>{channel.externalPageId}</td>
+                      <td style={tableCellStyle}>
+                        {formatStatus(channel.status)}
+                      </td>
+                      <td style={tableCellStyle}>
+                        <div
+                          style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
+                        >
+                          {needsReconnect &&
+                          (channel.provider === 'meta_page' ||
+                            channel.provider === 'meta_ig') ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleConnect()}
+                              disabled={connecting}
+                              style={{
+                                background: '#2563eb',
+                                border: 'none',
+                                borderRadius: 8,
+                                color: '#ffffff',
+                                cursor: connecting
+                                  ? 'not-allowed'
+                                  : 'pointer',
+                                fontSize: 16,
+                                fontWeight: 600,
+                                opacity: connecting ? 0.7 : 1,
+                                padding: '10px 16px',
+                              }}
+                            >
+                              Kết nối lại
+                            </button>
+                          ) : null}
+                          {needsReconnect && channel.provider === 'zalo_oa' ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleZaloReconnectPrefill(channel)
+                              }
+                              style={{
+                                background: '#0f766e',
+                                border: 'none',
+                                borderRadius: 8,
+                                color: '#ffffff',
+                                cursor: 'pointer',
+                                fontSize: 16,
+                                fontWeight: 600,
+                                padding: '10px 16px',
+                              }}
+                            >
+                              Dán token mới
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => void handleDisconnect(channel)}
+                            disabled={isDisconnecting}
+                            style={{
+                              background: '#b91c1c',
+                              border: 'none',
+                              borderRadius: 8,
+                              color: '#ffffff',
+                              cursor: isDisconnecting
+                                ? 'not-allowed'
+                                : 'pointer',
+                              fontSize: 16,
+                              fontWeight: 600,
+                              opacity: isDisconnecting ? 0.7 : 1,
+                              padding: '10px 16px',
+                            }}
+                          >
+                            {isDisconnecting ? 'Đang ngắt...' : 'Ngắt kết nối'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

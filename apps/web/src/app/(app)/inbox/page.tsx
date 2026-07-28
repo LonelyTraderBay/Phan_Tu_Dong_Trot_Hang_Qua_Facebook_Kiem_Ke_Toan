@@ -14,6 +14,7 @@ import {
   listInboxConversations,
   listInboxMessages,
   resumeInboxConversation,
+  sendInboxMessage,
   takeoverInboxConversation,
   type InboxConversation,
   type InboxMessage,
@@ -36,6 +37,8 @@ export default function InboxPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [takingOver, setTakingOver] = useState(false);
   const [resuming, setResuming] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [takeoverMessage, setTakeoverMessage] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
@@ -222,6 +225,28 @@ export default function InboxPage() {
     }
   }
 
+  async function handleSendMessage() {
+    if (!selectedConversation || sending || !replyText.trim()) {
+      return;
+    }
+
+    setSending(true);
+    setError(null);
+
+    try {
+      const sentMessage = await sendInboxMessage(
+        selectedConversation.id,
+        replyText.trim(),
+      );
+      setMessages((current) => [...current, sentMessage]);
+      setReplyText('');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Không thể gửi tin nhắn.'));
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <main>
       <header>
@@ -390,6 +415,41 @@ export default function InboxPage() {
                   })}
                 </div>
               )}
+
+              <div style={composeRowStyle}>
+                <textarea
+                  value={replyText}
+                  onChange={(event) => setReplyText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      void handleSendMessage();
+                    }
+                  }}
+                  rows={2}
+                  placeholder="Nhập tin nhắn trả lời khách..."
+                  style={composeInputStyle}
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleSendMessage()}
+                  disabled={sending || !replyText.trim()}
+                  style={{
+                    ...primaryButtonStyle,
+                    cursor:
+                      sending || !replyText.trim() ? 'not-allowed' : 'pointer',
+                    opacity: sending || !replyText.trim() ? 0.7 : 1,
+                  }}
+                >
+                  {sending ? 'Đang gửi...' : 'Gửi'}
+                </button>
+              </div>
+              {!selectedConversation.botPaused ? (
+                <p style={hintTextStyle}>
+                  Bot vẫn đang chạy — AI có thể trả lời đè lên tin nhắn của
+                  bạn. Bấm &quot;Tiếp quản&quot; trước nếu muốn chắc chắn.
+                </p>
+              ) : null}
             </>
           ) : (
             <p style={emptyStateStyle}>
@@ -535,6 +595,30 @@ const messageMetaStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
   margin: 0,
+};
+
+const composeRowStyle: CSSProperties = {
+  borderTop: '1px solid #e2e8f0',
+  display: 'flex',
+  gap: 10,
+  marginTop: 16,
+  paddingTop: 16,
+};
+
+const composeInputStyle: CSSProperties = {
+  border: '1px solid #cbd5e1',
+  borderRadius: 10,
+  color: '#0f172a',
+  flex: 1,
+  font: 'inherit',
+  padding: '11px 12px',
+  resize: 'vertical',
+};
+
+const hintTextStyle: CSSProperties = {
+  color: '#94a3b8',
+  fontSize: 13,
+  marginTop: 8,
 };
 
 const primaryButtonStyle: CSSProperties = {

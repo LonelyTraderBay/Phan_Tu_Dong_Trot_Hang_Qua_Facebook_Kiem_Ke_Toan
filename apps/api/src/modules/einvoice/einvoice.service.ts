@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -71,6 +72,16 @@ const ORDER_SELECT =
 const JOB_SELECT =
   'id, org_id, order_id, provider, status, attempts, last_error, payload_json, created_at, updated_at, sent_at';
 
+/**
+ * Statuses that mean "an invoice for this order is already claimed or issued".
+ * The full vocabulary is `pending | sent | failed | dead`
+ * (einvoice_jobs_status_check). `failed` and `dead` are deliberately excluded:
+ * a failed attempt must stay retryable, otherwise a provider outage would
+ * permanently lock an order out of ever being invoiced. Mirrors the predicate
+ * of `einvoice_jobs_one_active_per_order_idx`.
+ */
+const ACTIVE_JOB_STATUSES: EinvoiceJobStatus[] = ['pending', 'sent'];
+
 @Injectable()
 export class EinvoiceService {
   private readonly supabase: SupabaseLike;
@@ -128,6 +139,17 @@ export class EinvoiceService {
       });
     }
 
+    // Issuing is a real, externally visible tax event: `runJob` calls
+    // `provider.issue(...)`, which mints a legal invoice. This used to insert a
+    // job and call the provider unconditionally, so a double-click, a client
+    // retry after a timeout, or two operators acting at once produced two legal
+    // invoices for one sale. Check for an already-active job BEFORE touching the
+    // provider, and report that job instead of issuing again.
+    const active = await this.findActiveJob(orgId, body.orderId);
+    if (active) {
+      return { job: mapJob(active), alreadyIssued: true as const };
+    }
+
     const providerCode = body.provider ?? resolveDefaultEinvoiceProvider();
     const payload = buildPayload(order);
     const { data, error } = await this.supabase
@@ -144,11 +166,49 @@ export class EinvoiceService {
       .single();
 
     if (error) {
+      // Two requests raced past the lookup above; the partial unique index
+      // `einvoice_jobs_one_active_per_order_idx` let exactly one insert through.
+      // The loser reports the winner's job rather than a raw 500 — no provider
+      // call happens on this path, which is the whole point of the index.
+      if (error.code === '23505') {
+        const winner = await this.findActiveJob(orgId, body.orderId);
+        if (winner) {
+          return { job: mapJob(winner), alreadyIssued: true as const };
+        }
+        throw new ConflictException({
+          code: 'einvoice_already_active',
+          message: 'An e-invoice job for this order is already being issued',
+        });
+      }
       throwEinvoiceError(error, 'Could not create e-invoice job');
     }
 
     const job = data as EinvoiceJobRow;
     return { job: mapJob(await this.runJob(job, payload)) };
+  }
+
+  /**
+   * The single `pending`/`sent` job for an order, if any. At most one can exist
+   * (`einvoice_jobs_one_active_per_order_idx`); ordering keeps the result
+   * deterministic for rows predating that index.
+   */
+  private async findActiveJob(
+    orgId: string,
+    orderId: string,
+  ): Promise<EinvoiceJobRow | null> {
+    const { data, error } = await this.supabase
+      .from('einvoice_jobs')
+      .select(JOB_SELECT)
+      .eq('org_id', orgId)
+      .eq('order_id', orderId)
+      .in('status', ACTIVE_JOB_STATUSES)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      throwEinvoiceError(error, 'Could not read existing e-invoice jobs');
+    }
+
+    return ((data ?? []) as EinvoiceJobRow[])[0] ?? null;
   }
 
   private async requireOrder(orgId: string, orderId: string) {

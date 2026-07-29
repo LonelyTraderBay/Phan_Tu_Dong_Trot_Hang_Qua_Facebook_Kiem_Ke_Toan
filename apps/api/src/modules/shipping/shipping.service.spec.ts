@@ -118,6 +118,149 @@ function outboxInsertHandler(sink: Array<Record<string, unknown>>) {
   };
 }
 
+// createShipment now looks up an existing live shipment for the order BEFORE it
+// calls the carrier, so the shipments stub has to answer a
+// `select().eq().eq().in().order()` chain as well as insert. `existing` is what
+// that lookup finds; each inserted row is recorded into `sink`.
+function shipmentsTableHandler(
+  sink: Array<Record<string, unknown>>,
+  options: {
+    existing?: Array<Record<string, unknown>>;
+    inserted?: (values: Record<string, unknown>) => Record<string, unknown>;
+  } = {},
+) {
+  const liveStatusFilters: unknown[][] = [];
+
+  return {
+    liveStatusFilters,
+    select() {
+      return {
+        eq() {
+          return {
+            eq() {
+              return {
+                in(_column: string, values: unknown[]) {
+                  liveStatusFilters.push(values);
+                  return {
+                    order: async () => ({
+                      data: options.existing ?? [],
+                      error: null,
+                    }),
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+    insert(values: Record<string, unknown>) {
+      sink.push(values);
+      return {
+        select() {
+          return {
+            single: async () => ({
+              data: options.inserted ? options.inserted(values) : shipmentRow(),
+              error: null,
+            }),
+          };
+        },
+      };
+    },
+  };
+}
+
+function ghnConnectionRow(config: Record<string, unknown>) {
+  return {
+    id: CONNECTION_ID,
+    org_id: ORG_ID,
+    provider: 'ghn',
+    display_name: 'GHN',
+    credentials_enc: encryptToken(
+      JSON.stringify({ token: 'GHN_TOKEN' }),
+      TOKEN_KEY,
+    ),
+    config_json: config,
+    enabled: true,
+    created_at: CREATED_AT,
+    updated_at: CREATED_AT,
+  };
+}
+
+function createShipmentClient(options: {
+  shipments: ReturnType<typeof shipmentsTableHandler>;
+  updates: unknown[];
+  outboxInserts: Array<Record<string, unknown>>;
+  rpc: () => Promise<unknown>;
+  connection?: Record<string, unknown> | null;
+  orderStatus?: string;
+}) {
+  return {
+    rpc: options.rpc,
+    from(table: string) {
+      if (table === 'outbox_events') {
+        return outboxInsertHandler(options.outboxInserts);
+      }
+
+      if (table === 'shipments') {
+        return options.shipments;
+      }
+
+      if (table === 'orders') {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  eq() {
+                    return {
+                      maybeSingle: async () => ({
+                        data: orderRow(options.orderStatus ?? 'confirmed'),
+                        error: null,
+                      }),
+                    };
+                  },
+                };
+              },
+            };
+          },
+          update(values: unknown) {
+            options.updates.push(values);
+            return {
+              eq() {
+                return { eq: async () => ({ error: null }) };
+              },
+            };
+          },
+        };
+      }
+
+      if (table === 'carrier_connections') {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  eq() {
+                    return {
+                      maybeSingle: async () => ({
+                        data: options.connection ?? null,
+                        error: null,
+                      }),
+                    };
+                  },
+                };
+              },
+            };
+          },
+        };
+      }
+
+      throw new Error(`unexpected table ${table}`);
+    },
+  } as unknown as SupabaseLike;
+}
+
 describe('shipping providers', () => {
   it('manual provider creates a deterministic tracking code with configured fee', async () => {
     const provider = new ManualShippingProvider();
@@ -206,7 +349,7 @@ describe('shipping providers', () => {
 
 describe('ShippingService', () => {
   it('creates a manual shipment, stores fee on the order, and ships confirmed order', async () => {
-    const inserts: unknown[] = [];
+    const inserts: Array<Record<string, unknown>> = [];
     const updates: unknown[] = [];
     const outboxInserts: Array<Record<string, unknown>> = [];
     const rpc = vi.fn(async () => ({
@@ -277,21 +420,7 @@ describe('ShippingService', () => {
         }
 
         if (table === 'shipments') {
-          return {
-            insert(values: unknown) {
-              inserts.push(values);
-              return {
-                select() {
-                  return {
-                    single: async () => ({
-                      data: shipmentRow(),
-                      error: null,
-                    }),
-                  };
-                },
-              };
-            },
-          };
+          return shipmentsTableHandler(inserts);
         }
 
         throw new Error(`unexpected table ${table}`);
@@ -431,26 +560,15 @@ describe('ShippingService', () => {
         }
 
         if (table === 'shipments') {
-          return {
-            insert(values: Record<string, unknown>) {
-              inserts.push(values);
-              return {
-                select() {
-                  return {
-                    single: async () => ({
-                      data: shipmentRow({
-                        provider: 'ghn',
-                        external_shipment_id: 'GHN-MOCK-22222222',
-                        tracking_code: 'GHN-MOCK-22222222',
-                        raw_json: values.raw_json,
-                      }),
-                      error: null,
-                    }),
-                  };
-                },
-              };
-            },
-          };
+          return shipmentsTableHandler(inserts, {
+            inserted: (values) =>
+              shipmentRow({
+                provider: 'ghn',
+                external_shipment_id: 'GHN-MOCK-22222222',
+                tracking_code: 'GHN-MOCK-22222222',
+                raw_json: values.raw_json,
+              }),
+          });
         }
 
         throw new Error(`unexpected table ${table}`);
@@ -542,21 +660,7 @@ describe('ShippingService', () => {
         }
 
         if (table === 'shipments') {
-          return {
-            insert(values: Record<string, unknown>) {
-              inserts.push(values);
-              return {
-                select() {
-                  return {
-                    single: async () => ({
-                      data: shipmentRow(),
-                      error: null,
-                    }),
-                  };
-                },
-              };
-            },
-          };
+          return shipmentsTableHandler(inserts);
         }
 
         throw new Error(`unexpected table ${table}`);
@@ -578,6 +682,127 @@ describe('ShippingService', () => {
     expect(rpc).not.toHaveBeenCalled();
     expect(outboxInserts).toEqual([]);
     expect(result).not.toHaveProperty('order');
+  });
+
+  it('refuses a second booking for an order that already has a live shipment', async () => {
+    // The defect: the carrier was called FIRST and the local row/fee/ship
+    // transition written afterwards. When any of those threw (or the request
+    // timed out) the client retried, the carrier was called again, and the shop
+    // ended up with two live waybills and two carrier fees for one order.
+    const fetchImpl = vi.fn(async () => {
+      throw new Error('the carrier must not be contacted');
+    });
+    const inserts: Array<Record<string, unknown>> = [];
+    const updates: unknown[] = [];
+    const outboxInserts: Array<Record<string, unknown>> = [];
+    const rpc = vi.fn(async () => ({ data: null, error: null }));
+    const shipments = shipmentsTableHandler(inserts, {
+      existing: [
+        shipmentRow({
+          provider: 'ghn',
+          status: 'delivering',
+          tracking_code: 'GHN-REAL-0001',
+          raw_json: { mode: 'sandbox' },
+        }),
+      ],
+    });
+    const client = createShipmentClient({
+      shipments,
+      updates,
+      outboxInserts,
+      rpc,
+      connection: ghnConnectionRow({
+        sandboxUrl: 'https://sandbox.example.com/ghn',
+      }),
+    });
+    const cod = { ensureExpectationForOrder: vi.fn(async () => null) };
+    const service = new ShippingService(client, env, undefined, fetchImpl, cod);
+
+    await expect(
+      service.createShipment({
+        orgId: ORG_ID,
+        actorUserId: USER_ID,
+        body: { orderId: ORDER_ID, provider: 'ghn' },
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        code: 'shipment_already_exists',
+        shipmentId: SHIPMENT_ID,
+        trackingCode: 'GHN-REAL-0001',
+      },
+      status: 409,
+    });
+
+    // The whole point of the guard: no second waybill, no second carrier fee.
+    expect(fetchImpl).not.toHaveBeenCalled();
+    // ...and nothing downstream moved either.
+    expect(inserts).toEqual([]);
+    expect(updates).toEqual([]);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(outboxInserts).toEqual([]);
+    expect(cod.ensureExpectationForOrder).not.toHaveBeenCalled();
+    // Only live parcels block. `cancelled` and `failed` bookings stay
+    // re-bookable, otherwise a cancelled waybill would strand the order.
+    expect(shipments.liveStatusFilters).toEqual([
+      ['created', 'picking', 'delivering', 'delivered'],
+    ]);
+  });
+
+  it('lets a real booking through when the only prior shipment was a mock', async () => {
+    // Mock rows are traceability records where no carrier was contacted, so
+    // they cost nothing and must never block a genuine booking. Mock semantics
+    // stay exactly as they were.
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: { order_code: 'GHN-SANDBOX-1', total_fee: 30000 },
+      }),
+    }));
+    const inserts: Array<Record<string, unknown>> = [];
+    const updates: unknown[] = [];
+    const outboxInserts: Array<Record<string, unknown>> = [];
+    const rpc = vi.fn(async () => ({
+      data: { order: { id: ORDER_ID, status: 'shipped' }, items: [] },
+      error: null,
+    }));
+    const shipments = shipmentsTableHandler(inserts, {
+      existing: [
+        shipmentRow({
+          provider: 'ghn',
+          status: 'created',
+          tracking_code: 'GHN-MOCK-22222222',
+          raw_json: { mode: 'mock' },
+        }),
+      ],
+      inserted: () =>
+        shipmentRow({
+          provider: 'ghn',
+          tracking_code: 'GHN-SANDBOX-1',
+          fee_vnd: '30000',
+        }),
+    });
+    const client = createShipmentClient({
+      shipments,
+      updates,
+      outboxInserts,
+      rpc,
+      connection: ghnConnectionRow({
+        sandboxUrl: 'https://sandbox.example.com/ghn',
+      }),
+    });
+    const cod = { ensureExpectationForOrder: vi.fn(async () => null) };
+    const service = new ShippingService(client, env, undefined, fetchImpl, cod);
+
+    const result = await service.createShipment({
+      orgId: ORG_ID,
+      actorUserId: USER_ID,
+      body: { orderId: ORDER_ID, provider: 'ghn' },
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(inserts).toHaveLength(1);
+    expect(result.shipment.trackingCode).toBe('GHN-SANDBOX-1');
   });
 
   it('encrypts carrier credentials and omits them from the returned DTO', async () => {

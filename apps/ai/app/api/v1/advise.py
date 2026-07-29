@@ -8,10 +8,17 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import settings
+from app.infra.core import CoreKnowledgeClient
 from app.infra.llm.gemini import GeminiLlmProvider
+from app.infra.llm.spend import LlmSpendTracker
 
 router = APIRouter(prefix="/internal/v1")
 logger = logging.getLogger(__name__)
+
+# Same spend/quota plumbing process-message uses, so advisor completions are
+# capped and reported instead of spending silently.
+spend_budget = LlmSpendTracker()
+quota_client = CoreKnowledgeClient()
 
 PROMPT_VERSION = "advisor.v1"
 DISCLAIMER = (
@@ -109,20 +116,59 @@ def _stub_response(
 
 
 def _gemini_response(
+    org_id: str,
     goal: str,
     catalog_aggregates: dict[str, Any],
     sales_aggregates: dict[str, Any],
 ) -> dict[str, Any] | None:
+    messages = _build_advisor_messages(goal, catalog_aggregates, sales_aggregates)
+
+    try:
+        model = _advisor_model(settings.ai_model_allowlist)
+    except Exception:
+        logger.exception("Advisor model selection failed; falling back to stub")
+        return None
+
+    # Gate before spending: org token quota first, then the global LLM spend cap.
+    if quota_client is not None:
+        try:
+            quota = quota_client.check_ai_token_quota(org_id=org_id)
+        except Exception:
+            logger.exception("Advisor quota check failed; falling back to stub")
+            return None
+        if quota.get("exceeded") is True:
+            logger.warning("Advisor skipped: AI token quota exceeded for org")
+            return None
+
+    if spend_budget is not None:
+        estimate = spend_budget.estimate_messages(messages)
+        if spend_budget.would_exceed_cap(estimate):
+            logger.warning("Advisor skipped: LLM spend cap would be exceeded")
+            return None
+
     try:
         provider = GeminiLlmProvider()
-        model = _advisor_model(settings.ai_model_allowlist)
-        completion = provider.complete(
-            model=model,
-            messages=_build_advisor_messages(goal, catalog_aggregates, sales_aggregates),
-        )
+        completion = provider.complete(model=model, messages=messages)
     except Exception:
         logger.exception("Gemini advisor failed; falling back to stub")
         return None
+
+    # The money is already spent past this point: record it, and never discard a
+    # paid completion just because usage reporting to Core failed.
+    if spend_budget is not None:
+        spend_budget.record_completion(
+            prompt_tokens=completion.prompt_tokens,
+            completion_tokens=completion.completion_tokens,
+        )
+    if quota_client is not None and completion.total_tokens > 0:
+        try:
+            quota_client.record_ai_token_usage(
+                org_id=org_id,
+                quantity=completion.total_tokens,
+                ref_type="advisor",
+            )
+        except Exception:
+            logger.exception("Advisor token usage reporting to Core failed")
 
     return {
         "suggestionsText": completion.text,
@@ -162,7 +208,12 @@ def advise(
     sales_note = body.sales_aggregates.get("note") or "sales aggregate stub"
 
     if settings.gemini_api_key:
-        gemini_result = _gemini_response(goal, body.catalog_aggregates, body.sales_aggregates)
+        gemini_result = _gemini_response(
+            str(body.org_id),
+            goal,
+            body.catalog_aggregates,
+            body.sales_aggregates,
+        )
         if gemini_result is not None:
             return gemini_result
 

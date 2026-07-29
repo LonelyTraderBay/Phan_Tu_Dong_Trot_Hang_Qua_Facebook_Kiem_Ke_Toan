@@ -401,6 +401,123 @@ describe('CodService', () => {
     expect(db.tables.cod_expectations[1]).toMatchObject({
       status: 'written_off',
     });
+    // Only one reconcilable id existed and it was reconciled: nothing left.
+    expect(result.remaining).toBe(0);
+    expect(result.hasMore).toBe(false);
+  });
+
+  it('reports no remaining work when the caller names orderIds explicitly', async () => {
+    // The `remaining`/`hasMore` fields describe the auto-selected pool, not
+    // the caller's own list: an explicit `orderIds` batch either finishes or
+    // aborts in this call, so there is nothing left to report.
+    const db = createClient({ cod_expectations: [expectation()] });
+    const service = new CodService(db.client, auditMock());
+
+    const result = await service.reconcileBatch({
+      orgId: ORG_ID,
+      actorUserId: USER_ID,
+      body: { orderIds: [ORDER_ID] },
+    });
+
+    expect(result.reconciled).toBe(1);
+    expect(result.remaining).toBe(0);
+    expect(result.hasMore).toBe(false);
+  });
+});
+
+describe('CodService.reconcileBatch auto-selected paging', () => {
+  /**
+   * `count` open expectations, each paired with a collection that exactly
+   * matches its expected amount so reconciling flips it to `matched` and
+   * removes it from the reconcilable pool -- otherwise a zero-collection
+   * order would flip to `discrepancy`, which is still reconcilable, and a
+   * second `reconcileBatch` call would not cleanly pick up "the rest."
+   */
+  function reconcilableExpectations(count: number) {
+    return {
+      cod_expectations: Array.from({ length: count }, (_, index) =>
+        expectation({
+          id: `exp-auto-${index}`,
+          order_id: `order-auto-${index}`,
+          expected_vnd: '1000',
+          created_at: `2026-01-${String(1 + Math.floor(index / 24)).padStart(
+            2,
+            '0',
+          )}T${String(index % 24).padStart(2, '0')}:00:00.000Z`,
+        }),
+      ),
+      cod_collections: Array.from({ length: count }, (_, index) =>
+        collection({
+          id: `col-auto-${index}`,
+          order_id: `order-auto-${index}`,
+          amount_vnd: '1000',
+        }),
+      ),
+    };
+  }
+
+  it('bounds the auto-selected batch at 100 and reports the remainder explicitly', async () => {
+    // 150 reconcilable expectations against the 100-per-call reconcile cap.
+    // `reconcileBatch` used to hand back `{ reconciled: 100, results: [...] }`
+    // with nothing distinguishing that from "all done" -- a shop with more
+    // than 100 open COD expectations had to guess it needed to press the
+    // button again, and had no idea how many more presses it would take.
+    const db = createClient(reconcilableExpectations(150));
+    const service = new CodService(db.client, auditMock());
+
+    const first = await service.reconcileBatch({
+      orgId: ORG_ID,
+      actorUserId: USER_ID,
+      body: {},
+    });
+
+    expect(first.reconciled).toBe(100);
+    expect(first.results).toHaveLength(100);
+    expect(first.remaining).toBe(50);
+    expect(first.hasMore).toBe(true);
+    expect(
+      db.tables.cod_expectations.filter((row) => row.status === 'matched'),
+    ).toHaveLength(100);
+  });
+
+  it('finishes the pool on a second call once the first batch is done', async () => {
+    // Proves the "call again" contract end-to-end: after the remainder from
+    // the first call is itself reconciled, nothing is left.
+    const db = createClient(reconcilableExpectations(150));
+    const service = new CodService(db.client, auditMock());
+
+    await service.reconcileBatch({
+      orgId: ORG_ID,
+      actorUserId: USER_ID,
+      body: {},
+    });
+    const second = await service.reconcileBatch({
+      orgId: ORG_ID,
+      actorUserId: USER_ID,
+      body: {},
+    });
+
+    expect(second.reconciled).toBe(50);
+    expect(second.remaining).toBe(0);
+    expect(second.hasMore).toBe(false);
+    expect(
+      db.tables.cod_expectations.every((row) => row.status === 'matched'),
+    ).toBe(true);
+  });
+
+  it('does not report a remainder when the whole pool fits in one batch', async () => {
+    const db = createClient(reconcilableExpectations(3));
+    const service = new CodService(db.client, auditMock());
+
+    const result = await service.reconcileBatch({
+      orgId: ORG_ID,
+      actorUserId: USER_ID,
+      body: {},
+    });
+
+    expect(result.reconciled).toBe(3);
+    expect(result.remaining).toBe(0);
+    expect(result.hasMore).toBe(false);
   });
 });
 
@@ -504,6 +621,8 @@ describe('CodService.getReport totals', () => {
 class Query {
   private filters: Array<{ column: string; value: unknown; values?: unknown[] }> = [];
   private limitCount: number | null = null;
+  private sort: { column: string; ascending: boolean } | null = null;
+  private offsets: { from: number; to: number } | null = null;
   private insertValues: Row | null = null;
   private updateValues: Row | null = null;
   private upsertValues: Row | null = null;
@@ -528,12 +647,19 @@ class Query {
     return this;
   }
 
-  order() {
+  order(column: string, options: { ascending?: boolean } = {}) {
+    this.sort = { column, ascending: options.ascending ?? true };
     return this;
   }
 
   limit(count: number) {
     this.limitCount = count;
+    return this;
+  }
+
+  /** PostgREST `.range()` is inclusive on both bounds. */
+  range(from: number, to: number) {
+    this.offsets = { from, to };
     return this;
   }
 
@@ -613,8 +739,20 @@ class Query {
           : row[filter.column] === filter.value,
       ),
     );
+    if (this.sort) {
+      const { column, ascending } = this.sort;
+      rows = [...rows].sort((left, right) => {
+        const comparison = String(left[column]).localeCompare(
+          String(right[column]),
+        );
+        return ascending ? comparison : -comparison;
+      });
+    }
     if (this.limitCount !== null) {
       rows = rows.slice(0, this.limitCount);
+    }
+    if (this.offsets) {
+      rows = rows.slice(this.offsets.from, this.offsets.to + 1);
     }
     return rows;
   }

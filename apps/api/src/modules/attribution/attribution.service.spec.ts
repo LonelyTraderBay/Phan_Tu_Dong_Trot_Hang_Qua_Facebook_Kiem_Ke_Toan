@@ -6,6 +6,14 @@ import { AttributionService, type SupabaseLike } from './attribution.service';
 const ORG_ID = '11111111-1111-1111-1111-111111111111';
 const OTHER_ORG_ID = '99999999-9999-9999-9999-999999999999';
 
+/**
+ * PostgREST caps every response at `db-max-rows` (1000 by default) no matter
+ * what the client asks for. Modelling that here is the whole point: a fake that
+ * happily returns everything the caller asks for cannot see the bug where a
+ * `.limit(10_000)` was never actually the binding constraint.
+ */
+const DB_MAX_ROWS = 1_000;
+
 type Row = Record<string, unknown>;
 type Tables = Record<string, Row[]>;
 
@@ -186,6 +194,82 @@ describe('AttributionService', () => {
   });
 });
 
+describe('AttributionService range completeness', () => {
+  const ROW_COUNT = 1_500; // > DB_MAX_ROWS, so a single unpaged fetch cannot see it all
+
+  /** `2020-01-01` plus `days`, as a date-only string. */
+  function dayString(days: number) {
+    return new Date(Date.UTC(2020, 0, 1 + days)).toISOString().slice(0, 10);
+  }
+
+  function wideRangeOrders() {
+    return [
+      // A lone marker at the very oldest end of the range, on its own
+      // utm_source, so the assertions below can prove specifically that the
+      // OLDEST row survives pagination -- not just "some" row does.
+      order({
+        id: 'oldest-marker',
+        utm_source: 'oldest-marker',
+        total_vnd: '999',
+        created_at: `${dayString(0)}T12:00:00.000Z`,
+      }),
+      ...Array.from({ length: ROW_COUNT - 1 }, (_, index) =>
+        order({
+          id: `bulk-${index}`,
+          utm_source: 'campaign-x',
+          total_vnd: '1000',
+          created_at: `${dayString(index + 1)}T12:00:00.000Z`,
+        }),
+      ),
+    ];
+  }
+
+  const RANGE = { from: dayString(0), to: dayString(ROW_COUNT - 1) };
+
+  it('keeps the oldest order in range after paginating past a single page', async () => {
+    // The old code ordered created_at DESCENDING under a `.limit(10_000)` that
+    // PostgREST's own `db-max-rows` (modelled here as DB_MAX_ROWS) binds ahead
+    // of -- so the rows dropped when a range overflowed one page were the
+    // OLDEST ones in the requested window, not the newest. This seeds more
+    // than DB_MAX_ROWS orders and asserts the single oldest one -- alone on
+    // its own utm_source -- is still counted.
+    const { client } = createClient({ orders: wideRangeOrders() });
+    const service = new AttributionService(client);
+
+    const result = await service.summary(ORG_ID, RANGE);
+
+    const marker = result.sources.find(
+      (source) => source.utmSource === 'oldest-marker',
+    );
+    expect(marker).toEqual({
+      utmSource: 'oldest-marker',
+      label: 'oldest-marker',
+      orderCount: 1,
+      revenueVnd: '999',
+    });
+  });
+
+  it('counts every seeded order in range exactly once, not just the first or last page', async () => {
+    const { client } = createClient({ orders: wideRangeOrders() });
+    const service = new AttributionService(client);
+
+    const result = await service.summary(ORG_ID, RANGE);
+
+    expect(result.totalOrders).toBe(ROW_COUNT);
+    expect(result.totalRevenueVnd).toBe(String(999 + (ROW_COUNT - 1) * 1000));
+
+    const bulk = result.sources.find(
+      (source) => source.utmSource === 'campaign-x',
+    );
+    expect(bulk).toEqual({
+      utmSource: 'campaign-x',
+      label: 'campaign-x',
+      orderCount: ROW_COUNT - 1,
+      revenueVnd: String((ROW_COUNT - 1) * 1000),
+    });
+  });
+});
+
 function order(overrides: Row = {}) {
   const row = {
     id: `order-${Math.random()}`,
@@ -266,7 +350,7 @@ class Query {
   }
 
   then(resolve: (value: { data?: Row[]; error: null }) => void) {
-    resolve({ data: this.applyFilters(), error: null });
+    resolve({ data: this.applyFilters().slice(0, DB_MAX_ROWS), error: null });
   }
 
   private applyFilters() {

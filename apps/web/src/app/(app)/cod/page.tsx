@@ -193,85 +193,93 @@ export default function CodPage() {
         ) : !report || report.expectations.length === 0 ? (
           <EmptyState>Không có đơn COD cần đối soát.</EmptyState>
         ) : (
-          <Table style={{ minWidth: 980 }}>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>Mã đơn</TableHeaderCell>
-                <TableHeaderCell>Khách</TableHeaderCell>
-                <TableHeaderCell>Trạng thái COD</TableHeaderCell>
-                <TableHeaderCell>Dự kiến</TableHeaderCell>
-                <TableHeaderCell>Đã thu</TableHeaderCell>
-                <TableHeaderCell>Lệch</TableHeaderCell>
-                <TableHeaderCell>Ghi nhận thu</TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <tbody>
-              {report.expectations.map((expectation) => (
-                <TableRow key={expectation.id}>
-                  <TableCell>{shortId(expectation.orderId)}</TableCell>
-                  <TableCell>
-                    <strong>
-                      {expectation.order?.customerName ?? 'Khách chưa đặt tên'}
-                    </strong>
-                    <br />
-                    <span style={mutedStyle}>
-                      {expectation.order?.phoneE164 ?? 'Chưa có SĐT'}
-                    </span>
-                  </TableCell>
-                  <TableCell>{formatCodStatus(expectation.status)}</TableCell>
-                  <TableCell>
-                    {formatVnd(expectation.expectedVnd)}
-                  </TableCell>
-                  <TableCell>
-                    {formatVnd(expectation.collectedVnd)}
-                  </TableCell>
-                  <TableCell>
-                    <span style={deltaStyle(expectation.deltaVnd)}>
-                      {formatVnd(expectation.deltaVnd)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div style={collectionFormStyle}>
-                      <Input
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={amounts[expectation.orderId] ?? ''}
-                        onChange={(event) =>
-                          setAmounts((current) => ({
-                            ...current,
-                            [expectation.orderId]: event.target.value,
-                          }))
-                        }
-                        aria-label={`Số tiền COD thu cho đơn ${shortId(
-                          expectation.orderId,
-                        )}`}
-                      />
-                      <Input
-                        value={notes[expectation.orderId] ?? ''}
-                        onChange={(event) =>
-                          setNotes((current) => ({
-                            ...current,
-                            [expectation.orderId]: event.target.value,
-                          }))
-                        }
-                        placeholder="Ghi chú"
-                      />
-                      <Button
-                        variant="link"
-                        onClick={() => void handleRecordCollection(expectation)}
-                        disabled={busyOrderId === expectation.orderId}
-                        style={{ textAlign: 'left' }}
-                      >
-                        {busyOrderId === expectation.orderId
-                          ? 'Đang lưu...'
-                          : 'Ghi nhận'}
-                      </Button>
-                    </div>
-                  </TableCell>
+          <>
+            {report.expectationsTruncated ? (
+              <MutedText style={{ fontSize: 14 }}>
+                Chỉ hiển thị 100 khoản COD mới nhất; tổng bên trên vẫn tính đủ
+                toàn bộ.
+              </MutedText>
+            ) : null}
+            <Table style={{ minWidth: 980 }}>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>Mã đơn</TableHeaderCell>
+                  <TableHeaderCell>Khách</TableHeaderCell>
+                  <TableHeaderCell>Trạng thái COD</TableHeaderCell>
+                  <TableHeaderCell>Dự kiến</TableHeaderCell>
+                  <TableHeaderCell>Đã thu</TableHeaderCell>
+                  <TableHeaderCell>Lệch</TableHeaderCell>
+                  <TableHeaderCell>Ghi nhận thu</TableHeaderCell>
                 </TableRow>
-              ))}
-            </tbody>
-          </Table>
+              </TableHead>
+              <tbody>
+                {report.expectations.map((expectation) => (
+                  <TableRow key={expectation.id}>
+                    <TableCell>{shortId(expectation.orderId)}</TableCell>
+                    <TableCell>
+                      <strong>
+                        {expectation.order?.customerName ?? 'Khách chưa đặt tên'}
+                      </strong>
+                      <br />
+                      <span style={mutedStyle}>
+                        {expectation.order?.phoneE164 ?? 'Chưa có SĐT'}
+                      </span>
+                    </TableCell>
+                    <TableCell>{formatCodStatus(expectation.status)}</TableCell>
+                    <TableCell>
+                      {formatVnd(expectation.expectedVnd)}
+                    </TableCell>
+                    <TableCell>
+                      {formatVnd(expectation.collectedVnd)}
+                    </TableCell>
+                    <TableCell>
+                      <span style={deltaStyle(expectation.deltaVnd)}>
+                        {formatVnd(expectation.deltaVnd)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div style={collectionFormStyle}>
+                        <Input
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={amounts[expectation.orderId] ?? ''}
+                          onChange={(event) =>
+                            setAmounts((current) => ({
+                              ...current,
+                              [expectation.orderId]: event.target.value,
+                            }))
+                          }
+                          aria-label={`Số tiền COD thu cho đơn ${shortId(
+                            expectation.orderId,
+                          )}`}
+                        />
+                        <Input
+                          value={notes[expectation.orderId] ?? ''}
+                          onChange={(event) =>
+                            setNotes((current) => ({
+                              ...current,
+                              [expectation.orderId]: event.target.value,
+                            }))
+                          }
+                          placeholder="Ghi chú"
+                        />
+                        <Button
+                          variant="link"
+                          onClick={() => void handleRecordCollection(expectation)}
+                          disabled={busyOrderId === expectation.orderId}
+                          style={{ textAlign: 'left' }}
+                        >
+                          {busyOrderId === expectation.orderId
+                            ? 'Đang lưu...'
+                            : 'Ghi nhận'}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </tbody>
+            </Table>
+          </>
         )}
       </Card>
 
@@ -279,34 +287,42 @@ export default function CodPage() {
         {!report || report.discrepancies.length === 0 ? (
           <EmptyState>Chưa có lệch COD mở.</EmptyState>
         ) : (
-          <Table style={{ minWidth: 980 }}>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>Mã đơn</TableHeaderCell>
-                <TableHeaderCell>Dự kiến</TableHeaderCell>
-                <TableHeaderCell>Đã thu</TableHeaderCell>
-                <TableHeaderCell>Lệch</TableHeaderCell>
-                <TableHeaderCell>Ghi chú</TableHeaderCell>
-                <TableHeaderCell>Tạo lúc</TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <tbody>
-              {report.discrepancies.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{shortId(item.orderId)}</TableCell>
-                  <TableCell>{formatVnd(item.expectedVnd)}</TableCell>
-                  <TableCell>{formatVnd(item.collectedVnd)}</TableCell>
-                  <TableCell>
-                    <span style={deltaStyle(item.deltaVnd)}>
-                      {formatVnd(item.deltaVnd)}
-                    </span>
-                  </TableCell>
-                  <TableCell>{item.note ?? '-'}</TableCell>
-                  <TableCell>{formatDateTime(item.createdAt)}</TableCell>
+          <>
+            {report.discrepanciesTruncated ? (
+              <MutedText style={{ fontSize: 14 }}>
+                Chỉ hiển thị 100 chênh lệch COD mới nhất; tổng bên trên vẫn
+                tính đủ toàn bộ.
+              </MutedText>
+            ) : null}
+            <Table style={{ minWidth: 980 }}>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>Mã đơn</TableHeaderCell>
+                  <TableHeaderCell>Dự kiến</TableHeaderCell>
+                  <TableHeaderCell>Đã thu</TableHeaderCell>
+                  <TableHeaderCell>Lệch</TableHeaderCell>
+                  <TableHeaderCell>Ghi chú</TableHeaderCell>
+                  <TableHeaderCell>Tạo lúc</TableHeaderCell>
                 </TableRow>
-              ))}
-            </tbody>
-          </Table>
+              </TableHead>
+              <tbody>
+                {report.discrepancies.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{shortId(item.orderId)}</TableCell>
+                    <TableCell>{formatVnd(item.expectedVnd)}</TableCell>
+                    <TableCell>{formatVnd(item.collectedVnd)}</TableCell>
+                    <TableCell>
+                      <span style={deltaStyle(item.deltaVnd)}>
+                        {formatVnd(item.deltaVnd)}
+                      </span>
+                    </TableCell>
+                    <TableCell>{item.note ?? '-'}</TableCell>
+                    <TableCell>{formatDateTime(item.createdAt)}</TableCell>
+                  </TableRow>
+                ))}
+              </tbody>
+            </Table>
+          </>
         )}
       </Card>
     </main>

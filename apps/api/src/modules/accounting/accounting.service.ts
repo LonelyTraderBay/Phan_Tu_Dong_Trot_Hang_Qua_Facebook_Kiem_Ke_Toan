@@ -8,6 +8,7 @@ import {
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { neutralizeSpreadsheetFormula } from '../../common/csv/csv-formula-guard';
+import { SOLD_ORDER_STATUSES } from '../../common/reporting/sold-order-statuses';
 import { loadEnv } from '../../config/env';
 import type { AccountingExportQuery } from './dto';
 
@@ -74,13 +75,30 @@ type SupabaseError = {
 const ORDER_SELECT =
   'id, status, total_vnd, shipped_at, done_at, created_at, sold_at, items:order_items(cogs_unit_vnd, qty)';
 /** Rows fetched per round-trip while walking the full date range. */
-const ORDER_PAGE_SIZE = 1_000;
-/** Runaway guard: 1M sold orders in one export means something is wrong upstream. */
-const MAX_ORDER_PAGES = 1_000;
+const PAGE_SIZE = 1_000;
+/** Runaway guard: 1M rows of one kind in one export means something is wrong upstream. */
+const MAX_PAGES = 1_000;
 const SHIPMENT_SELECT = 'id, order_id, fee_vnd, created_at';
 const COD_SELECT = 'id, order_id, amount_vnd, collected_at';
 const AD_SPEND_SELECT = 'id, date, campaign_name, amount_vnd';
-const SOLD_STATUSES = ['shipped', 'done'];
+
+type PagedLoad = {
+  table: string;
+  select: string;
+  /** Column the range predicate and the page ordering both use. */
+  dateColumn: string;
+  /** Lower/upper bounds already normalized for `dateColumn`, or null for unbounded. */
+  from: string | null;
+  to: string | null;
+  statuses?: readonly string[];
+  errorMessage: string;
+  tooLargeMessage: string;
+  /**
+   * Tables that a given deployment may not have provisioned yet. A missing
+   * relation yields an empty section instead of failing the whole export.
+   */
+  optionalTable?: boolean;
+};
 
 @Injectable()
 export class AccountingService {
@@ -166,121 +184,124 @@ export class AccountingService {
   }
 
   /**
-   * Walks every sold order in the range.
+   * Walks every row of one kind in the range, oldest first.
    *
-   * The date predicate is pushed into SQL against the generated `orders.sold_at`
-   * column and the result set is paged. The previous unfiltered `.limit(10_000)`
-   * silently dropped the oldest rows, producing a ledger that looked complete
-   * and balanced but was missing entries.
+   * This is the pattern `loadOrders` established when the orders leg of this
+   * export was fixed, generalized so the other three legs stop reintroducing
+   * the same bug: the date predicate is pushed into SQL and the result set is
+   * paged with `.range()` until a short page proves the range is exhausted.
+   *
+   * The shape being replaced was `.order(dateColumn, { ascending: false })`
+   * plus `.limit(10_000)`. Note *which* rows that dropped: descending order
+   * means the cap keeps the newest rows and discards the **oldest ones in the
+   * requested window**, with nothing in the response saying so. A shop owner
+   * exporting a wide range got a ledger that looked complete and balanced but
+   * was silently missing its earliest entries.
    */
-  private async loadOrders(orgId: string, query: AccountingExportQuery) {
-    const range = normalizeRangeIso(query);
-    const orders: OrderRow[] = [];
+  private async loadPaged<Row>(orgId: string, options: PagedLoad) {
+    const rows: Row[] = [];
 
-    for (let page = 0; page < MAX_ORDER_PAGES; page += 1) {
+    for (let page = 0; page < MAX_PAGES; page += 1) {
       let builder = this.supabase
-        .from('orders')
-        .select(ORDER_SELECT)
-        .eq('org_id', orgId)
-        .in('status', SOLD_STATUSES);
+        .from(options.table)
+        .select(options.select)
+        .eq('org_id', orgId);
 
-      if (range.from !== null) {
-        builder = builder.gte('sold_at', range.from);
+      if (options.statuses) {
+        builder = builder.in('status', options.statuses);
       }
-      if (range.to !== null) {
-        builder = builder.lte('sold_at', range.to);
+      if (options.from !== null) {
+        builder = builder.gte(options.dateColumn, options.from);
+      }
+      if (options.to !== null) {
+        builder = builder.lte(options.dateColumn, options.to);
       }
 
-      const offset = page * ORDER_PAGE_SIZE;
+      const offset = page * PAGE_SIZE;
       const { data, error } = await builder
-        .order('sold_at', { ascending: true })
-        .range(offset, offset + ORDER_PAGE_SIZE - 1);
+        .order(options.dateColumn, { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
 
       if (error) {
-        throwAccountingError(error, 'Could not load accounting orders');
+        if (options.optionalTable && error.code === '42P01') {
+          return [];
+        }
+        throwAccountingError(error, options.errorMessage);
       }
 
-      const batch = (data ?? []) as unknown as OrderRow[];
-      orders.push(...batch);
-      if (batch.length < ORDER_PAGE_SIZE) {
-        return orders;
+      const batch = (data ?? []) as unknown as Row[];
+      rows.push(...batch);
+      if (batch.length < PAGE_SIZE) {
+        return rows;
       }
     }
 
     throw new InternalServerErrorException({
       code: 'accounting_range_too_large',
-      message:
+      message: options.tooLargeMessage,
+    });
+  }
+
+  /** Sold orders in the range, bucketed on the generated `orders.sold_at` column. */
+  private async loadOrders(orgId: string, query: AccountingExportQuery) {
+    const range = normalizeRangeIso(query);
+    return this.loadPaged<OrderRow>(orgId, {
+      table: 'orders',
+      select: ORDER_SELECT,
+      dateColumn: 'sold_at',
+      from: range.from,
+      to: range.to,
+      statuses: SOLD_ORDER_STATUSES,
+      errorMessage: 'Could not load accounting orders',
+      tooLargeMessage:
         'Accounting range exceeded the maximum number of orders that can be exported',
     });
   }
 
   private async loadShipments(orgId: string, query: AccountingExportQuery) {
-    let builder = this.supabase
-      .from('shipments')
-      .select(SHIPMENT_SELECT)
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false })
-      .limit(10_000);
-    if (query.from) {
-      builder = builder.gte('created_at', dateIso(query.from, 'from'));
-    }
-    if (query.to) {
-      builder = builder.lte('created_at', dateIso(query.to, 'to'));
-    }
-    const { data, error } = await builder;
-    if (error) {
-      if (error.code === '42P01') {
-        return [];
-      }
-      throwAccountingError(error, 'Could not load accounting shipments');
-    }
-    return (data ?? []) as ShipmentRow[];
+    const range = normalizeRangeIso(query);
+    return this.loadPaged<ShipmentRow>(orgId, {
+      table: 'shipments',
+      select: SHIPMENT_SELECT,
+      dateColumn: 'created_at',
+      from: range.from,
+      to: range.to,
+      errorMessage: 'Could not load accounting shipments',
+      tooLargeMessage:
+        'Accounting range exceeded the maximum number of shipments that can be exported',
+      optionalTable: true,
+    });
   }
 
   private async loadCodCollections(orgId: string, query: AccountingExportQuery) {
-    let builder = this.supabase
-      .from('cod_collections')
-      .select(COD_SELECT)
-      .eq('org_id', orgId)
-      .order('collected_at', { ascending: false })
-      .limit(10_000);
-    if (query.from) {
-      builder = builder.gte('collected_at', dateIso(query.from, 'from'));
-    }
-    if (query.to) {
-      builder = builder.lte('collected_at', dateIso(query.to, 'to'));
-    }
-    const { data, error } = await builder;
-    if (error) {
-      if (error.code === '42P01') {
-        return [];
-      }
-      throwAccountingError(error, 'Could not load accounting COD collections');
-    }
-    return (data ?? []) as CodCollectionRow[];
+    const range = normalizeRangeIso(query);
+    return this.loadPaged<CodCollectionRow>(orgId, {
+      table: 'cod_collections',
+      select: COD_SELECT,
+      dateColumn: 'collected_at',
+      from: range.from,
+      to: range.to,
+      errorMessage: 'Could not load accounting COD collections',
+      tooLargeMessage:
+        'Accounting range exceeded the maximum number of COD collections that can be exported',
+      optionalTable: true,
+    });
   }
 
   private async loadAdSpend(orgId: string, query: AccountingExportQuery) {
-    let builder = this.supabase
-      .from('ad_spend')
-      .select(AD_SPEND_SELECT)
-      .eq('org_id', orgId)
-      .order('date', { ascending: false })
-      .limit(10_000);
-    if (query.from) {
-      builder = builder.gte('date', dateOnly(query.from, 'from'));
-    }
-    if (query.to) {
-      builder = builder.lte('date', dateOnly(query.to, 'to'));
-    }
-    const { data, error } = await builder;
-    if (error) {
-      if (error.code === '42P01') {
-        return [];
-      }
-      throwAccountingError(error, 'Could not load accounting ad spend');
-    }
-    return (data ?? []) as AdSpendRow[];
+    // `ad_spend.date` is a plain `date`, not a timestamptz, so it takes the
+    // date-only bounds rather than the ISO instants the other legs use.
+    return this.loadPaged<AdSpendRow>(orgId, {
+      table: 'ad_spend',
+      select: AD_SPEND_SELECT,
+      dateColumn: 'date',
+      from: query.from ? dateOnly(query.from, 'from') : null,
+      to: query.to ? dateOnly(query.to, 'to') : null,
+      errorMessage: 'Could not load accounting ad spend',
+      tooLargeMessage:
+        'Accounting range exceeded the maximum number of ad spend rows that can be exported',
+      optionalTable: true,
+    });
   }
 }
 

@@ -3568,18 +3568,35 @@ components:
       required:
         - summary
         - expectations
+        - expectationsTruncated
         - discrepancies
+        - discrepanciesTruncated
       properties:
         summary:
           $ref: '#/components/schemas/CodReportSummary'
+          description: >-
+            Totals aggregated over every open/discrepant expectation in the org,
+            independent of the row caps on the two lists below.
         expectations:
           type: array
           items:
             $ref: '#/components/schemas/CodExpectation'
+          description: Newest 100 open or discrepant expectations.
+        expectationsTruncated:
+          type: boolean
+          description: >-
+            True when more open/discrepant expectations exist than the
+            `expectations` list returned. `summary` stays complete either way.
         discrepancies:
           type: array
           items:
             $ref: '#/components/schemas/CodDiscrepancy'
+          description: Newest 100 open discrepancies.
+        discrepanciesTruncated:
+          type: boolean
+          description: >-
+            True when more open discrepancies exist than the `discrepancies`
+            list returned. `summary.discrepancyCount` stays complete either way.
     RecordCodCollectionRequest:
       type: object
       required:

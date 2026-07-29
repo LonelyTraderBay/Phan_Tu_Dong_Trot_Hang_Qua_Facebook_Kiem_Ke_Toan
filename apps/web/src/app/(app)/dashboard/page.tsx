@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { type CSSProperties, useCallback, useEffect, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   ApiClientError,
@@ -12,7 +12,7 @@ import {
   type ChannelConnection,
   type Order,
 } from '../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import {
   Button,
   Card,
@@ -45,8 +45,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  // Bumped on every load; a resolved response is applied only while it is
+  // still the latest, so an older org's in-flight load can't overwrite the
+  // current org's data after a switch.
+  const loadSeqRef = useRef(0);
 
   const loadDashboard = useCallback(async () => {
+    const seq = ++loadSeqRef.current;
     setLoading(true);
     setError(null);
 
@@ -57,6 +62,9 @@ export default function DashboardPage() {
         listLowStock(),
       ]);
 
+      if (seq !== loadSeqRef.current) {
+        return; // a newer load started; drop this stale response
+      }
       setState({
         orders,
         channels,
@@ -65,14 +73,22 @@ export default function DashboardPage() {
       });
       setLastUpdatedAt(new Date());
     } catch (err) {
+      if (seq !== loadSeqRef.current) {
+        return; // a newer load started; drop this stale response
+      }
       setError(getApiErrorMessage(err, 'Không thể tải bảng điều khiển.'));
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    function handleSessionChanged() {
+    function handleSessionChanged(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       void loadDashboard();
     }
 

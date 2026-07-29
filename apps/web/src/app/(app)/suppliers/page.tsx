@@ -8,7 +8,7 @@ import {
   listSuppliers,
   type Supplier,
 } from '../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import {
   Button,
   Card,
@@ -35,7 +35,10 @@ export default function SuppliersPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (event?: Event) => {
+    if (event && isForeignStorageEvent(event)) {
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

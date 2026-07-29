@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, useCallback, useEffect, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   ApiClientError,
@@ -10,7 +10,7 @@ import {
   type PnlSku,
   type PnlSummary,
 } from '../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import {
   Button,
   Card,
@@ -42,8 +42,13 @@ export default function PnlPage() {
   const [loading, setLoading] = useState(true);
   const [accountingExporting, setAccountingExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bumped on every load; a resolved response is applied only while it is
+  // still the latest, so an older org's (or date range's) in-flight load can't
+  // overwrite the current data after a switch.
+  const loadSeqRef = useRef(0);
 
   const loadReport = useCallback(async () => {
+    const seq = ++loadSeqRef.current;
     setLoading(true);
     setError(null);
 
@@ -52,19 +57,30 @@ export default function PnlPage() {
         getPnlSummary(range),
         getPnlBySku(range),
       ]);
+      if (seq !== loadSeqRef.current) {
+        return; // a newer load started; drop this stale response
+      }
       setSummary(nextSummary);
       setSkuRows(nextSkuRows);
     } catch (err) {
+      if (seq !== loadSeqRef.current) {
+        return; // a newer load started; drop this stale response
+      }
       setError(getApiErrorMessage(err, 'Không thể tải báo cáo lãi gộp.'));
       setSummary(null);
       setSkuRows([]);
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) {
+        setLoading(false);
+      }
     }
   }, [range]);
 
   useEffect(() => {
-    function handleSessionChanged() {
+    function handleSessionChanged(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       void loadReport();
     }
 

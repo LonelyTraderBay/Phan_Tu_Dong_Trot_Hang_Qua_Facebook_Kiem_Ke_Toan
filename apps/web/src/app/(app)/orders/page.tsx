@@ -27,7 +27,7 @@ import {
   type OrderStatus,
   type Shipment,
 } from '../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import {
   Button,
   Card,
@@ -92,7 +92,10 @@ function OrdersContent() {
   }, [status]);
 
   useEffect(() => {
-    function handleSessionChanged() {
+    function handleSessionChanged(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       void loadOrders();
     }
 
@@ -134,6 +137,14 @@ function OrdersContent() {
           ? current.map((item) => (item.id === updated.id ? updated : item))
           : current,
       );
+      // The order's lifecycle changed (e.g. a shipment was created), so any
+      // cached expanded-row detail for it is now stale — drop it so the next
+      // expand refetches instead of showing the pre-mutation snapshot.
+      setOrderDetails((current) => {
+        const next = { ...current };
+        delete next[order.id];
+        return next;
+      });
       setMessage(
         action === 'shipment'
           ? `Đã tạo vận đơn ${shipmentResult?.shipment.trackingCode ?? ''} cho đơn ${shortId(

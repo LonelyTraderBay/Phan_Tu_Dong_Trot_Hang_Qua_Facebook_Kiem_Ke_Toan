@@ -16,7 +16,7 @@ import {
   type CatalogVariant,
   type StockMovement,
 } from '../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import { VariantPicker } from '../../../components/variant-picker';
 import {
   Button,
@@ -65,7 +65,10 @@ export default function InventoryPage() {
   }, [variantId]);
 
   useEffect(() => {
-    function onSession() {
+    function onSession(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       void load();
     }
     void load();

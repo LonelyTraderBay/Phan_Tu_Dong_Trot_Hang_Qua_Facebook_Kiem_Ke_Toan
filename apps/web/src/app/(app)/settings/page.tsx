@@ -17,6 +17,7 @@ import {
 } from '../../../lib/api-client';
 import {
   getStoredOrganizations,
+  isForeignStorageEvent,
   SESSION_CHANGED_EVENT,
   type StoredOrganization,
 } from '../../../lib/auth-session';
@@ -93,7 +94,10 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    function handleSessionChanged() {
+    function handleSessionChanged(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       void loadSettings();
     }
 
@@ -121,6 +125,10 @@ export default function SettingsPage() {
 
     try {
       await updateOrgSettings(activeOrgId, settings);
+      // The server is now the source of truth, so drop any local override left
+      // behind by a previous failed save — otherwise it keeps winning over the
+      // freshly-saved server settings on the next load (see readLocalSettings).
+      window.localStorage.removeItem(storageKey(activeOrgId));
       setMessage('Đã lưu cài đặt lên máy chủ.');
     } catch (err) {
       try {

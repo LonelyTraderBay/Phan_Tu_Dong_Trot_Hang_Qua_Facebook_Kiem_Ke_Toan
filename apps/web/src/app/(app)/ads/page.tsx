@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, useCallback, useEffect, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   ApiClientError,
@@ -10,7 +10,7 @@ import {
   type AdSpendRecord,
   type AdSpendSummary,
 } from '../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import {
   Button,
   Card,
@@ -48,8 +48,13 @@ export default function AdsPage() {
   const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bumped on every load; a resolved response is applied only while it is
+  // still the latest, so an older org's (or date range's) in-flight load can't
+  // overwrite the current data after a switch.
+  const loadSeqRef = useRef(0);
 
   const loadAds = useCallback(async () => {
+    const seq = ++loadSeqRef.current;
     setLoading(true);
     setError(null);
 
@@ -58,19 +63,30 @@ export default function AdsPage() {
         listAdSpend({ ...range, limit: 200 }),
         getAdSpendSummary(range),
       ]);
+      if (seq !== loadSeqRef.current) {
+        return; // a newer load started; drop this stale response
+      }
       setRows(nextRows);
       setSummary(nextSummary);
     } catch (err) {
+      if (seq !== loadSeqRef.current) {
+        return; // a newer load started; drop this stale response
+      }
       setRows([]);
       setSummary(null);
       setError(getApiErrorMessage(err, 'Không thể tải chi phí ads.'));
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) {
+        setLoading(false);
+      }
     }
   }, [range]);
 
   useEffect(() => {
-    function handleSessionChanged() {
+    function handleSessionChanged(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       void loadAds();
     }
 

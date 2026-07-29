@@ -13,6 +13,7 @@ import {
   clearSession,
   getAccessToken,
   getStoredOrganizations,
+  isForeignStorageEvent,
   saveOrganizations,
   SESSION_CHANGED_EVENT,
   type StoredOrganization,
@@ -125,7 +126,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    function loadSession() {
+    function loadSession(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       const token = getAccessToken();
       if (!token) {
         router.replace('/login');
@@ -137,7 +141,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       const storedActiveOrgId =
         resolveActiveOrgId(getActiveOrgId(), storedOrganizations) ?? '';
-      if (storedActiveOrgId) {
+      // Only persist when the resolved value actually differs from what's
+      // stored. This handler also runs on `storage` events, so re-writing the
+      // same key here would bounce back to other tabs as another `storage`
+      // event — a cross-tab ping-pong.
+      if (storedActiveOrgId && storedActiveOrgId !== getActiveOrgId()) {
         setActiveOrgId(storedActiveOrgId);
       }
       setActiveOrgIdState(storedActiveOrgId);

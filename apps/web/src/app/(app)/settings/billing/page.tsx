@@ -11,7 +11,7 @@ import {
   type BillingPlan,
   type BillingUsage,
 } from '../../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../../lib/auth-session';
 import {
   Card,
   ErrorText,
@@ -87,7 +87,10 @@ export default function BillingSettingsPage() {
   }, [loadBilling]);
 
   useEffect(() => {
-    function handleSessionChanged() {
+    function handleSessionChanged(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       void loadBilling();
     }
 

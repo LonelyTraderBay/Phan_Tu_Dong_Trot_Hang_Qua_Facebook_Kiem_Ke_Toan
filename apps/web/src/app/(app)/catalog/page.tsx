@@ -23,7 +23,7 @@ import {
   type CatalogVariant,
   type ProductStatus,
 } from '../../../lib/api-client';
-import { SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
+import { isForeignStorageEvent, SESSION_CHANGED_EVENT } from '../../../lib/auth-session';
 import {
   Button,
   Card,
@@ -103,7 +103,10 @@ export default function CatalogPage() {
   }, [selectedProductId]);
 
   useEffect(() => {
-    function handleSessionChanged() {
+    function handleSessionChanged(event?: Event) {
+      if (event && isForeignStorageEvent(event)) {
+        return;
+      }
       setSelectedProduct(null);
       setEditingVariantId(null);
       void loadProducts();
@@ -553,12 +556,14 @@ export default function CatalogPage() {
                           <Button
                             variant="link"
                             onClick={() => setEditingVariantId(variant.id)}
+                            disabled={savingVariant}
                           >
                             Sửa
                           </Button>{' '}
                           <Button
                             variant="danger"
                             onClick={() => void handleDeleteVariant(variant)}
+                            disabled={savingVariant}
                           >
                             Xoá
                           </Button>

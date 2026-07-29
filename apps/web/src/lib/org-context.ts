@@ -1,4 +1,4 @@
-const ACTIVE_ORG_ID_STORAGE_KEY = 'omni.activeOrgId';
+export const ACTIVE_ORG_ID_STORAGE_KEY = 'omni.activeOrgId';
 
 let activeOrgId: string | null = null;
 

@@ -194,4 +194,77 @@ describe("OrderWebhookDispatchService", () => {
     });
     expect(sender).toHaveBeenCalledTimes(2);
   });
+
+  it("still delivers to a healthy webhook when an earlier one responds non-2xx", async () => {
+    const dead = webhookRow({ url: "https://dead.example.test/webhooks/omni" });
+    const healthy = webhookRow({
+      id: OTHER_WEBHOOK_ID,
+      url: "https://healthy.example.test/webhooks/omni",
+    });
+    const sender = vi.fn().mockImplementation(async (input: { url: string }) => {
+      if (input.url === "https://dead.example.test/webhooks/omni") {
+        return { ok: false, status: 500 };
+      }
+      return { ok: true, status: 200 };
+    });
+    const { service } = createService([dead, healthy], { sender });
+
+    await expect(service.dispatch(dispatchInput())).rejects.toThrow(
+      /1 of 2 webhook/,
+    );
+
+    // The healthy endpoint is not starved by the dead one.
+    expect(sender).toHaveBeenCalledTimes(2);
+    const targetedUrls = sender.mock.calls.map((call) => call[0].url);
+    expect(targetedUrls).toContain("https://healthy.example.test/webhooks/omni");
+  });
+
+  it("reports every failing webhook id and status in the thrown error", async () => {
+    const deadA = webhookRow({ url: "https://a.example.test/hook" });
+    const deadB = webhookRow({
+      id: OTHER_WEBHOOK_ID,
+      url: "https://b.example.test/hook",
+    });
+    const sender = vi.fn().mockImplementation(async (input: { url: string }) => {
+      return input.url === "https://a.example.test/hook"
+        ? { ok: false, status: 500 }
+        : { ok: false, status: 404 };
+    });
+    const { service } = createService([deadA, deadB], { sender });
+
+    const error = await service
+      .dispatch(dispatchInput())
+      .then(() => null)
+      .catch((caught: Error) => caught);
+
+    expect(error).toBeInstanceOf(Error);
+    const message = (error as Error).message;
+    expect(message).toContain(WEBHOOK_ID);
+    expect(message).toContain(OTHER_WEBHOOK_ID);
+    expect(message).toContain("500");
+    expect(message).toContain("404");
+    expect(message).toContain(OUTBOX_EVENT_ID);
+  });
+
+  it("treats an undecryptable secret as that webhook's failure, not an org-wide blackout", async () => {
+    // Simulates a TOKEN_ENCRYPTION_KEY rotation that left one row behind.
+    const rotated = webhookRow({
+      secret_enc: encryptToken(SECRET, "y".repeat(32)),
+      url: "https://rotated.example.test/hook",
+    });
+    const healthy = webhookRow({
+      id: OTHER_WEBHOOK_ID,
+      url: "https://healthy.example.test/hook",
+    });
+    const { service, sender } = createService([rotated, healthy]);
+
+    await expect(service.dispatch(dispatchInput())).rejects.toThrow(
+      /1 of 2 webhook/,
+    );
+
+    expect(sender).toHaveBeenCalledTimes(1);
+    expect(sender.mock.calls[0]?.[0].url).toBe(
+      "https://healthy.example.test/hook",
+    );
+  });
 });

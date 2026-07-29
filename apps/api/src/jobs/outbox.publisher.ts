@@ -17,10 +17,18 @@ export const OUTBOX_INNGEST = Symbol("OUTBOX_INNGEST");
 export const OUTBOX_PUBLISHER_OPTIONS = Symbol("OUTBOX_PUBLISHER_OPTIONS");
 
 const OUTBOX_SELECT =
-  "id, org_id, event_name, payload_json, created_at, published_at, attempts";
+  "id, org_id, event_name, payload_json, created_at, published_at, attempts, next_attempt_at";
 const DEFAULT_BATCH_SIZE = 25;
 const DEFAULT_MAX_ATTEMPTS = 5;
 const DEFAULT_PUBLISH_INTERVAL_MS = 2_000;
+
+/**
+ * Delay applied after the Nth consecutive failed send, indexed by attempt
+ * number (1-based). Chosen so the default 5-attempt budget spans ~12m40s of
+ * continuous outage instead of the ~8s it took when every tick burned an
+ * attempt. The last entry is reused if `maxAttempts` is raised.
+ */
+const BACKOFF_SCHEDULE_MS = [2_000, 8_000, 30_000, 120_000, 600_000];
 
 export type SupabaseLike = Pick<SupabaseClient, "from">;
 export type JsonObject = Record<string, unknown>;
@@ -32,7 +40,17 @@ export type EnqueueOutboxInput = {
 };
 
 export type InngestSender = {
-  send(event: { name: string; data: JsonObject }): Promise<unknown>;
+  /**
+   * `id` is Inngest's idempotency key: "A unique id used to idempotently
+   * process a given event payload. Set this when sending events to ensure that
+   * the event is only processed once; if an event with the same ID is sent
+   * again, it will not invoke functions." (inngest@4.13.0, MinimalEventPayload)
+   */
+  send(event: {
+    id: string;
+    name: string;
+    data: JsonObject;
+  }): Promise<unknown>;
 };
 
 type SupabaseError = {
@@ -48,6 +66,7 @@ type OutboxRow = {
   created_at: string;
   published_at: string | null;
   attempts: number;
+  next_attempt_at: string | null;
 };
 
 type OutboxPublisherOptions = {
@@ -137,6 +156,9 @@ export class OutboxPublisher implements OnModuleInit, OnModuleDestroy {
       .select(OUTBOX_SELECT)
       .is("published_at", null)
       .lt("attempts", this.maxAttempts)
+      .or(
+        `next_attempt_at.is.null,next_attempt_at.lte.${this.now().toISOString()}`,
+      )
       .order("created_at", { ascending: true })
       .limit(batchSize);
 
@@ -151,7 +173,12 @@ export class OutboxPublisher implements OnModuleInit, OnModuleDestroy {
 
     for (const row of rows) {
       try {
+        // Only the send itself may count as a delivery failure. `id` is the
+        // Inngest idempotency key, so a redelivery of a row we already sent
+        // (crash or bookkeeping failure below) will not invoke the function a
+        // second time.
         await this.inngestClient.send({
+          id: row.id,
           name: toInngestEventName(row.event_name),
           data: {
             ...(row.payload_json ?? {}),
@@ -159,21 +186,83 @@ export class OutboxPublisher implements OnModuleInit, OnModuleDestroy {
             outboxEventId: row.id,
           },
         });
-        await this.markPublished(row.id, this.now().toISOString());
-        published += 1;
-      } catch (error) {
-        const nextAttempts = row.attempts + 1;
-        await this.markFailed(row.id, nextAttempts);
+      } catch (sendError) {
+        deadLettered += await this.recordFailedSend(row, sendError);
         failed += 1;
+        continue;
+      }
 
-        if (nextAttempts >= this.maxAttempts) {
-          await this.writeDeadLetter(row, nextAttempts, error);
-          deadLettered += 1;
-        }
+      published += 1;
+
+      // The event IS delivered at this point. A failure here is bookkeeping
+      // only: never bump attempts and never dead-letter, or a delivered event
+      // gets permanently mislabelled as failed. The row simply stays
+      // unpublished and is re-sent (harmlessly, see the dedup `id` above).
+      try {
+        await this.markPublished(row.id, this.now().toISOString());
+      } catch (bookkeepingError) {
+        this.logger.error(
+          `Outbox event ${row.id} was delivered to Inngest but could not be marked published; it will be re-sent and deduplicated by event id`,
+          bookkeepingError instanceof Error
+            ? bookkeepingError.stack
+            : String(bookkeepingError),
+        );
       }
     }
 
     return { published, failed, deadLettered };
+  }
+
+  /**
+   * Persists the outcome of a genuinely failed send. Returns the number of
+   * dead letters written (0 or 1).
+   *
+   * Ordering is load-bearing: bumping `attempts` to `maxAttempts` is what
+   * removes the row from every future pending scan, so the dead-letter row —
+   * the only remaining artifact of the event — must exist *before* that
+   * happens. If the dead-letter insert fails we deliberately leave `attempts`
+   * below the cap so the row stays selectable and can be dead-lettered on a
+   * later tick, rather than vanishing with no artifact at all.
+   */
+  private async recordFailedSend(row: OutboxRow, sendError: unknown) {
+    const nextAttempts = row.attempts + 1;
+    const isExhausted = nextAttempts >= this.maxAttempts;
+    let deadLettered = 0;
+
+    if (isExhausted) {
+      try {
+        await this.writeDeadLetter(row, nextAttempts, sendError);
+        deadLettered = 1;
+      } catch (deadLetterError) {
+        this.logger.error(
+          `Could not write dead letter for outbox event ${row.id}; keeping attempts below the cap so the event stays retryable`,
+          deadLetterError instanceof Error
+            ? deadLetterError.stack
+            : String(deadLetterError),
+        );
+      }
+    }
+
+    const attemptsToPersist =
+      isExhausted && deadLettered === 0 ? row.attempts : nextAttempts;
+
+    // Back off regardless, so a row we could not dead-letter does not hot-loop.
+    await this.markFailed(
+      row.id,
+      attemptsToPersist,
+      this.nextAttemptAt(nextAttempts),
+    );
+
+    return deadLettered;
+  }
+
+  private nextAttemptAt(attempts: number) {
+    const index = Math.min(
+      Math.max(attempts, 1),
+      BACKOFF_SCHEDULE_MS.length,
+    ) - 1;
+    const delayMs = BACKOFF_SCHEDULE_MS[index] as number;
+    return new Date(this.now().getTime() + delayMs).toISOString();
   }
 
   private async publishPendingOnce() {
@@ -208,10 +297,14 @@ export class OutboxPublisher implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async markFailed(id: string, attempts: number) {
+  private async markFailed(
+    id: string,
+    attempts: number,
+    nextAttemptAt: string,
+  ) {
     const { error } = await this.supabase
       .from("outbox_events")
-      .update({ attempts })
+      .update({ attempts, next_attempt_at: nextAttemptAt })
       .eq("id", id)
       .is("published_at", null)
       .select("id")

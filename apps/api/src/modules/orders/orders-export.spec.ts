@@ -1,9 +1,11 @@
 import ExcelJS from 'exceljs';
+import { PDFParse } from 'pdf-parse';
 import { describe, expect, it } from 'vitest';
 
 import {
   EXPORT_HEADERS,
   buildOrdersCsv,
+  buildOrdersPdf,
   buildOrdersXlsx,
   type ExportOrderRow,
 } from './orders-export';
@@ -225,5 +227,117 @@ describe('buildOrdersXlsx', () => {
     expect(nameCell?.value).toBe(payload);
     expect(titleCell?.type).toBe(ExcelJS.ValueType.String);
     expect(titleCell?.value).toBe('=1+1');
+  });
+});
+
+/**
+ * Pulls the real text layer back out of a generated PDF (via pdf-parse, which
+ * wraps pdfjs-dist) rather than eyeballing the raw byte stream. This is what
+ * actually proves a compliant PDF viewer would render/extract the embedded
+ * Vietnamese text correctly, instead of merely asserting "buildOrdersPdf
+ * didn't throw".
+ */
+async function extractPdfText(buffer: Buffer): Promise<{ text: string; pageCount: number }> {
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const result = await parser.getText();
+    return { text: result.text, pageCount: result.pages.length };
+  } finally {
+    await parser.destroy();
+  }
+}
+
+/**
+ * A long "id | status | name | phone | address | sku xqty title | total"
+ * row can be wider than the page for real Vietnamese names/addresses, so
+ * `buildOrdersPdf` relies on PDFKit's own word-wrap (see orders-export.ts)
+ * rather than a hand-rolled fixed-width line. PDFKit (like any correct line
+ * breaker) may wrap at a space *or* a hyphen, and it does not always render
+ * the space consumed at a wrap point back into the text layer. Stripping all
+ * whitespace from both sides before comparing makes the assertion robust to
+ * *where* a line wrapped while still requiring every non-whitespace
+ * character - i.e. every actual diacritic - to survive, in order, exactly.
+ * A dropped/mangled character anywhere still fails this check.
+ */
+function stripWhitespace(value: string): string {
+  return value.replace(/\s+/g, '');
+}
+
+function expectPdfTextToContainExactly(haystack: string, expected: string) {
+  expect(stripWhitespace(haystack)).toContain(stripWhitespace(expected));
+}
+
+describe('buildOrdersPdf', () => {
+  it('round-trips a full range of Vietnamese diacritics exactly', async () => {
+    const customerName = 'Nguyễn Thị Ánh Dương';
+    const addressText = '123 Đường Nguyễn Huệ, Quận 1, Thành phố Hồ Chí Minh';
+    const title = 'Bàn ủi hơi nước đứng cỡ ơ ư đặc biệt';
+
+    const buffer = await buildOrdersPdf([
+      row({ customerName, addressText, title }),
+    ]);
+
+    expect(buffer.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+
+    const { text } = await extractPdfText(buffer);
+
+    expectPdfTextToContainExactly(text, 'Xuất đơn hàng');
+    expectPdfTextToContainExactly(text, customerName);
+    expectPdfTextToContainExactly(text, addressText);
+    expectPdfTextToContainExactly(text, title);
+
+    // Order matters too: these should all belong to the same row, not just
+    // appear anywhere in the document.
+    const stripped = stripWhitespace(text);
+    const nameIndex = stripped.indexOf(stripWhitespace(customerName));
+    const addressIndex = stripped.indexOf(stripWhitespace(addressText));
+    const titleIndex = stripped.indexOf(stripWhitespace(title));
+    expect(nameIndex).toBeGreaterThan(-1);
+    expect(addressIndex).toBeGreaterThan(nameIndex);
+    expect(titleIndex).toBeGreaterThan(addressIndex);
+  });
+
+  it('renders the Vietnamese empty-state line when there are no rows', async () => {
+    const buffer = await buildOrdersPdf([]);
+
+    const { text, pageCount } = await extractPdfText(buffer);
+
+    expect(pageCount).toBe(1);
+    expectPdfTextToContainExactly(text, 'Xuất đơn hàng');
+    expectPdfTextToContainExactly(text, '(không có đơn)');
+  });
+
+  it('round-trips plain ASCII content (phone number, SKU) with no regression', async () => {
+    const phoneE164 = '+84901234567';
+    const sku = 'SKU-PLAIN-001';
+
+    const buffer = await buildOrdersPdf([row({ phoneE164, sku })]);
+
+    const { text } = await extractPdfText(buffer);
+
+    expectPdfTextToContainExactly(text, phoneE164);
+    expectPdfTextToContainExactly(text, sku);
+  });
+
+  it('paginates across multiple pages without dropping any rows', async () => {
+    const rowCount = 150;
+    const rows = Array.from({ length: rowCount }, (_, index) =>
+      row({
+        id: `ORD-${index}`,
+        customerName: `Khách hàng ${index}`,
+        addressText: `Số ${index} Đường Lê Lợi`,
+      }),
+    );
+
+    const buffer = await buildOrdersPdf(rows);
+    const { text, pageCount } = await extractPdfText(buffer);
+
+    expect(pageCount).toBeGreaterThan(1);
+
+    const stripped = stripWhitespace(text);
+    for (const currentRow of rows) {
+      expect(stripped).toContain(currentRow.id);
+      expect(stripped).toContain(stripWhitespace(currentRow.customerName ?? ''));
+    }
   });
 });

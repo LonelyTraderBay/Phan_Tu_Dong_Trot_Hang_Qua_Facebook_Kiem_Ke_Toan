@@ -27,6 +27,10 @@ type OrderAttributionRow = {
 };
 
 const ORDER_ATTRIBUTION_SELECT = 'id, utm_source, total_vnd, created_at';
+/** Rows fetched per round-trip while walking the full date range. */
+const ORDER_PAGE_SIZE = 1_000;
+/** Runaway guard: 1M sold orders in one window means something is wrong upstream. */
+const MAX_ORDER_PAGES = 1_000;
 
 @Injectable()
 export class AttributionService {
@@ -104,27 +108,43 @@ export class AttributionService {
    * the status divergence was the bug.
    */
   private async loadOrders(orgId: string, query: AttributionSummaryQuery) {
-    let builder = this.supabase
-      .from('orders')
-      .select(ORDER_ATTRIBUTION_SELECT)
-      .eq('org_id', orgId)
-      .in('status', SOLD_ORDER_STATUSES)
-      .order('created_at', { ascending: false })
-      .limit(10_000);
+    const rows: OrderAttributionRow[] = [];
 
-    if (query.from) {
-      builder = builder.gte('created_at', `${query.from}T00:00:00.000Z`);
-    }
-    if (query.to) {
-      builder = builder.lte('created_at', `${query.to}T23:59:59.999Z`);
+    for (let page = 0; page < MAX_ORDER_PAGES; page += 1) {
+      let builder = this.supabase
+        .from('orders')
+        .select(ORDER_ATTRIBUTION_SELECT)
+        .eq('org_id', orgId)
+        .in('status', SOLD_ORDER_STATUSES);
+
+      if (query.from) {
+        builder = builder.gte('created_at', `${query.from}T00:00:00.000Z`);
+      }
+      if (query.to) {
+        builder = builder.lte('created_at', `${query.to}T23:59:59.999Z`);
+      }
+
+      const offset = page * ORDER_PAGE_SIZE;
+      const { data, error } = await builder
+        .order('created_at', { ascending: true })
+        .range(offset, offset + ORDER_PAGE_SIZE - 1);
+
+      if (error) {
+        throwAttributionError(error, 'Could not summarize attribution');
+      }
+
+      const batch = (data ?? []) as OrderAttributionRow[];
+      rows.push(...batch);
+      if (batch.length < ORDER_PAGE_SIZE) {
+        return rows;
+      }
     }
 
-    const { data, error } = await builder;
-    if (error) {
-      throwAttributionError(error, 'Could not summarize attribution');
-    }
-
-    return (data ?? []) as OrderAttributionRow[];
+    throw new InternalServerErrorException({
+      code: 'attribution_range_too_large',
+      message:
+        'Attribution range exceeded the maximum number of orders that can be summarized',
+    });
   }
 }
 

@@ -71,8 +71,27 @@ export class OrderWebhookDispatchService {
       return { ok: true, dispatched: 0 };
     }
 
+    // Every webhook is attempted, always. A dead endpoint (or one webhook with
+    // an undecryptable `secret_enc` after a TOKEN_ENCRYPTION_KEY rotation) must
+    // not blackout the org's other endpoints. Redelivery on the Inngest retry
+    // is safe for the ones that already succeeded because the payload carries a
+    // stable `id` (the outbox event id) for receiver-side dedup.
+    const failures: string[] = [];
+
     for (const webhook of webhooks) {
-      await this.sendToWebhook(webhook, event);
+      try {
+        await this.sendToWebhook(webhook, event);
+      } catch (error) {
+        failures.push(`${webhook.id}: ${errorToText(error)}`);
+      }
+    }
+
+    if (failures.length > 0) {
+      // Throw so Inngest retries, but only after every endpoint had its turn.
+      throw new Error(
+        `Order webhook dispatch failed for ${failures.length} of ${webhooks.length} webhook(s) ` +
+          `(event ${event.event}, outbox event ${event.outboxEventId}): ${failures.join("; ")}`,
+      );
     }
 
     return { ok: true, dispatched: webhooks.length };
@@ -131,11 +150,14 @@ export class OrderWebhookDispatchService {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Order webhook delivery failed: webhook ${webhook.id} responded ${response.status}`,
-      );
+      // The caller prefixes the webhook id and aggregates across endpoints.
+      throw new Error(`responded HTTP ${response.status}`);
     }
   }
+}
+
+function errorToText(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 export const orderWebhookDispatch = inngest.createFunction(

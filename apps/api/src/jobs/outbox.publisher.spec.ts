@@ -13,7 +13,7 @@ const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
 
 type QueryResult = {
   data: unknown;
-  error: null;
+  error: { code?: string; message?: string } | null;
 };
 
 type SupabaseCall = {
@@ -24,6 +24,30 @@ type SupabaseCall = {
   field?: string;
   value?: unknown;
 };
+
+/**
+ * Evaluates the PostgREST `.or()` expression the publisher uses for backoff,
+ * e.g. `next_attempt_at.is.null,next_attempt_at.lte.2026-07-24T11:00:00.000Z`.
+ * The value segment is rejoined because ISO timestamps contain dots.
+ */
+function evaluateOrFilter(
+  expression: string,
+  row: Record<string, unknown>,
+): boolean {
+  return expression.split(",").some((clause) => {
+    const [field, op, ...rest] = clause.split(".");
+    const value = rest.join(".");
+    const actual = row[field as string];
+
+    if (op === "is" && value === "null") {
+      return actual === null || actual === undefined;
+    }
+    if (op === "lte") {
+      return typeof actual === "string" && actual <= value;
+    }
+    return false;
+  });
+}
 
 function mockSupabase(input: {
   selectResults?: QueryResult[];
@@ -47,6 +71,10 @@ function mockSupabase(input: {
             },
             lt(field: string, value: unknown) {
               calls.push({ op: "lt", field, value });
+              return query;
+            },
+            or(expression: string) {
+              calls.push({ op: "or", value: expression });
               return query;
             },
             order(field: string, value: unknown) {
@@ -109,8 +137,71 @@ function outboxRow(overrides: Record<string, unknown> = {}) {
     created_at: "2026-07-24T10:00:00.000Z",
     published_at: null,
     attempts: 0,
+    next_attempt_at: null,
     ...overrides,
   };
+}
+
+/**
+ * Supabase mock whose pending scan actually applies the `is`/`lt`/`or` filters
+ * to a row set, so backoff eligibility can be asserted end to end rather than
+ * by inspecting the filter string.
+ */
+function mockScanSupabase(rows: Array<Record<string, unknown>>) {
+  return {
+    from() {
+      return {
+        select() {
+          const predicates: Array<
+            (row: Record<string, unknown>) => boolean
+          > = [];
+          const query = {
+            is(field: string, value: unknown) {
+              predicates.push((row) => row[field] === value);
+              return query;
+            },
+            lt(field: string, value: unknown) {
+              predicates.push(
+                (row) => (row[field] as number) < (value as number),
+              );
+              return query;
+            },
+            or(expression: string) {
+              predicates.push((row) => evaluateOrFilter(expression, row));
+              return query;
+            },
+            order() {
+              return query;
+            },
+            limit: async () => ({
+              data: rows.filter((row) =>
+                predicates.every((predicate) => predicate(row)),
+              ),
+              error: null,
+            }),
+          };
+          return query;
+        },
+        update() {
+          const query = {
+            eq: () => query,
+            is: () => query,
+            select: () => ({
+              maybeSingle: async () => ({ data: { id: "updated" }, error: null }),
+            }),
+          };
+          return query;
+        },
+        insert() {
+          return {
+            select: () => ({
+              single: async () => ({ data: { id: "inserted" }, error: null }),
+            }),
+          };
+        },
+      };
+    },
+  } as unknown as SupabaseLike;
 }
 
 describe("outbox publisher", () => {
@@ -176,6 +267,7 @@ describe("outbox publisher", () => {
     });
     expect(sentEvents).toEqual([
       {
+        id: OUTBOX_ID,
         name: "platform/noop",
         data: {
           source: "test",
@@ -217,6 +309,7 @@ describe("outbox publisher", () => {
 
     expect(sentEvents).toEqual([
       {
+        id: OUTBOX_ID,
         name: "zalo/inbound/received",
         data: {
           oa_id: "oa-1",
@@ -254,6 +347,7 @@ describe("outbox publisher", () => {
 
     expect(sentEvents).toEqual([
       {
+        id: OUTBOX_ID,
         name: "meta/persist_inbound",
         data: {
           object: "page",
@@ -294,6 +388,7 @@ describe("outbox publisher", () => {
 
     expect(sentEvents).toEqual([
       {
+        id: OUTBOX_ID,
         name: "knowledge/reindex",
         data: {
           sourceType: "product",
@@ -343,6 +438,7 @@ describe("outbox publisher", () => {
 
     expect(sentEvents).toEqual([
       {
+        id: OUTBOX_ID,
         name: "ai/process_inbound",
         data: {
           conversationId: "33333333-3333-3333-3333-333333333333",
@@ -352,6 +448,7 @@ describe("outbox publisher", () => {
         },
       },
       {
+        id: "55555555-5555-5555-5555-555555555555",
         name: "meta/send",
         data: {
           botEpoch: 1,
@@ -403,6 +500,7 @@ describe("outbox publisher", () => {
 
     expect(sentEvents).toEqual([
       {
+        id: OUTBOX_ID,
         name: "order/webhook_dispatch",
         data: {
           event: "order.confirmed",
@@ -413,6 +511,7 @@ describe("outbox publisher", () => {
         },
       },
       {
+        id: "55555555-5555-5555-5555-555555555555",
         name: "order/webhook_dispatch",
         data: {
           event: "order.shipped",
@@ -426,8 +525,136 @@ describe("outbox publisher", () => {
   });
 
   it("increments attempts and dead-letters exhausted events", async () => {
+    const fixedNow = new Date("2026-07-24T11:00:00.000Z");
     const { calls, client } = mockSupabase({
       selectResults: [{ data: [outboxRow()], error: null }],
+    });
+    const publisher = new OutboxPublisher(
+      client,
+      {
+        send: async () => {
+          throw new Error("inngest unavailable");
+        },
+      },
+      { maxAttempts: 1, now: () => fixedNow },
+    );
+
+    await expect(publisher.publishPending()).resolves.toEqual({
+      published: 0,
+      failed: 1,
+      deadLettered: 1,
+    });
+    expect(calls).toContainEqual({
+      op: "update",
+      table: "outbox_events",
+      values: {
+        attempts: 1,
+        next_attempt_at: new Date(
+          fixedNow.getTime() + 2_000,
+        ).toISOString(),
+      },
+    });
+    expect(calls).toContainEqual({
+      op: "insert",
+      table: "job_dead_letters",
+      values: expect.objectContaining({
+        job_name: "platform.noop",
+        error_text: "inngest unavailable",
+        attempts: 1,
+      }),
+    });
+  });
+
+  it("sends the outbox row id as the Inngest dedup id so redelivery cannot double-invoke", async () => {
+    const { client } = mockSupabase({
+      selectResults: [{ data: [outboxRow()], error: null }],
+    });
+    const sentEvents: Array<{ id: string }> = [];
+    const publisher = new OutboxPublisher(client, {
+      send: async (event) => {
+        sentEvents.push(event);
+        return { ids: ["evt_1"] };
+      },
+    });
+
+    await publisher.publishPending(10);
+
+    expect(sentEvents).toHaveLength(1);
+    expect(sentEvents[0]?.id).toBe(OUTBOX_ID);
+  });
+
+  it("does not mislabel a delivered event as failed when markPublished throws", async () => {
+    const { calls, client } = mockSupabase({
+      selectResults: [{ data: [outboxRow()], error: null }],
+      updateResults: [{ data: null, error: { message: "db blip" } }],
+    });
+    const publisher = new OutboxPublisher(client, {
+      send: async () => ({ ids: ["evt_1"] }),
+    });
+
+    // The event WAS delivered; a bookkeeping failure must not become a
+    // delivery failure.
+    await expect(publisher.publishPending(10)).resolves.toEqual({
+      published: 1,
+      failed: 0,
+      deadLettered: 0,
+    });
+
+    const attemptBumps = calls.filter(
+      (call) =>
+        call.op === "update" &&
+        call.table === "outbox_events" &&
+        Object.prototype.hasOwnProperty.call(
+          call.values as object,
+          "attempts",
+        ),
+    );
+    expect(attemptBumps).toEqual([]);
+    expect(
+      calls.some(
+        (call) => call.op === "insert" && call.table === "job_dead_letters",
+      ),
+    ).toBe(false);
+  });
+
+  it("writes the dead letter before the attempts bump that would exclude the row", async () => {
+    const { calls, client } = mockSupabase({
+      selectResults: [{ data: [outboxRow()], error: null }],
+    });
+    const publisher = new OutboxPublisher(
+      client,
+      {
+        send: async () => {
+          throw new Error("inngest unavailable");
+        },
+      },
+      { maxAttempts: 1 },
+    );
+
+    await publisher.publishPending();
+
+    const deadLetterIndex = calls.findIndex(
+      (call) => call.op === "insert" && call.table === "job_dead_letters",
+    );
+    const attemptsIndex = calls.findIndex(
+      (call) =>
+        call.op === "update" &&
+        call.table === "outbox_events" &&
+        Object.prototype.hasOwnProperty.call(
+          call.values as object,
+          "attempts",
+        ),
+    );
+
+    expect(deadLetterIndex).toBeGreaterThanOrEqual(0);
+    expect(attemptsIndex).toBeGreaterThanOrEqual(0);
+    expect(deadLetterIndex).toBeLessThan(attemptsIndex);
+  });
+
+  it("keeps an event retryable instead of excluding it when the dead-letter insert fails", async () => {
+    const { calls, client } = mockSupabase({
+      selectResults: [{ data: [outboxRow({ attempts: 0 })], error: null }],
+      insertResults: [{ data: null, error: { message: "dead letter table down" } }],
     });
     const publisher = new OutboxPublisher(
       client,
@@ -442,22 +669,119 @@ describe("outbox publisher", () => {
     await expect(publisher.publishPending()).resolves.toEqual({
       published: 0,
       failed: 1,
-      deadLettered: 1,
+      deadLettered: 0,
     });
-    expect(calls).toContainEqual({
-      op: "update",
-      table: "outbox_events",
-      values: { attempts: 1 },
+
+    // attempts stays below the cap: the row must never be excluded from future
+    // scans without a dead-letter artifact existing.
+    const attemptBump = calls.find(
+      (call) =>
+        call.op === "update" &&
+        call.table === "outbox_events" &&
+        Object.prototype.hasOwnProperty.call(
+          call.values as object,
+          "attempts",
+        ),
+    );
+    expect((attemptBump?.values as { attempts: number }).attempts).toBe(0);
+    expect(
+      (attemptBump?.values as { next_attempt_at: string }).next_attempt_at,
+    ).toEqual(expect.any(String));
+  });
+
+  it("does not re-select a backed-off row until next_attempt_at has passed", async () => {
+    const backedOff = outboxRow({
+      attempts: 1,
+      next_attempt_at: "2026-07-24T11:00:10.000Z",
     });
-    expect(calls).toContainEqual({
-      op: "insert",
-      table: "job_dead_letters",
-      values: expect.objectContaining({
-        job_name: "platform.noop",
-        error_text: "inngest unavailable",
-        attempts: 1,
-      }),
+    const sentBefore: unknown[] = [];
+    const beforeWindow = new OutboxPublisher(
+      mockScanSupabase([backedOff]),
+      {
+        send: async (event) => {
+          sentBefore.push(event);
+          return { ids: ["evt_1"] };
+        },
+      },
+      { now: () => new Date("2026-07-24T11:00:05.000Z") },
+    );
+
+    await expect(beforeWindow.publishPending(10)).resolves.toEqual({
+      published: 0,
+      failed: 0,
+      deadLettered: 0,
     });
+    expect(sentBefore).toEqual([]);
+
+    const sentAfter: unknown[] = [];
+    const afterWindow = new OutboxPublisher(
+      mockScanSupabase([backedOff]),
+      {
+        send: async (event) => {
+          sentAfter.push(event);
+          return { ids: ["evt_1"] };
+        },
+      },
+      { now: () => new Date("2026-07-24T11:00:11.000Z") },
+    );
+
+    await expect(afterWindow.publishPending(10)).resolves.toEqual({
+      published: 1,
+      failed: 0,
+      deadLettered: 0,
+    });
+    expect(sentAfter).toHaveLength(1);
+  });
+
+  it("still selects never-attempted rows, whose next_attempt_at is null", async () => {
+    const sent: unknown[] = [];
+    const publisher = new OutboxPublisher(
+      mockScanSupabase([outboxRow()]),
+      {
+        send: async (event) => {
+          sent.push(event);
+          return { ids: ["evt_1"] };
+        },
+      },
+      { now: () => new Date("2026-07-24T11:00:00.000Z") },
+    );
+
+    await publisher.publishPending(10);
+
+    expect(sent).toHaveLength(1);
+  });
+
+  it("backs off exponentially across consecutive failures", async () => {
+    const fixedNow = new Date("2026-07-24T11:00:00.000Z");
+    const expectedDelaysMs = [2_000, 8_000, 30_000, 120_000];
+
+    for (const [index, delayMs] of expectedDelaysMs.entries()) {
+      const { calls, client } = mockSupabase({
+        selectResults: [{ data: [outboxRow({ attempts: index })], error: null }],
+      });
+      const publisher = new OutboxPublisher(
+        client,
+        {
+          send: async () => {
+            throw new Error("inngest unavailable");
+          },
+        },
+        { maxAttempts: 5, now: () => fixedNow },
+      );
+
+      await publisher.publishPending();
+
+      expect(calls).toContainEqual({
+        op: "update",
+        table: "outbox_events",
+        values: {
+          attempts: index + 1,
+          next_attempt_at: new Date(
+            fixedNow.getTime() + delayMs,
+          ).toISOString(),
+        },
+      });
+    }
   });
 
   it("publishes on an interval outside test env and clears on destroy", async () => {

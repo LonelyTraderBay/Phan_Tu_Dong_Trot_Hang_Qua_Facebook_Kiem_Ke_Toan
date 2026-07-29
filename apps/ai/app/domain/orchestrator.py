@@ -8,6 +8,7 @@ from typing import Protocol
 from app.config import settings
 from app.infra.embeddings.gemini import EMBEDDING_DIMENSIONS, EmbeddingProvider
 from app.infra.llm.provider import LlmProvider, assert_model_allowed
+from app.infra.llm.spend import estimate_tokens
 
 PROMPT_PATH = Path(__file__).parent / "prompts" / "v1_grounded_process_message.md"
 SAFE_ESCALATE_REPLY = (
@@ -73,10 +74,16 @@ class LlmSpendBudget(Protocol):
     def estimate_messages(self, messages: list[dict[str, str]]):
         ...
 
+    def estimate_embedding(self, texts: list[str]):
+        ...
+
     def would_exceed_cap(self, estimate) -> bool:
         ...
 
     def record_completion(self, *, prompt_tokens: int, completion_tokens: int) -> None:
+        ...
+
+    def record_embedding(self, *, input_tokens: int) -> None:
         ...
 
 
@@ -155,7 +162,45 @@ class ProcessMessageOrchestrator:
     ) -> dict:
         selected_model = model or default_model()
         assert_model_allowed(selected_model, settings.ai_model_allowlist)
+
+        # Embedding is a *paid* Gemini call, so both the org quota gate and the
+        # spend cap gate must run before it — not after.
+        if self.quota_client is not None:
+            quota = self.quota_client.check_ai_token_quota(org_id=org_id)
+            if quota.get("exceeded") is True:
+                return self._escalation_response(
+                    model=selected_model,
+                    tokens={"prompt": 0, "completion": 0, "total": 0},
+                )
+
+        embed_estimate = (
+            self.spend_budget.estimate_embedding([message])
+            if self.spend_budget is not None
+            else None
+        )
+        if embed_estimate is not None and self.spend_budget.would_exceed_cap(
+            embed_estimate
+        ):
+            return self._escalation_response(
+                model=selected_model,
+                tokens={"prompt": 0, "completion": 0, "total": 0},
+            )
+
         query_embedding = self._embed_query(message)
+        embed_tokens = (
+            embed_estimate.input_tokens
+            if embed_estimate is not None
+            else estimate_tokens(message)
+        )
+        if self.spend_budget is not None:
+            self.spend_budget.record_embedding(input_tokens=embed_tokens)
+        if self.quota_client is not None and embed_tokens > 0:
+            self.quota_client.record_ai_token_usage(
+                org_id=org_id,
+                quantity=embed_tokens,
+                ref_type="embedding",
+            )
+
         chunks = self.retriever.retrieve_chunks(
             org_id=org_id,
             embedding=query_embedding,
@@ -168,14 +213,6 @@ class ProcessMessageOrchestrator:
                 model=selected_model,
                 tokens={"prompt": 0, "completion": 0, "total": 0},
             )
-
-        if self.quota_client is not None:
-            quota = self.quota_client.check_ai_token_quota(org_id=org_id)
-            if quota.get("exceeded") is True:
-                return self._escalation_response(
-                    model=selected_model,
-                    tokens={"prompt": 0, "completion": 0, "total": 0},
-                )
 
         tools_used, tool_context = self._run_core_tools(
             org_id=org_id,
@@ -221,6 +258,7 @@ class ProcessMessageOrchestrator:
             self.quota_client.record_ai_token_usage(
                 org_id=org_id,
                 quantity=completion.total_tokens,
+                ref_type="completion",
             )
         decision = _parse_llm_decision(completion.text)
         if decision is None:

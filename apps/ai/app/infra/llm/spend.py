@@ -23,6 +23,7 @@ class LlmSpendTracker:
         monthly_cap_usd: float | None = None,
         input_usd_per_1k_tokens: float | None = None,
         output_usd_per_1k_tokens: float | None = None,
+        embedding_usd_per_1k_tokens: float | None = None,
     ):
         self.counter_path = Path(counter_path or settings.llm_spend_counter_path)
         self.daily_cap_usd = (
@@ -44,6 +45,11 @@ class LlmSpendTracker:
             settings.gemini_usd_per_1k_output_tokens
             if output_usd_per_1k_tokens is None
             else output_usd_per_1k_tokens
+        )
+        self.embedding_usd_per_1k_tokens = (
+            settings.gemini_usd_per_1k_embedding_tokens
+            if embedding_usd_per_1k_tokens is None
+            else embedding_usd_per_1k_tokens
         )
         self._lock = Lock()
 
@@ -73,6 +79,20 @@ class LlmSpendTracker:
             usd=usd,
         )
 
+    def estimate_embedding(self, texts: list[str]) -> LlmSpendEstimate:
+        """Estimate the cost of embedding ``texts`` as one batch."""
+        return self.estimate_embedding_cost(
+            input_tokens=sum(estimate_tokens(text) for text in texts),
+        )
+
+    def estimate_embedding_cost(self, *, input_tokens: int) -> LlmSpendEstimate:
+        tokens = max(input_tokens, 0)
+        return LlmSpendEstimate(
+            input_tokens=tokens,
+            output_tokens=0,
+            usd=(tokens / 1000) * self.embedding_usd_per_1k_tokens,
+        )
+
     def would_exceed_cap(self, estimate: LlmSpendEstimate) -> bool:
         if self.daily_cap_usd <= 0 and self.monthly_cap_usd <= 0:
             return False
@@ -92,13 +112,21 @@ class LlmSpendTracker:
             input_tokens=max(prompt_tokens, 0),
             output_tokens=max(completion_tokens, 0),
         )
-        if actual.usd <= 0:
+        self._add_usd(actual.usd)
+
+    def record_embedding(self, *, input_tokens: int) -> None:
+        """Charge embedding tokens against the same day/month counters."""
+        actual = self.estimate_embedding_cost(input_tokens=input_tokens)
+        self._add_usd(actual.usd)
+
+    def _add_usd(self, usd: float) -> None:
+        if usd <= 0:
             return
 
         with self._lock:
             counters = self._read_counters()
-            counters["day_usd"] += actual.usd
-            counters["month_usd"] += actual.usd
+            counters["day_usd"] += usd
+            counters["month_usd"] += usd
             self.counter_path.parent.mkdir(parents=True, exist_ok=True)
             self.counter_path.write_text(json.dumps(counters, sort_keys=True), "utf-8")
 

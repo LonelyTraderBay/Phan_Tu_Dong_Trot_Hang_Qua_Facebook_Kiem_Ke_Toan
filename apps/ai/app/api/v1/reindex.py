@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import logging
 from typing import Literal
 from uuid import UUID
 
@@ -10,11 +11,14 @@ from app.config import settings
 from app.infra.core import CoreKnowledgeClient
 from app.infra.embeddings.factory import create_embedding_provider
 from app.infra.embeddings.gemini import EMBEDDING_DIMENSIONS, EmbeddingProvider
+from app.infra.llm.spend import LlmSpendTracker
 
 router = APIRouter(prefix="/internal/v1")
+logger = logging.getLogger(__name__)
 
 embedding_provider: EmbeddingProvider = create_embedding_provider()
 core_client = CoreKnowledgeClient()
+spend_budget = LlmSpendTracker()
 
 
 class KnowledgeDocument(BaseModel):
@@ -45,8 +49,21 @@ def reindex(
         for chunk in chunk_text(document.content)
     ]
 
+    # Metered at batch granularity: one estimate/record for the whole request
+    # rather than per chunk. Per-chunk accounting would multiply counter-file
+    # writes by up to 50x per call for no extra accuracy — the estimator is
+    # linear in characters, so the batch total equals the sum of the parts.
+    estimate = spend_budget.estimate_embedding(texts)
+    if texts and spend_budget.would_exceed_cap(estimate):
+        raise HTTPException(
+            status_code=429,
+            detail="LLM spend cap reached; reindex embedding batch refused",
+        )
+
     try:
         embeddings = embedding_provider.embed_texts(texts) if texts else []
+        if estimate.input_tokens > 0:
+            spend_budget.record_embedding(input_tokens=estimate.input_tokens)
         if len(embeddings) != len(texts):
             raise RuntimeError("Embedding provider returned unexpected count")
         for embedding in embeddings:
@@ -68,6 +85,17 @@ def reindex(
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    if estimate.input_tokens > 0:
+        try:
+            core_client.record_ai_token_usage(
+                org_id=str(body.org_id),
+                quantity=estimate.input_tokens,
+                ref_type="embedding_reindex",
+                ref_id=str(body.source_id),
+            )
+        except RuntimeError:
+            logger.exception("Reindex embedding usage reporting to Core failed")
 
     return {
         "ok": True,

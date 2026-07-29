@@ -4,6 +4,7 @@ from app.api.v1 import process_message as process_message_api
 from app.config import settings
 from app.domain.orchestrator import ProcessMessageOrchestrator, PromptTemplate
 from app.infra.llm.provider import LlmCompletion
+from app.infra.llm.spend import LlmSpendEstimate, estimate_tokens
 from app.main import app
 
 ORG_ID = "11111111-1111-1111-1111-111111111111"
@@ -19,8 +20,10 @@ client = TestClient(app)
 class FakeEmbeddings:
     def __init__(self):
         self.texts: list[str] = []
+        self.calls: int = 0
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        self.calls += 1
         self.texts = texts
         return [[0.02] * 768 for _ in texts]
 
@@ -71,23 +74,38 @@ class FakeQuotaClient:
         self.record_calls.append(kwargs)
 
 
+EMBED_ESTIMATE = LlmSpendEstimate(input_tokens=6, output_tokens=0, usd=0.0006)
+
+
 class FakeSpendBudget:
-    def __init__(self, *, exceeded: bool = False):
+    def __init__(self, *, exceeded: bool = False, embedding_exceeded: bool = False):
         self.exceeded = exceeded
+        self.embedding_exceeded = embedding_exceeded
         self.estimate_calls: list[list[dict[str, str]]] = []
+        self.embedding_estimate_calls: list[list[str]] = []
         self.check_calls: list[object] = []
         self.record_calls: list[dict] = []
+        self.record_embedding_calls: list[dict] = []
 
     def estimate_messages(self, messages: list[dict[str, str]]):
         self.estimate_calls.append(messages)
         return {"usd": 0.01}
 
+    def estimate_embedding(self, texts: list[str]):
+        self.embedding_estimate_calls.append(texts)
+        return EMBED_ESTIMATE
+
     def would_exceed_cap(self, estimate) -> bool:
         self.check_calls.append(estimate)
+        if isinstance(estimate, LlmSpendEstimate):
+            return self.embedding_exceeded
         return self.exceeded
 
     def record_completion(self, **kwargs) -> None:
         self.record_calls.append(kwargs)
+
+    def record_embedding(self, **kwargs) -> None:
+        self.record_embedding_calls.append(kwargs)
 
 
 class FakeCoreTools:
@@ -168,7 +186,7 @@ def test_process_message_escalates_without_context_and_skips_llm():
 
 def test_process_message_escalates_when_monthly_token_quota_is_exceeded():
     quota = FakeQuotaClient(exceeded=True)
-    orchestrator, _, _, llm = make_orchestrator(
+    orchestrator, embeddings, retriever, llm = make_orchestrator(
         [
             {
                 "sourceType": "product",
@@ -188,10 +206,80 @@ def test_process_message_escalates_when_monthly_token_quota_is_exceeded():
     )
 
     assert quota.check_calls == [{"org_id": ORG_ID}]
+    # The quota gate must run BEFORE the paid embedContent call.
+    assert embeddings.calls == 0
+    assert retriever.calls == []
     assert llm.calls == []
     assert quota.record_calls == []
     assert result["escalate"] is True
     assert result["tokens"] == {"prompt": 0, "completion": 0, "total": 0}
+
+
+def test_process_message_escalates_before_embedding_when_spend_cap_is_exceeded():
+    spend_budget = FakeSpendBudget(embedding_exceeded=True)
+    orchestrator, embeddings, retriever, llm = make_orchestrator(
+        [
+            {
+                "sourceType": "product",
+                "sourceId": "22222222-2222-2222-2222-222222222222",
+                "chunkIndex": 0,
+                "content": "Ao thun co mau den.",
+                "score": 0.92,
+            }
+        ],
+        spend_budget=spend_budget,
+    )
+
+    result = orchestrator.process_message(
+        org_id=ORG_ID,
+        message="Ao nay co mau den khong?",
+        model="gemini-2.0-flash",
+    )
+
+    assert spend_budget.embedding_estimate_calls == [["Ao nay co mau den khong?"]]
+    assert spend_budget.check_calls == [EMBED_ESTIMATE]
+    assert embeddings.calls == 0
+    assert spend_budget.record_embedding_calls == []
+    assert retriever.calls == []
+    assert llm.calls == []
+    assert result["escalate"] is True
+
+
+def test_process_message_meters_embedding_usage_in_spend_tracker_and_core():
+    quota = FakeQuotaClient()
+    spend_budget = FakeSpendBudget()
+    orchestrator, embeddings, _, _ = make_orchestrator(
+        [
+            {
+                "sourceType": "product",
+                "sourceId": "22222222-2222-2222-2222-222222222222",
+                "chunkIndex": 0,
+                "content": "Ao thun co mau den.",
+                "score": 0.92,
+            }
+        ],
+        quota_client=quota,
+        spend_budget=spend_budget,
+    )
+
+    orchestrator.process_message(
+        org_id=ORG_ID,
+        message="Ao nay co mau den khong?",
+        model="gemini-2.0-flash",
+    )
+
+    assert embeddings.calls == 1
+    assert spend_budget.record_embedding_calls == [
+        {"input_tokens": EMBED_ESTIMATE.input_tokens}
+    ]
+    assert quota.record_calls == [
+        {
+            "org_id": ORG_ID,
+            "quantity": EMBED_ESTIMATE.input_tokens,
+            "ref_type": "embedding",
+        },
+        {"org_id": ORG_ID, "quantity": 17, "ref_type": "completion"},
+    ]
 
 
 def test_process_message_records_token_usage_after_successful_llm():
@@ -215,7 +303,15 @@ def test_process_message_records_token_usage_after_successful_llm():
         model="gemini-2.0-flash",
     )
 
-    assert quota.record_calls == [{"org_id": ORG_ID, "quantity": 17}]
+    # No spend budget wired: embedding tokens are still counted for Core.
+    assert quota.record_calls == [
+        {
+            "org_id": ORG_ID,
+            "quantity": estimate_tokens("Ao nay co mau den khong?"),
+            "ref_type": "embedding",
+        },
+        {"org_id": ORG_ID, "quantity": 17, "ref_type": "completion"},
+    ]
 
 
 def test_process_message_escalates_when_llm_spend_cap_is_exceeded():
@@ -240,7 +336,8 @@ def test_process_message_escalates_when_llm_spend_cap_is_exceeded():
     )
 
     assert spend_budget.estimate_calls
-    assert spend_budget.check_calls == [{"usd": 0.01}]
+    # Embedding gate passes, completion gate refuses.
+    assert spend_budget.check_calls == [EMBED_ESTIMATE, {"usd": 0.01}]
     assert spend_budget.record_calls == []
     assert llm.calls == []
     assert result["escalate"] is True

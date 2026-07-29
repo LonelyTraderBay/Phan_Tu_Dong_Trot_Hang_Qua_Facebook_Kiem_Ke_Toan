@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     llm_monthly_spend_cap_usd: float = Field(default=0.0, ge=0.0)
     gemini_usd_per_1k_input_tokens: float = Field(default=0.0001, ge=0.0)
     gemini_usd_per_1k_output_tokens: float = Field(default=0.0004, ge=0.0)
+    # Embeddings are billed per input token only. Defaults to the completion
+    # input rate (conservative) so embedding spend is metered out of the box;
+    # set explicitly once the paid key's embedding price is known.
+    gemini_usd_per_1k_embedding_tokens: float = Field(default=0.0001, ge=0.0)
     llm_spend_counter_path: str = ".llm-spend.json"
     sentry_dsn: str | None = None
 

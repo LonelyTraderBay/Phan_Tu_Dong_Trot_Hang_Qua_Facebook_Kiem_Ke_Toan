@@ -11,6 +11,16 @@ class LlmCompletion:
     total_tokens: int
 
 
+class ModelNotAllowedError(ValueError):
+    """A model was refused because it is not in AI_MODEL_ALLOWLIST.
+
+    Subclasses ``ValueError`` so existing callers (and the FastAPI routes that
+    map ``ValueError`` to HTTP 400) keep behaving the same, while
+    :class:`FailoverLlmProvider` can tell a *policy refusal* apart from a
+    *provider outage*.
+    """
+
+
 class LlmProvider(Protocol):
     def complete(
         self,
@@ -34,10 +44,24 @@ class FailoverLlmProvider:
     ) -> LlmCompletion:
         try:
             return self.primary.complete(model=model, messages=messages)
-        except Exception:
+        except ModelNotAllowedError:
+            # Policy refusal, not an outage. Failing over here would send the
+            # grounded prompt to a model the org has explicitly not approved,
+            # which is exactly backwards. Fail closed.
+            raise
+        except Exception as primary_error:
             if self.secondary is None:
                 raise
-            return self.secondary.complete(model=model, messages=messages)
+            try:
+                return self.secondary.complete(model=model, messages=messages)
+            except ModelNotAllowedError as secondary_error:
+                # The primary is genuinely down but no approved fallback model
+                # exists. That is a server/config problem, not a bad request,
+                # so surface it as RuntimeError (HTTP 502) rather than 400.
+                raise RuntimeError(
+                    f"Primary LLM failed ({primary_error}) and the fallback"
+                    f" model is not allowed: {secondary_error}"
+                ) from primary_error
 
 
 def parse_allowlist(allowlist: str) -> set[str]:
@@ -46,4 +70,4 @@ def parse_allowlist(allowlist: str) -> set[str]:
 
 def assert_model_allowed(model: str, allowlist: str) -> None:
     if model not in parse_allowlist(allowlist):
-        raise ValueError(f"Model {model!r} is not in AI_MODEL_ALLOWLIST")
+        raise ModelNotAllowedError(f"Model {model!r} is not in AI_MODEL_ALLOWLIST")

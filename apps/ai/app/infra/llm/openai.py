@@ -2,7 +2,22 @@ import json
 from urllib import error, request
 
 from app.config import settings
-from app.infra.llm.provider import LlmCompletion
+from app.infra.llm.provider import LlmCompletion, assert_model_allowed
+
+# Documented Gemini -> OpenAI failover mapping. Whatever a request resolves to
+# here is BOTH the model that gets allowlist-checked AND the model actually sent
+# to OpenAI, so an org has to add the OpenAI model to AI_MODEL_ALLOWLIST before
+# failover is allowed to spend on it.
+GEMINI_TO_OPENAI_FALLBACK = {
+    "gemini-1.5-flash": "gpt-4o-mini",
+    "gemini-2.0-flash": "gpt-4o-mini",
+    "gemini-2.0-flash-lite": "gpt-4o-mini",
+    "gemini-2.5-flash": "gpt-4o-mini",
+    "gemini-1.5-pro": "gpt-4o",
+    "gemini-2.0-pro": "gpt-4o",
+    "gemini-2.5-pro": "gpt-4o",
+}
+OPENAI_MODEL_PREFIXES = ("gpt-", "chatgpt-", "o1", "o3", "o4")
 
 
 class OpenAiLlmProvider:
@@ -10,11 +25,28 @@ class OpenAiLlmProvider:
         self,
         api_key: str | None = None,
         model: str | None = None,
+        allowlist: str | None = None,
         opener=request.urlopen,
     ):
         self.api_key = api_key if api_key is not None else settings.openai_api_key
         self.model = model if model is not None else settings.openai_model
+        self.allowlist = (
+            allowlist if allowlist is not None else settings.ai_model_allowlist
+        )
         self.opener = opener
+
+    def resolve_model(self, model: str) -> str:
+        """Map a requested model onto the OpenAI model that will actually run.
+
+        1. An OpenAI model asked for by the caller is honored as-is.
+        2. A Gemini model uses the documented ``GEMINI_TO_OPENAI_FALLBACK``.
+        3. Anything else falls back to the configured ``OPENAI_MODEL``.
+
+        The result is always allowlist-checked by :meth:`complete`.
+        """
+        if model.startswith(OPENAI_MODEL_PREFIXES):
+            return model
+        return GEMINI_TO_OPENAI_FALLBACK.get(model, self.model)
 
     def complete(
         self,
@@ -22,13 +54,17 @@ class OpenAiLlmProvider:
         model: str,
         messages: list[dict[str, str]],
     ) -> LlmCompletion:
+        resolved_model = self.resolve_model(model)
+        # Enforce on the model that is actually used, not on the one requested.
+        assert_model_allowed(resolved_model, self.allowlist)
+
         if not self.api_key:
             raise RuntimeError("OPENAI_API_KEY is required for LLM fallback")
         if not messages:
             raise ValueError("messages must not be empty")
 
         payload = {
-            "model": self.model,
+            "model": resolved_model,
             "messages": [
                 {
                     "role": _map_role(message["role"]),
@@ -58,7 +94,7 @@ class OpenAiLlmProvider:
         usage = body.get("usage") or {}
         return LlmCompletion(
             text=text,
-            model=str(body.get("model") or self.model),
+            model=str(body.get("model") or resolved_model),
             prompt_tokens=int(usage.get("prompt_tokens") or 0),
             completion_tokens=int(usage.get("completion_tokens") or 0),
             total_tokens=int(usage.get("total_tokens") or 0),

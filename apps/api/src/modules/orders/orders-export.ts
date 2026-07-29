@@ -1,4 +1,7 @@
+import path from 'node:path';
+
 import ExcelJS from 'exceljs';
+import PDFDocument from 'pdfkit';
 
 import { neutralizeSpreadsheetFormula } from '../../common/csv/csv-formula-guard';
 
@@ -96,84 +99,58 @@ export async function buildOrdersXlsx(rows: ExportOrderRow[]): Promise<Buffer> {
   return Buffer.from(arrayBuffer);
 }
 
-function pdfEscape(text: string) {
-  return text.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+// Vietnamese customer names, addresses, and product titles need full Unicode
+// diacritic coverage (ạ, ệ, ố, ơ, ư, đ, ...) that the PDF base-14 standard
+// fonts cannot render (Type1 "Helvetica" only supports single-byte
+// StandardEncoding/WinAnsiEncoding). We embed Roboto, a Unicode TrueType
+// font with full Vietnamese coverage, licensed under the SIL Open Font
+// License 1.1 (see ../../../assets/fonts/OFL.txt).
+//
+// Roboto was chosen over Noto Sans specifically: pdfkit/fontkit shape four
+// lowercase Vietnamese letters (ẹ, ị, ọ, ụ) in Noto Sans as a base glyph plus
+// a separate zero-width "dotbelowcomb" mark glyph that carries no Unicode
+// code point, which makes pdfkit emit an empty ToUnicode CMap entry for that
+// mark (verified by walking fontkit's own glyph run for all 146 precomposed
+// Vietnamese letters). The glyph still renders correctly, but copy/paste and
+// text-extraction of a very common syllable like "Thị" comes back corrupted.
+// Roboto keeps every one of the 146 Vietnamese letters as a single glyph
+// with a direct code point, so it round-trips cleanly.
+const PDF_FONT_PATH = path.join(__dirname, '../../../assets/fonts/Roboto-Regular.ttf');
+const PDF_FONT_SIZE = 9;
+const PDF_MARGIN = 50;
+
+function orderRowLine(row: ExportOrderRow) {
+  return `${row.id} | ${row.status} | ${row.customerName ?? '-'} | ${row.phoneE164 ?? '-'} | ${row.addressText ?? '-'} | ${row.sku} x${row.qty} ${row.title} | ${row.totalVnd} VND`;
 }
 
-const PDF_LINES_PER_PAGE = 50;
-const PDF_LINE_HEIGHT = 14;
-const PDF_START_Y = 750;
+export function buildOrdersPdf(rows: ExportOrderRow[]): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'letter', margin: PDF_MARGIN });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (error: Error) => reject(error));
 
-function buildPdfPageStream(lines: string[]) {
-  const content: string[] = ['BT', '/F1 9 Tf'];
-  for (let index = 0; index < lines.length; index += 1) {
-    if (index === 0) {
-      content.push(`50 ${PDF_START_Y} Td (${pdfEscape(lines[index] ?? '')}) Tj`);
+    // A row (id | status | customer | phone | address | sku x qty title |
+    // total) can run wider than the page for long Vietnamese addresses/names,
+    // so we rely on PDFKit's own word-wrap (rather than the previous
+    // hand-rolled single unbounded line) to keep every row fully on the
+    // page; PDFKit also auto-paginates (adds new pages) when the vertical
+    // cursor runs past the bottom margin.
+    doc.font(PDF_FONT_PATH).fontSize(PDF_FONT_SIZE);
+    doc.text('Xuất đơn hàng');
+    doc.moveDown();
+
+    if (rows.length === 0) {
+      doc.text('(không có đơn)');
     } else {
-      content.push(`0 -${PDF_LINE_HEIGHT} Td (${pdfEscape(lines[index] ?? '')}) Tj`);
+      for (const row of rows) {
+        doc.text(orderRowLine(row));
+      }
     }
-  }
-  content.push('ET');
-  return content.join('\n');
-}
 
-export function buildOrdersPdf(rows: ExportOrderRow[]): Buffer {
-  const textLines = [
-    'Xuất đơn hàng',
-    '',
-    ...rows.map(
-      (row) =>
-        `${row.id} | ${row.status} | ${row.customerName ?? '-'} | ${row.phoneE164 ?? '-'} | ${row.addressText ?? '-'} | ${row.sku} x${row.qty} ${row.title} | ${row.totalVnd} VND`,
-    ),
-  ];
-  if (rows.length === 0) {
-    textLines.push('(không có đơn)');
-  }
-
-  const pageLines: string[][] = [];
-  for (let index = 0; index < textLines.length; index += PDF_LINES_PER_PAGE) {
-    pageLines.push(textLines.slice(index, index + PDF_LINES_PER_PAGE));
-  }
-
-  const pageCount = pageLines.length;
-  const fontObjectId = pageCount * 2 + 2;
-  const objects: string[] = [
-    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
-    `2 0 obj\n<< /Type /Pages /Kids [${Array.from({ length: pageCount }, (_, index) => `${index * 2 + 3} 0 R`).join(' ')}] /Count ${pageCount} >>\nendobj\n`,
-  ];
-
-  for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
-    const pageObjectId = pageIndex * 2 + 3;
-    const contentObjectId = pageIndex * 2 + 4;
-    const stream = buildPdfPageStream(pageLines[pageIndex] ?? []);
-    const streamLength = Buffer.byteLength(stream, 'utf8');
-    objects.push(
-      `${pageObjectId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${contentObjectId} 0 R /Resources << /Font << /F1 ${fontObjectId} 0 R >> >> >>\nendobj\n`,
-      `${contentObjectId} 0 obj\n<< /Length ${streamLength} >>\nstream\n${stream}\nendstream\nendobj\n`,
-    );
-  }
-
-  objects.push(
-    `${fontObjectId} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`,
-  );
-
-  let pdf = '%PDF-1.4\n';
-  const offsets: number[] = [0];
-  for (const object of objects) {
-    offsets.push(Buffer.byteLength(pdf, 'utf8'));
-    pdf += object;
-  }
-
-  const xrefOffset = Buffer.byteLength(pdf, 'utf8');
-  pdf += `xref\n0 ${objects.length + 1}\n`;
-  pdf += '0000000000 65535 f \n';
-  for (let index = 1; index <= objects.length; index += 1) {
-    pdf += `${String(offsets[index]).padStart(10, '0')} 00000 n \n`;
-  }
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`;
-  pdf += `startxref\n${xrefOffset}\n%%EOF\n`;
-
-  return Buffer.from(pdf, 'utf8');
+    doc.end();
+  });
 }
 
 export function buildOrdersExport(
@@ -195,10 +172,10 @@ export function buildOrdersExport(
         filename: 'orders.xlsx',
       }));
     case 'pdf':
-      return {
-        buffer: buildOrdersPdf(rows),
+      return buildOrdersPdf(rows).then((buffer) => ({
+        buffer,
         contentType: 'application/pdf',
         filename: 'orders.pdf',
-      };
+      }));
   }
 }

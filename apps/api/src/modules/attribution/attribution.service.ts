@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import { SOLD_ORDER_STATUSES } from '../../common/reporting/sold-order-statuses';
 import { loadEnv } from '../../config/env';
 import type { AttributionSummaryQuery } from './dto';
 
@@ -76,11 +77,38 @@ export class AttributionService {
     };
   }
 
+  /**
+   * Loads the orders whose revenue this report is allowed to count.
+   *
+   * Two deliberate decisions live here, and they pull in opposite directions:
+   *
+   * 1. **Status: identical to P&L.** Only `SOLD_ORDER_STATUSES` counts. This
+   *    filter used to be missing entirely, so `draft`, `cancelled` and
+   *    `returned` orders contributed their full `total_vnd` to attribution
+   *    revenue while `/pnl` reported zero for them — the two reports were
+   *    guaranteed to disagree and no shop owner could reconcile them.
+   *
+   * 2. **Date basis: `created_at`, NOT `sold_at` — on purpose.** P&L buckets on
+   *    the generated `orders.sold_at` (`coalesce(done_at, shipped_at,
+   *    created_at)`) because it answers "when was this revenue recognized?".
+   *    Attribution answers a different question: "which source produced this
+   *    order?" — a click-date/cohort question. Ad spend is dated on the day the
+   *    ads ran, so pairing it with orders *originated* that day is what makes
+   *    ROAS meaningful; re-bucketing on `sold_at` would credit Monday's ad
+   *    budget with an order that was clicked Monday and shipped Friday.
+   *
+   * The consequence, stated plainly so nobody "fixes" it later: `/attribution`
+   * and `/pnl` now report the same revenue for the same *set* of orders, but
+   * they still legitimately assign an order to different days when it is
+   * created in one window and shipped in another. That divergence is by design;
+   * the status divergence was the bug.
+   */
   private async loadOrders(orgId: string, query: AttributionSummaryQuery) {
     let builder = this.supabase
       .from('orders')
       .select(ORDER_ATTRIBUTION_SELECT)
       .eq('org_id', orgId)
+      .in('status', SOLD_ORDER_STATUSES)
       .order('created_at', { ascending: false })
       .limit(10_000);
 

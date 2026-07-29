@@ -13,12 +13,11 @@ import { loadEnv } from "../../config/env";
 
 export const AI_TOKEN_USAGE_SUPABASE = Symbol("AI_TOKEN_USAGE_SUPABASE");
 
-export type SupabaseLike = Pick<SupabaseClient, "from">;
+export type SupabaseLike = Pick<SupabaseClient, "from" | "rpc">;
 
 export const AI_TOKEN_USAGE_KIND = "ai_tokens";
 
 const ENTITLEMENTS_SELECT = "org_id, ai_monthly_token_limit";
-const USAGE_SELECT = "quantity";
 
 export const RecordAiTokenUsageSchema = z.object({
   orgId: z.string().uuid(),
@@ -45,10 +44,6 @@ type SupabaseError = {
 type EntitlementsRow = {
   org_id: string;
   ai_monthly_token_limit: number | string;
-};
-
-type UsageRow = {
-  quantity: number | string;
 };
 
 @Injectable()
@@ -125,23 +120,32 @@ export class AiTokenUsageService {
     );
   }
 
+  /**
+   * Monthly AI token consumption, aggregated in SQL.
+   *
+   * This is the number the quota gate compares against the entitlement limit.
+   * It used to fetch `usage_events` rows and sum them in Node with no `.limit()`,
+   * which PostgREST silently truncates at `db-max-rows` (1000 by default) — so
+   * the busiest orgs, the only ones that can actually exceed a token limit, were
+   * exactly the ones whose usage was under-counted and whose limit therefore
+   * never engaged.
+   */
   private async loadMonthlyUsage(orgId: string) {
     const periodStart = startOfUtcMonthIso(new Date());
-    const { data, error } = await this.supabase
-      .from("usage_events")
-      .select(USAGE_SELECT)
-      .eq("org_id", orgId)
-      .eq("kind", AI_TOKEN_USAGE_KIND)
-      .gte("created_at", periodStart);
+    const { data, error } = await this.supabase.rpc(
+      "sum_usage_event_quantity",
+      {
+        p_org_id: orgId,
+        p_kind: AI_TOKEN_USAGE_KIND,
+        p_since: periodStart,
+      },
+    );
 
     if (error) {
       throwUsageError(error, "Could not read AI token usage");
     }
 
-    return (data as UsageRow[] | null)?.reduce(
-      (total, row) => total + toBigIntQuantity(row.quantity, "quantity"),
-      0n,
-    ) ?? 0n;
+    return toBigIntQuantity((data ?? "0") as number | string, "quantity");
   }
 }
 

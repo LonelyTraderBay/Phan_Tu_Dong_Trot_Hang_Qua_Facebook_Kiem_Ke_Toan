@@ -65,7 +65,52 @@ function createClient(seed: Partial<Tables> = {}) {
         }
         return new Query(tables, table, mutations);
       },
+      rpc(fn: string, args: Record<string, unknown>) {
+        if (fn !== 'cod_report_summary') {
+          throw new Error(`Unexpected rpc call: ${fn}`);
+        }
+        return Promise.resolve({
+          data: [codReportSummary(tables, args.p_org_id)],
+          error: null,
+        });
+      },
     } as unknown as SupabaseLike,
+  };
+}
+
+/**
+ * In-memory twin of `public.cod_report_summary` (20260729030000). It aggregates
+ * over the *whole* table on purpose: the point of the RPC is that the report's
+ * totals no longer inherit the 100-row cap of the list beneath them. The SQL
+ * itself is pinned separately in cod-report-summary.integration.spec.ts.
+ */
+function codReportSummary(tables: Tables, orgId: unknown) {
+  const openOrDiscrepancy = tables.cod_expectations.filter(
+    (row) =>
+      row.org_id === orgId &&
+      (row.status === 'open' || row.status === 'discrepancy'),
+  );
+  const orderIds = new Set(openOrDiscrepancy.map((row) => row.order_id));
+  const sum = (rows: Row[], column: string) =>
+    rows
+      .reduce((total, row) => total + BigInt(String(row[column])), 0n)
+      .toString();
+
+  return {
+    open_count: tables.cod_expectations.filter(
+      (row) => row.org_id === orgId && row.status === 'open',
+    ).length,
+    discrepancy_count: tables.cod_discrepancies.filter(
+      (row) => row.org_id === orgId && row.status === 'open',
+    ).length,
+    expectation_count: openOrDiscrepancy.length,
+    expected_vnd: sum(openOrDiscrepancy, 'expected_vnd'),
+    collected_vnd: sum(
+      tables.cod_collections.filter(
+        (row) => row.org_id === orgId && orderIds.has(row.order_id),
+      ),
+      'amount_vnd',
+    ),
   };
 }
 
@@ -356,6 +401,103 @@ describe('CodService', () => {
     expect(db.tables.cod_expectations[1]).toMatchObject({
       status: 'written_off',
     });
+  });
+});
+
+describe('CodService.getReport totals', () => {
+  /** One `open` expectation per order, each with a matching part-collection. */
+  function manyExpectations(count: number) {
+    return {
+      cod_expectations: Array.from({ length: count }, (_, index) =>
+        expectation({
+          id: `exp-${index}`,
+          order_id: `order-${index}`,
+          expected_vnd: '1000',
+          created_at: `2026-07-27T${String(index % 24).padStart(2, '0')}:00:00.000Z`,
+        }),
+      ),
+      cod_collections: Array.from({ length: count }, (_, index) =>
+        collection({
+          id: `col-${index}`,
+          order_id: `order-${index}`,
+          amount_vnd: '400',
+        }),
+      ),
+    };
+  }
+
+  it('computes totals over ALL expectations, not just the first page', async () => {
+    // 250 open expectations against a 100-row list cap. The summary used to be
+    // reduced over the same 100 rows the list is drawn from, so a shop with
+    // more than 100 open COD expectations was shown 100/100000/40000 — numbers
+    // that are wrong by 60% and presented as complete.
+    const db = createClient(manyExpectations(250));
+    const service = new CodService(db.client, auditMock());
+
+    const report = await service.getReport(ORG_ID);
+
+    expect(report.summary).toEqual({
+      openCount: 250,
+      discrepancyCount: 0,
+      expectedVnd: '250000',
+      collectedVnd: '100000',
+      deltaVnd: '-150000',
+    });
+  });
+
+  it('flags the expectation list as truncated while keeping the totals whole', async () => {
+    const db = createClient(manyExpectations(250));
+    const service = new CodService(db.client, auditMock());
+
+    const report = await service.getReport(ORG_ID);
+
+    expect(report.expectations).toHaveLength(100);
+    expect(report.expectationsTruncated).toBe(true);
+    expect(report.summary.openCount).toBe(250);
+  });
+
+  it('does not flag truncation when everything fits in one page', async () => {
+    const db = createClient(manyExpectations(3));
+    const service = new CodService(db.client, auditMock());
+
+    const report = await service.getReport(ORG_ID);
+
+    expect(report.expectations).toHaveLength(3);
+    expect(report.expectationsTruncated).toBe(false);
+    expect(report.discrepanciesTruncated).toBe(false);
+    expect(report.summary).toEqual({
+      openCount: 3,
+      discrepancyCount: 0,
+      expectedVnd: '3000',
+      collectedVnd: '1200',
+      deltaVnd: '-1800',
+    });
+  });
+
+  it('counts every open discrepancy, even past the discrepancy list cap', async () => {
+    const db = createClient({
+      ...manyExpectations(5),
+      cod_discrepancies: Array.from({ length: 120 }, (_, index) => ({
+        id: `disc-${index}`,
+        org_id: ORG_ID,
+        order_id: `order-${index}`,
+        expected_vnd: '1000',
+        collected_vnd: '400',
+        delta_vnd: '-600',
+        status: 'open',
+        note: null,
+        created_at: CREATED_AT,
+        resolved_at: null,
+      })),
+    });
+    const service = new CodService(db.client, auditMock());
+
+    const report = await service.getReport(ORG_ID);
+
+    // `discrepancyCount` used to be `discrepancies.length`, i.e. the capped page.
+    expect(report.discrepancies).toHaveLength(100);
+    expect(report.summary.discrepancyCount).toBe(120);
+    expect(report.discrepanciesTruncated).toBe(true);
   });
 });
 

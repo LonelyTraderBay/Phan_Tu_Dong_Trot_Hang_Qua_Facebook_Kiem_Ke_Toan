@@ -10,21 +10,28 @@ type SupabaseCall = {
   field?: string;
   value?: unknown;
   values?: unknown;
+  options?: unknown;
 };
 
-function mockSupabase(input: {
+type MockInput = {
   billingStatus?: string;
-  channels?: unknown[];
-  usageRows?: Array<{ quantity: number | string }>;
-  orders?: unknown[];
+  /** Exact counts the database reports; deliberately not row arrays. */
+  activePageCount?: number;
+  ordersCount?: number;
+  aiTokenSum?: number | string;
   invoices?: unknown[];
-}) {
+};
+
+function mockSupabase(input: MockInput) {
   const calls: SupabaseCall[] = [];
   const client = {
     from(table: string) {
       return {
-        select(values: string) {
-          calls.push({ op: "select", table, values });
+        select(
+          values: string,
+          options?: { count?: string; head?: boolean },
+        ) {
+          calls.push({ op: "select", table, values, options });
           const query = {
             eq(field: string, value: unknown) {
               calls.push({ op: "eq", table, field, value });
@@ -32,11 +39,11 @@ function mockSupabase(input: {
             },
             gte(field: string, value: unknown) {
               calls.push({ op: "gte", table, field, value });
-              return Promise.resolve(resultFor(table, input));
+              return query;
             },
             order(field: string, value: unknown) {
               calls.push({ op: "order", table, field, value });
-              return Promise.resolve(resultFor(table, input));
+              return query;
             },
             maybeSingle: async () => {
               if (table === "organizations") {
@@ -54,12 +61,25 @@ function mockSupabase(input: {
               return { data: null, error: null };
             },
             then(resolve: (value: unknown) => unknown) {
-              return Promise.resolve(resultFor(table, input)).then(resolve);
+              return Promise.resolve(resultFor(table, input, options)).then(
+                resolve,
+              );
             },
           };
           return query;
         },
       };
+    },
+    rpc(fn: string, args: Record<string, unknown>) {
+      calls.push({ op: "rpc", table: fn, values: args });
+      if (fn !== "sum_usage_event_quantity") {
+        throw new Error(`Unexpected rpc call: ${fn}`);
+      }
+      // The SQL function returns `text` so a bigint sum survives JSON intact.
+      return Promise.resolve({
+        data: String(input.aiTokenSum ?? 0),
+        error: null,
+      });
     },
   } as unknown as SupabaseLike;
 
@@ -68,16 +88,19 @@ function mockSupabase(input: {
 
 function resultFor(
   table: string,
-  input: Parameters<typeof mockSupabase>[0],
+  input: MockInput,
+  options?: { count?: string; head?: boolean },
 ) {
-  if (table === "channel_connections") {
-    return { data: input.channels ?? [], error: null };
-  }
-  if (table === "usage_events") {
-    return { data: input.usageRows ?? [], error: null };
-  }
-  if (table === "orders") {
-    return { data: input.orders ?? [], error: null };
+  // A `head: true` count request returns no rows at all — only the count. A
+  // mock that returned rows here would let a client-side `.length` keep passing.
+  if (options?.head) {
+    if (table === "channel_connections") {
+      return { data: null, count: input.activePageCount ?? 0, error: null };
+    }
+    if (table === "orders") {
+      return { data: null, count: input.ordersCount ?? 0, error: null };
+    }
+    return { data: null, count: 0, error: null };
   }
   if (table === "billing_invoices") {
     return { data: input.invoices ?? [], error: null };
@@ -145,9 +168,9 @@ describe("BillingService", () => {
 
   it("returns simple usage meters for the current month", async () => {
     const { client } = mockSupabase({
-      channels: [{ id: "page-1" }, { id: "page-2" }],
-      usageRows: [{ quantity: 100 }, { quantity: "25" }],
-      orders: [{ id: "order-1" }],
+      activePageCount: 2,
+      aiTokenSum: 125,
+      ordersCount: 1,
     });
     const service = new BillingService(
       client,
@@ -161,6 +184,55 @@ describe("BillingService", () => {
       pagesConnectedCount: 2,
       aiTokensMonth: 125,
       ordersCountMonth: 1,
+    });
+  });
+
+  it("reports exact counts past PostgREST's default max-rows cap", async () => {
+    // These meters used to fetch rows and count them with `.length`. PostgREST
+    // caps a response at `db-max-rows` (1000 by default), so an org with 5,000
+    // orders in the month was shown `ordersCountMonth: 1000` — and the AI token
+    // total that quota enforcement reads was under-summed the same way.
+    const { client, calls } = mockSupabase({
+      activePageCount: 1_200,
+      ordersCount: 5_000,
+      aiTokenSum: "4200000",
+    });
+    const service = new BillingService(
+      client,
+      entitlementsMock({ autoConfirmAllowed: true }) as never,
+    );
+
+    await expect(
+      service.getUsage(ORG_ID, new Date("2026-07-25T01:00:00.000Z")),
+    ).resolves.toMatchObject({
+      pagesConnectedCount: 1_200,
+      ordersCountMonth: 5_000,
+      aiTokensMonth: 4_200_000,
+    });
+
+    // Counting has to happen in Postgres: `head: true` means no rows are
+    // transferred at all, so there is nothing left for a cap to truncate.
+    expect(calls).toContainEqual({
+      op: "select",
+      table: "orders",
+      values: "id",
+      options: { count: "exact", head: true },
+    });
+    expect(calls).toContainEqual({
+      op: "select",
+      table: "channel_connections",
+      values: "id",
+      options: { count: "exact", head: true },
+    });
+    // ...and summing has to happen in Postgres too.
+    expect(calls).toContainEqual({
+      op: "rpc",
+      table: "sum_usage_event_quantity",
+      values: {
+        p_org_id: ORG_ID,
+        p_kind: "ai_tokens",
+        p_since: "2026-07-01T00:00:00.000Z",
+      },
     });
   });
 });

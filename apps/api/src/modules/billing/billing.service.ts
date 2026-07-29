@@ -17,11 +17,10 @@ const ORGANIZATION_PLAN_SELECT =
   "id, plan, billing_customer_email, billing_status, plan_renews_at";
 const CHANNEL_SELECT = "id";
 const ORDER_SELECT = "id";
-const USAGE_SELECT = "quantity";
 const INVOICE_SELECT =
   "id, org_id, period_start, period_end, amount_vnd, status, issued_at, note, created_at";
 
-export type SupabaseLike = Pick<SupabaseClient, "from">;
+export type SupabaseLike = Pick<SupabaseClient, "from" | "rpc">;
 
 type SupabaseError = {
   code?: string;
@@ -34,10 +33,6 @@ type OrganizationPlanRow = {
   billing_customer_email: string | null;
   billing_status: BillingStatus | null;
   plan_renews_at: string | null;
-};
-
-type UsageRow = {
-  quantity: number | string;
 };
 
 type InvoiceRow = {
@@ -138,10 +133,21 @@ export class BillingService {
     return data as OrganizationPlanRow;
   }
 
+  /**
+   * These three meters used to fetch rows and count/sum them in Node with no
+   * `.limit()` at all. PostgREST caps every response at `db-max-rows` (1000 by
+   * default), so an org with 5,000 orders in a month was shown
+   * `ordersCountMonth: 1000` — a wrong number presented as a fact, and the same
+   * truncation under-summed AI token usage that quota enforcement reads.
+   *
+   * Counts now come from `count: "exact"` with `head: true`: Postgres does the
+   * counting and no rows cross the wire. The token sum is a SQL aggregate
+   * (`public.sum_usage_event_quantity`) for the same reason.
+   */
   private async countActivePages(orgId: string) {
-    const { data, error } = await this.supabase
+    const { count, error } = await this.supabase
       .from("channel_connections")
-      .select(CHANNEL_SELECT)
+      .select(CHANNEL_SELECT, { count: "exact", head: true })
       .eq("org_id", orgId)
       .eq("status", "active");
 
@@ -149,13 +155,13 @@ export class BillingService {
       throwBillingError(error, "Could not count connected pages");
     }
 
-    return (data ?? []).length;
+    return count ?? 0;
   }
 
   private async countOrders(orgId: string, periodStart: string) {
-    const { data, error } = await this.supabase
+    const { count, error } = await this.supabase
       .from("orders")
-      .select(ORDER_SELECT)
+      .select(ORDER_SELECT, { count: "exact", head: true })
       .eq("org_id", orgId)
       .gte("created_at", periodStart);
 
@@ -163,28 +169,27 @@ export class BillingService {
       throwBillingError(error, "Could not count monthly orders");
     }
 
-    return (data ?? []).length;
+    return count ?? 0;
   }
 
   private async sumAiTokens(orgId: string, periodStart: string) {
-    const { data, error } = await this.supabase
-      .from("usage_events")
-      .select(USAGE_SELECT)
-      .eq("org_id", orgId)
-      .eq("kind", AI_TOKEN_USAGE_KIND)
-      .gte("created_at", periodStart);
+    const { data, error } = await this.supabase.rpc(
+      "sum_usage_event_quantity",
+      {
+        p_org_id: orgId,
+        p_kind: AI_TOKEN_USAGE_KIND,
+        p_since: periodStart,
+      },
+    );
 
     if (error) {
-      if (error.code === "42P01") {
-        return 0;
-      }
       throwBillingError(error, "Could not sum monthly AI token usage");
     }
 
-    return ((data ?? []) as UsageRow[]).reduce(
-      (total, row) => total + toSafeNumber(row.quantity, "quantity"),
-      0,
-    );
+    // The function returns `text` so a bigint sum survives the JSON round-trip
+    // intact; `toSafeNumber` is what rejects anything that is not a whole,
+    // representable count.
+    return toSafeNumber((data ?? "0") as number | string, "quantity");
   }
 }
 

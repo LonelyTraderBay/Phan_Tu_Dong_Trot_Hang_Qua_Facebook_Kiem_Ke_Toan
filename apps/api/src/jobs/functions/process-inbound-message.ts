@@ -7,7 +7,9 @@ import { FeatureFlagsService } from "../../modules/feature-flags/feature-flags.s
 import { inngest } from "../inngest.client";
 import { enqueueOutbox } from "../outbox.publisher";
 
-export type SupabaseLike = Pick<SupabaseClient, "from">;
+// `rpc` is required because this client is handed to AiTokenUsageService, whose
+// monthly-usage read is a SQL aggregate rather than a client-side sum.
+export type SupabaseLike = Pick<SupabaseClient, "from" | "rpc">;
 export type JsonObject = Record<string, unknown>;
 
 type FetchLike = typeof fetch;

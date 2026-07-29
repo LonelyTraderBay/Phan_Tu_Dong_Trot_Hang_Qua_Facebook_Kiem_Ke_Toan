@@ -7,11 +7,28 @@ import type { AccountingExportQuery } from './dto';
 const ORG_ID = '11111111-1111-1111-1111-111111111111';
 const QUERY = { format: 'csv' } as AccountingExportQuery;
 
+/**
+ * PostgREST caps every response at `db-max-rows` (1000 by default) no matter
+ * what the client asks for. Modelling that here is the whole point: a fake that
+ * happily returns 10,000 rows cannot see the bug where a `.limit(10_000)` was
+ * never actually the binding constraint.
+ */
+const DB_MAX_ROWS = 1_000;
+
 type Row = Record<string, unknown>;
 type Tables = Record<string, Row[]>;
 
 class Query {
   private eqFilters: Array<{ column: string; value: unknown }> = [];
+  private inFilters: Array<{ column: string; values: readonly unknown[] }> = [];
+  private rangeFilters: Array<{
+    column: string;
+    value: unknown;
+    op: 'gte' | 'lte';
+  }> = [];
+  private limitCount: number | null = null;
+  private sort: { column: string; ascending: boolean } | null = null;
+  private offsets: { from: number; to: number } | null = null;
 
   constructor(
     private readonly tables: Tables,
@@ -27,35 +44,68 @@ class Query {
     return this;
   }
 
-  in() {
+  in(column: string, values: readonly unknown[]) {
+    this.inFilters.push({ column, values });
     return this;
   }
 
-  gte() {
+  gte(column: string, value: unknown) {
+    this.rangeFilters.push({ column, value, op: 'gte' });
     return this;
   }
 
-  lte() {
+  lte(column: string, value: unknown) {
+    this.rangeFilters.push({ column, value, op: 'lte' });
     return this;
   }
 
-  order() {
+  order(column: string, options: { ascending?: boolean } = {}) {
+    this.sort = { column, ascending: options.ascending ?? true };
     return this;
   }
 
-  limit() {
+  limit(count: number) {
+    this.limitCount = count;
     return this;
   }
 
-  range() {
+  /** PostgREST `.range()` is inclusive on both bounds. */
+  range(from: number, to: number) {
+    this.offsets = { from, to };
     return this;
   }
 
   then(resolve: (value: { data: Row[]; error: null }) => void) {
-    const rows = (this.tables[this.table] ?? []).filter((row) =>
-      this.eqFilters.every((filter) => row[filter.column] === filter.value),
+    let rows = (this.tables[this.table] ?? []).filter(
+      (row) =>
+        this.eqFilters.every((filter) => row[filter.column] === filter.value) &&
+        this.inFilters.every((filter) =>
+          filter.values.includes(row[filter.column]),
+        ) &&
+        this.rangeFilters.every((filter) =>
+          filter.op === 'gte'
+            ? String(row[filter.column]) >= String(filter.value)
+            : String(row[filter.column]) <= String(filter.value),
+        ),
     );
-    resolve({ data: rows, error: null });
+
+    if (this.sort) {
+      const { column, ascending } = this.sort;
+      rows = [...rows].sort((left, right) => {
+        const comparison = String(left[column]).localeCompare(
+          String(right[column]),
+        );
+        return ascending ? comparison : -comparison;
+      });
+    }
+    if (this.limitCount !== null) {
+      rows = rows.slice(0, this.limitCount);
+    }
+    if (this.offsets) {
+      rows = rows.slice(this.offsets.from, this.offsets.to + 1);
+    }
+
+    resolve({ data: rows.slice(0, DB_MAX_ROWS), error: null });
   }
 }
 
@@ -100,6 +150,17 @@ function codCollection(overrides: Row = {}): Row {
     collected_at: '2026-07-02T08:00:00.000Z',
     ...overrides,
   };
+}
+
+/** `2020-01-01` plus `days`, as a date-only string. */
+function dayString(days: number) {
+  return new Date(Date.UTC(2020, 0, 1 + days)).toISOString().slice(0, 10);
+}
+
+function countLines(csv: string, accountHint: string) {
+  return csv
+    .split('\n')
+    .filter((line) => line.includes(`,"${accountHint}",`)).length;
 }
 
 describe('AccountingService CSV export', () => {
@@ -160,5 +221,60 @@ describe('AccountingService CSV export', () => {
     // formula (Excel evaluates it to 0) and does not match `^-?\d+$`.
     expect(neutralizeSpreadsheetFormula('-1+1')).toBe("'-1+1");
     expect(neutralizeSpreadsheetFormula('-500000')).toBe('-500000');
+  });
+});
+
+describe('AccountingService range completeness', () => {
+  const ROW_COUNT = 1_500; // > DB_MAX_ROWS, so a single unpaged fetch cannot see it all
+
+  function wideRangeSeed(): Partial<Tables> {
+    return {
+      shipments: Array.from({ length: ROW_COUNT }, (_, index) => ({
+        id: `ship-${String(index).padStart(4, '0')}`,
+        org_id: ORG_ID,
+        order_id: `order-${index}`,
+        fee_vnd: '1000',
+        created_at: `${dayString(index)}T08:00:00.000Z`,
+      })),
+      cod_collections: Array.from({ length: ROW_COUNT }, (_, index) => ({
+        id: `cod-${String(index).padStart(4, '0')}`,
+        org_id: ORG_ID,
+        order_id: `order-${index}`,
+        amount_vnd: '2000',
+        collected_at: `${dayString(index)}T09:00:00.000Z`,
+      })),
+      ad_spend: Array.from({ length: ROW_COUNT }, (_, index) => ({
+        id: `ad-${String(index).padStart(4, '0')}`,
+        org_id: ORG_ID,
+        date: dayString(index),
+        campaign_name: 'Chiến dịch',
+        amount_vnd: '3000',
+      })),
+    };
+  }
+
+  it('keeps the OLDEST row in a range that exceeds one page, for every ledger leg', async () => {
+    // The shipments / COD / ad-spend loaders used to order DESCENDING under a
+    // cap, so the rows that vanished when a range overflowed were the oldest
+    // ones in the window — and nothing in the export said so. This asserts the
+    // direction bug specifically: it is the *first* row of each range, not the
+    // last, that used to disappear.
+    const csv = await exportCsv(wideRangeSeed());
+
+    expect(csv).toContain('"shipment:ship-0000:order:order-0"');
+    expect(csv).toContain('"cod:cod-0000:order:order-0"');
+    expect(csv).toContain('"ad_spend:ad-0000:Chiến dịch"');
+  });
+
+  it('exports every row of every leg, not just the newest page', async () => {
+    const csv = await exportCsv(wideRangeSeed());
+
+    expect(countLines(csv, 'shipping_fee')).toBe(ROW_COUNT);
+    expect(countLines(csv, 'cod_cash')).toBe(ROW_COUNT);
+    expect(countLines(csv, 'ad_spend')).toBe(ROW_COUNT);
+    // Newest rows were never the ones at risk, but they must survive the switch
+    // to ascending paging too.
+    expect(csv).toContain(`"shipment:ship-1499:order:order-1499"`);
+    expect(csv).toContain(`"cod:cod-1499:order:order-1499"`);
   });
 });

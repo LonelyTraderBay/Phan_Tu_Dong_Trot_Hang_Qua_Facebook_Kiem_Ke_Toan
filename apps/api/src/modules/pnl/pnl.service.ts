@@ -7,6 +7,10 @@ import {
 } from '@nestjs/common';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  SOLD_ORDER_STATUSES,
+  type SoldOrderStatus,
+} from '../../common/reporting/sold-order-statuses';
 import { loadEnv } from '../../config/env';
 import type { PnlDateRangeQuery } from './dto';
 
@@ -14,7 +18,7 @@ export const PNL_SUPABASE = Symbol('PNL_SUPABASE');
 
 export type SupabaseLike = Pick<SupabaseClient, 'from'>;
 
-type OrderStatus = 'shipped' | 'done';
+type OrderStatus = SoldOrderStatus;
 
 type OrderItemRow = {
   sku_snapshot: string;
@@ -64,7 +68,6 @@ type SkuAggregate = GrossAggregate & {
   orderIds: Set<string>;
 };
 
-const SOLD_STATUSES: OrderStatus[] = ['shipped', 'done'];
 const ORDER_WITH_ITEMS_SELECT =
   'id, status, total_vnd, shipping_fee_vnd, shipped_at, done_at, created_at, sold_at, items:order_items(sku_snapshot, qty, line_total_vnd, cogs_unit_vnd)';
 const AD_SPEND_SELECT = 'date, amount_vnd';
@@ -177,7 +180,7 @@ export class PnlService {
         .from('orders')
         .select(ORDER_WITH_ITEMS_SELECT)
         .eq('org_id', orgId)
-        .in('status', SOLD_STATUSES);
+        .in('status', SOLD_ORDER_STATUSES);
 
       if (range.from !== null) {
         builder = builder.gte('sold_at', range.from);

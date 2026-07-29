@@ -18,7 +18,7 @@ import type {
 
 export const COD_SUPABASE = Symbol('COD_SUPABASE');
 
-export type SupabaseLike = Pick<SupabaseClient, 'from'>;
+export type SupabaseLike = Pick<SupabaseClient, 'from' | 'rpc'>;
 export type AuditWriter = {
   writeAudit(input: WriteAuditInput): Promise<unknown>;
 };
@@ -87,6 +87,15 @@ type SupabaseError = {
   hint?: string;
 };
 
+/** One row out of `public.cod_report_summary`; money columns arrive as text. */
+type CodReportSummaryRow = {
+  open_count: number | string;
+  discrepancy_count: number | string;
+  expectation_count: number | string;
+  expected_vnd: string;
+  collected_vnd: string;
+};
+
 const EXPECTATION_SELECT =
   'id, org_id, order_id, expected_vnd, status, created_at';
 const COLLECTION_SELECT =
@@ -95,6 +104,8 @@ const DISCREPANCY_SELECT =
   'id, org_id, order_id, expected_vnd, collected_vnd, delta_vnd, status, note, created_at, resolved_at';
 const ORDER_SELECT =
   'id, org_id, status, payment_method, customer_name, phone_e164, total_vnd, shipped_at, created_at';
+/** Rows the report returns in its `expectations` / `discrepancies` lists. */
+const REPORT_LIST_LIMIT = 100;
 
 @Injectable()
 export class CodService {
@@ -346,49 +357,52 @@ export class CodService {
     };
   }
 
+  /**
+   * COD reconciliation report: complete totals, one page of detail rows.
+   *
+   * The summary is aggregated in SQL over *every* open/discrepant expectation
+   * (`public.cod_report_summary`). It used to be reduced over the same capped
+   * 100-row page the `expectations` list is drawn from, and `discrepancyCount`
+   * over the capped discrepancy page, so a shop with more than 100 open COD
+   * expectations was shown understated totals with nothing marking them as
+   * partial — the worst failure mode for a money screen.
+   *
+   * The detail lists stay capped: they back a UI table, and returning tens of
+   * thousands of rows to render 100 helps nobody. What changed is that the caps
+   * are now *declared* — `expectationsTruncated` / `discrepanciesTruncated` say
+   * when a list is only a first page, while the totals above it stay whole.
+   */
   async getReport(orgId: string) {
-    const { data: expectationRows, error: expectationError } = await this.supabase
-      .from('cod_expectations')
-      .select(EXPECTATION_SELECT)
-      .eq('org_id', orgId)
-      .in('status', ['open', 'discrepancy'])
-      .order('created_at', { ascending: false })
-      .limit(100);
+    const [summary, expectationRows, discrepancies] = await Promise.all([
+      this.loadReportSummary(orgId),
+      this.listReportExpectations(orgId),
+      this.listOpenDiscrepancies(orgId),
+    ]);
 
-    if (expectationError) {
-      throwCodError(expectationError, 'Could not load COD expectations');
-    }
-
-    const expectations = (expectationRows ?? []) as CodExpectationRow[];
-    const orderIds = expectations.map((row) => row.order_id);
-    const ordersById = await this.loadOrdersById(orgId, orderIds);
-    const collectedByOrderId = await this.loadCollectionTotals(orgId, orderIds);
-    const discrepancies = await this.listOpenDiscrepancies(orgId);
-    const expectedTotal = expectations.reduce(
-      (sum, row) => sum + toBigintVnd(row.expected_vnd),
-      0n,
-    );
-    const collectedTotal = expectations.reduce(
-      (sum, row) => sum + (collectedByOrderId.get(row.order_id) ?? 0n),
-      0n,
-    );
+    const orderIds = expectationRows.map((row) => row.order_id);
+    const [ordersById, collectedByOrderId] = await Promise.all([
+      this.loadOrdersById(orgId, orderIds),
+      this.loadCollectionTotals(orgId, orderIds),
+    ]);
 
     return {
       summary: {
-        openCount: expectations.filter((row) => row.status === 'open').length,
-        discrepancyCount: discrepancies.length,
-        expectedVnd: expectedTotal.toString(),
-        collectedVnd: collectedTotal.toString(),
-        deltaVnd: (collectedTotal - expectedTotal).toString(),
+        openCount: summary.openCount,
+        discrepancyCount: summary.discrepancyCount,
+        expectedVnd: summary.expected.toString(),
+        collectedVnd: summary.collected.toString(),
+        deltaVnd: (summary.collected - summary.expected).toString(),
       },
-      expectations: expectations.map((row) =>
+      expectations: expectationRows.map((row) =>
         mapExpectationForReport(
           row,
           ordersById.get(row.order_id) ?? null,
           collectedByOrderId.get(row.order_id) ?? 0n,
         ),
       ),
+      expectationsTruncated: summary.expectationCount > expectationRows.length,
       discrepancies: discrepancies.map(mapDiscrepancy),
+      discrepanciesTruncated: summary.discrepancyCount > discrepancies.length,
     };
   }
 
@@ -662,6 +676,47 @@ export class CodService {
     return totals;
   }
 
+  /** Whole-org COD totals, aggregated in SQL so no row cap can understate them. */
+  private async loadReportSummary(orgId: string) {
+    const { data, error } = await this.supabase.rpc('cod_report_summary', {
+      p_org_id: orgId,
+    });
+
+    if (error) {
+      throwCodError(error, 'Could not load COD report summary');
+    }
+
+    // A `returns table (...)` function comes back as a one-element array.
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | CodReportSummaryRow
+      | null
+      | undefined;
+
+    return {
+      openCount: toCount(row?.open_count ?? 0),
+      discrepancyCount: toCount(row?.discrepancy_count ?? 0),
+      expectationCount: toCount(row?.expectation_count ?? 0),
+      expected: toBigintVnd(row?.expected_vnd ?? '0'),
+      collected: toBigintVnd(row?.collected_vnd ?? '0'),
+    };
+  }
+
+  private async listReportExpectations(orgId: string) {
+    const { data, error } = await this.supabase
+      .from('cod_expectations')
+      .select(EXPECTATION_SELECT)
+      .eq('org_id', orgId)
+      .in('status', ['open', 'discrepancy'])
+      .order('created_at', { ascending: false })
+      .limit(REPORT_LIST_LIMIT);
+
+    if (error) {
+      throwCodError(error, 'Could not load COD expectations');
+    }
+
+    return (data ?? []) as CodExpectationRow[];
+  }
+
   private async listOpenDiscrepancies(orgId: string) {
     const { data, error } = await this.supabase
       .from('cod_discrepancies')
@@ -669,7 +724,7 @@ export class CodService {
       .eq('org_id', orgId)
       .eq('status', 'open')
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(REPORT_LIST_LIMIT);
 
     if (error) {
       throwCodError(error, 'Could not list COD discrepancies');
@@ -803,6 +858,18 @@ function returnDiscrepancyNote(reason: string | undefined) {
   return normalized
     ? `Order returned; COD discrepancy left open: ${normalized}`
     : 'Order returned; COD discrepancy left open';
+}
+
+/** `count(*)` arrives as a JSON number, but PostgREST may hand back bigint text. */
+function toCount(value: number | string) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new InternalServerErrorException({
+      code: 'cod_failed',
+      message: 'COD report summary returned an invalid row count',
+    });
+  }
+  return parsed;
 }
 
 function toBigintVnd(value: string | number | unknown) {

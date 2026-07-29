@@ -18,7 +18,8 @@ type SupabaseCall = {
 
 function mockSupabase(input: {
   limit: number | string;
-  usageRows?: Array<{ quantity: number | string }>;
+  /** Whole-month total the SQL aggregate reports, as PostgREST `text`. */
+  usageSum?: number | string;
 }) {
   const calls: SupabaseCall[] = [];
   const client = {
@@ -26,23 +27,13 @@ function mockSupabase(input: {
       return {
         select(values: string) {
           calls.push({ op: "select", table, values });
-          const filters: Array<{ field: string; value: unknown; op: string }> =
-            [];
           const query = {
             eq(field: string, value: unknown) {
               calls.push({ op: "eq", table, field, value });
-              filters.push({ field, value, op: "eq" });
               return query;
             },
             gte(field: string, value: unknown) {
               calls.push({ op: "gte", table, field, value });
-              filters.push({ field, value, op: "gte" });
-              if (table === "usage_events") {
-                return Promise.resolve({
-                  data: input.usageRows ?? [],
-                  error: null,
-                });
-              }
               return query;
             },
             maybeSingle: async () => {
@@ -59,10 +50,6 @@ function mockSupabase(input: {
             },
           };
 
-          if (table === "usage_events") {
-            return query;
-          }
-
           return query;
         },
         insert(values: unknown) {
@@ -71,6 +58,13 @@ function mockSupabase(input: {
         },
       };
     },
+    rpc(fn: string, args: Record<string, unknown>) {
+      calls.push({ op: "rpc", table: fn, values: args });
+      if (fn !== "sum_usage_event_quantity") {
+        throw new Error(`Unexpected rpc call: ${fn}`);
+      }
+      return Promise.resolve({ data: String(input.usageSum ?? 0), error: null });
+    },
   } as unknown as SupabaseLike;
 
   return { calls, client };
@@ -78,10 +72,7 @@ function mockSupabase(input: {
 
 describe("AiTokenUsageService", () => {
   it("reports quota exceeded when monthly usage meets the entitlement limit", async () => {
-    const { client } = mockSupabase({
-      limit: 100,
-      usageRows: [{ quantity: 60 }, { quantity: 40 }],
-    });
+    const { client } = mockSupabase({ limit: 100, usageSum: 100 });
     const service = new AiTokenUsageService(client);
 
     await expect(service.getQuotaStatus(ORG_ID)).resolves.toMatchObject({
@@ -93,10 +84,7 @@ describe("AiTokenUsageService", () => {
   });
 
   it("allows usage below the monthly entitlement limit", async () => {
-    const { client } = mockSupabase({
-      limit: 1_000,
-      usageRows: [{ quantity: 250 }],
-    });
+    const { client } = mockSupabase({ limit: 1_000, usageSum: 250 });
     const service = new AiTokenUsageService(client);
 
     await expect(service.getQuotaStatus(ORG_ID)).resolves.toMatchObject({
@@ -107,8 +95,37 @@ describe("AiTokenUsageService", () => {
     });
   });
 
+  it("reads usage as a SQL aggregate, so the quota gate cannot be under-counted", async () => {
+    // The gate used to sum `usage_events` rows client-side with no `.limit()`.
+    // PostgREST caps that at `db-max-rows` (1000 by default), so the busiest
+    // orgs — the only ones that can actually blow a token limit — were exactly
+    // the ones whose usage was truncated and whose limit never engaged.
+    const { client, calls } = mockSupabase({
+      limit: 2_000_000,
+      usageSum: "2500000",
+    });
+    const service = new AiTokenUsageService(client);
+
+    await expect(service.getQuotaStatus(ORG_ID)).resolves.toMatchObject({
+      allowed: false,
+      exceeded: true,
+      used: 2_500_000,
+    });
+    expect(
+      calls.some(
+        (call) =>
+          call.op === "rpc" && call.table === "sum_usage_event_quantity",
+      ),
+    ).toBe(true);
+    expect(
+      calls.some(
+        (call) => call.op === "select" && call.table === "usage_events",
+      ),
+    ).toBe(false);
+  });
+
   it("records ai token usage events", async () => {
-    const { client, calls } = mockSupabase({ limit: 1_000, usageRows: [] });
+    const { client, calls } = mockSupabase({ limit: 1_000 });
     const service = new AiTokenUsageService(client);
 
     await service.recordUsage({

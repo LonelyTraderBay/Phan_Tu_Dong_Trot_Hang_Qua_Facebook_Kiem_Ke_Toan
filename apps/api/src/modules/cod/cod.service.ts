@@ -260,6 +260,18 @@ export class CodService {
     note?: string;
   }) {
     const expectation = await this.requireExpectation(input.orgId, input.orderId);
+    // A written-off expectation is a deliberate decision made when the order was
+    // returned: nobody owes this money. Reconciling it would compute a negative
+    // delta against zero collections, flip the row back to `discrepancy` and open
+    // a fresh discrepancy for money that was never owed. Refuse before any write.
+    if (expectation.status === 'written_off') {
+      throw new BadRequestException({
+        code: 'cod_expectation_written_off',
+        message:
+          'COD expectation was written off when the order was returned and cannot be reconciled',
+      });
+    }
+
     const expected = toBigintVnd(expectation.expected_vnd);
     const collected = await this.sumCollections(input.orgId, input.orderId);
     const delta = collected - expected;

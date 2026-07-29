@@ -86,6 +86,17 @@ function outboxOnlyFrom(sink: Record<string, unknown>[]) {
   };
 }
 
+/** The row `public.create_and_confirm_order` inserts into `outbox_events`. */
+function outboxRow(eventName: string, status: string) {
+  return {
+    org_id: ORG_ID,
+    event_name: eventName,
+    payload_json: { event: eventName, orderId: ORDER_ID, status },
+    published_at: null,
+    attempts: 0,
+  };
+}
+
 function entitlementsMock(input: { autoConfirmAllowed: boolean }) {
   return {
     getEntitlements: vi.fn(async () => ({
@@ -113,6 +124,9 @@ function autoConfirmClient(input: { stockQty: number }) {
 
       const existing = idempotentResponses.get(idempotencyKey);
       if (existing) {
+        // The replay returns before the RPC reaches its outbox insert, so no
+        // second pair of events is written. See the early return in
+        // public.create_and_confirm_order.
         return {
           data: { ...existing, _idempotencyReplayed: true },
           error: null,
@@ -130,6 +144,15 @@ function autoConfirmClient(input: { stockQty: number }) {
       const payload = orderPayload(ORDER_ID, 'confirmed');
       orders.push(payload.order);
       idempotentResponses.set(idempotencyKey, payload);
+      // Stands in for the `insert into public.outbox_events` that
+      // 20260729040000_create_and_confirm_order_transactional_outbox.sql added
+      // inside this RPC's transaction. Enqueuing is no longer a separate call
+      // the service makes, so the only way a unit test can see the events is to
+      // model them here, alongside the order they commit with.
+      outboxInserts.push(
+        outboxRow('order.created', 'draft'),
+        outboxRow('order.confirmed', 'confirmed'),
+      );
 
       return {
         data: { ...payload, _idempotencyReplayed: false },
@@ -138,7 +161,10 @@ function autoConfirmClient(input: { stockQty: number }) {
     }),
     from(table: string) {
       if (table === 'outbox_events') {
-        return outboxOnlyFrom(outboxInserts)(table);
+        throw new Error(
+          'auto-confirm must not enqueue order events from TypeScript: ' +
+            'create_and_confirm_order writes them transactionally',
+        );
       }
 
       const chain = {
@@ -617,7 +643,9 @@ describe('OrdersService auto-confirm create', () => {
     );
     // Both order.created and order.confirmed fire exactly once for the
     // auto-confirm create — the replay (same idempotency key) must not
-    // double-enqueue either event.
+    // double-enqueue either event. They are now written by the RPC itself, in
+    // the order's own transaction; `from('outbox_events')` throws in this mock,
+    // so the service enqueuing them a second time would fail the test loudly.
     expect(db.outboxInserts).toHaveLength(2);
     expect(db.outboxInserts).toEqual([
       expect.objectContaining({

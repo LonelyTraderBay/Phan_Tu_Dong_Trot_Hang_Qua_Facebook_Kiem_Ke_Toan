@@ -288,24 +288,25 @@ export class OrdersService {
         { ...input, idempotencyKey },
         items,
       );
+      // No enqueue here. `order.created` and `order.confirmed` are written by
+      // public.create_and_confirm_order itself, in the same transaction as the
+      // order, its items, the stock decrement and the idempotency row
+      // (20260729040000_create_and_confirm_order_transactional_outbox.sql).
+      // Enqueuing them here as well would emit each event twice.
+      //
+      // The audit row stays out here: it is a separate concern, and writing it
+      // is not what this fix was about. It is still guarded on `!replayed`, and
+      // for the audit alone that guard now reads as "only the call that
+      // actually created the order logs the confirmation" — a replay returns
+      // the first call's response and must not append a second audit entry.
+      // Unlike the events, a lost audit row is not silently unrecoverable: the
+      // order itself records `confirmed_at`.
       if (!payload.replayed) {
-        await this.enqueueOrderEvent({
-          orgId: input.orgId,
-          orderId: payload.response.order.id,
-          event: 'order.created',
-          status: 'draft',
-        });
         await this.writeOrderConfirmedAudit({
           orgId: input.orgId,
           orderId: payload.response.order.id,
           actorUserId: input.actorUserId,
           autoConfirm: true,
-        });
-        await this.enqueueOrderEvent({
-          orgId: input.orgId,
-          orderId: payload.response.order.id,
-          event: 'order.confirmed',
-          status: 'confirmed',
         });
       }
       return payload.response;

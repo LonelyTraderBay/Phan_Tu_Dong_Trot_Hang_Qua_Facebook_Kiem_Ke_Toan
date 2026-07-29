@@ -121,6 +121,21 @@ const ORDER_WITH_ITEMS_SELECT =
 const SHIPMENT_SELECT =
   'id, org_id, order_id, carrier_connection_id, provider, external_shipment_id, tracking_code, status, fee_vnd, label_url, raw_json, created_at, updated_at';
 
+/**
+ * Shipment statuses that mean "a parcel for this order is live at the carrier".
+ * Full vocabulary (shipments_status_check): `created | picking | delivering |
+ * delivered | cancelled | failed`. `cancelled` and `failed` are excluded so a
+ * cancelled or failed booking can be re-attempted; everything else blocks a
+ * second booking, because that would mint a second real waybill and a second
+ * carrier fee.
+ */
+const LIVE_SHIPMENT_STATUSES = [
+  'created',
+  'picking',
+  'delivering',
+  'delivered',
+];
+
 @Injectable()
 export class ShippingService {
   private readonly supabase: SupabaseLike;
@@ -244,6 +259,25 @@ export class ShippingService {
       throw new BadRequestException({
         code: 'invalid_order_status',
         message: 'Order must be confirmed or already shipped before shipment creation',
+      });
+    }
+
+    // `provider.createShipment(...)` books a REAL waybill and incurs a REAL
+    // carrier fee. It used to run first, with the local shipment row, the fee
+    // update and the ship transition happening only afterwards — so if any of
+    // those threw, or the request timed out, the client retried and the carrier
+    // was called a second time: two live waybills, two fees charged, and
+    // `orders.shipping_fee_vnd` reflecting only the last one. Refuse the second
+    // booking before the provider is ever reached.
+    const live = await this.findLiveShipment(input.orgId, order.id);
+    if (live) {
+      throw new ConflictException({
+        code: 'shipment_already_exists',
+        message:
+          'Order already has an active shipment. Cancel it before booking another.',
+        shipmentId: live.id,
+        trackingCode: live.tracking_code,
+        status: live.status,
       });
     }
 
@@ -483,6 +517,34 @@ export class ShippingService {
     return data as unknown as OrderRow;
   }
 
+  /**
+   * The newest shipment for an order that represents a real parcel at a
+   * carrier, or null when a new booking is legitimate.
+   *
+   * Mock rows are skipped on purpose: they are traceability records where no
+   * carrier was contacted (see `GhnShippingProvider`, `raw_json.mode = 'mock'`),
+   * so they cost nothing and must never block a genuine booking. Blocking on
+   * them would change mock semantics, which stay untouched.
+   */
+  private async findLiveShipment(orgId: string, orderId: string) {
+    const { data, error } = await this.supabase
+      .from('shipments')
+      .select(SHIPMENT_SELECT)
+      .eq('org_id', orgId)
+      .eq('order_id', orderId)
+      .in('status', LIVE_SHIPMENT_STATUSES)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throwShippingError(error, 'Could not read existing shipments');
+    }
+
+    return (
+      ((data ?? []) as ShipmentRow[]).find((row) => !isMockShipmentRow(row)) ??
+      null
+    );
+  }
+
   private async insertShipment(input: {
     orgId: string;
     orderId: string;
@@ -595,6 +657,10 @@ function mapShipment(row: ShipmentRow) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function isMockShipmentRow(row: ShipmentRow) {
+  return (row.raw_json ?? {}).mode === 'mock';
 }
 
 function mapShippingOrder(row: OrderRow): ShippingOrder {

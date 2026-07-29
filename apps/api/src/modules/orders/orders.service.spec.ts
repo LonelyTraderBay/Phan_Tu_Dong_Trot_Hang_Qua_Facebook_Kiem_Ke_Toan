@@ -747,106 +747,377 @@ describe('OrdersService auto-confirm create', () => {
   });
 });
 
+type IdempotencyStore = Map<string, Record<string, unknown>>;
+type MockFilters = {
+  eq: Record<string, unknown>;
+  lt: Record<string, string>;
+};
+
+function idempotencyRowMatches(
+  row: Record<string, unknown>,
+  filters: MockFilters,
+) {
+  for (const [column, value] of Object.entries(filters.eq)) {
+    if (row[column] !== value) {
+      return false;
+    }
+  }
+  for (const [column, value] of Object.entries(filters.lt)) {
+    const cell = row[column];
+    // Postgres: `NULL < x` is NULL, i.e. the row never matches.
+    if (typeof cell !== 'string') {
+      return false;
+    }
+    if (!(Date.parse(cell) < Date.parse(value))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function projectIdempotencyRow(
+  row: Record<string, unknown>,
+  columns: string,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    columns.split(',').map((column) => {
+      const name = column.trim();
+      return [name, row[name] ?? null];
+    }),
+  );
+}
+
+/**
+ * A PostgREST-shaped mock of the `idempotency_keys` table backed by `rows`.
+ * Supports the chains the service actually builds:
+ *   insert(row)
+ *   select(cols).eq().eq().maybeSingle()
+ *   update(values).eq().eq()                 (await-ed directly)
+ *   update(values).eq().eq().lt().select()   (conditional reclaim)
+ *   delete().eq().eq()
+ * `select()` projects only the requested columns, so a column the service
+ * forgets to request is genuinely missing from the row it sees.
+ */
+function idempotencyKeysTable(rows: IdempotencyStore) {
+  const makeFilters = (): MockFilters => ({ eq: {}, lt: {} });
+
+  const matching = (filters: MockFilters) =>
+    [...rows.entries()].filter(([, row]) =>
+      idempotencyRowMatches(row, filters),
+    );
+
+  return {
+    insert(row: Record<string, unknown>) {
+      const mapKey = `${row.org_id}:${row.key}`;
+      if (rows.has(mapKey)) {
+        return Promise.resolve({ error: { code: '23505' } });
+      }
+      rows.set(mapKey, { ...row });
+      return Promise.resolve({ error: null });
+    },
+    select(columns: string) {
+      const filters = makeFilters();
+      const builder = {
+        eq(column: string, value: unknown) {
+          filters.eq[column] = value;
+          return builder;
+        },
+        maybeSingle: async () => {
+          const hit = matching(filters)[0];
+          if (!hit) {
+            return { data: null, error: null };
+          }
+          return {
+            data: projectIdempotencyRow(hit[1], columns),
+            error: null,
+          };
+        },
+      };
+      return builder;
+    },
+    update(values: Record<string, unknown>) {
+      const filters = makeFilters();
+      let projected = false;
+      const run = () => {
+        const affected = matching(filters).map(([mapKey, row]) => {
+          const next = { ...row, ...values };
+          rows.set(mapKey, next);
+          return next;
+        });
+        return { data: projected ? affected : null, error: null };
+      };
+      const builder = {
+        eq(column: string, value: unknown) {
+          filters.eq[column] = value;
+          return builder;
+        },
+        lt(column: string, value: string) {
+          filters.lt[column] = value;
+          return builder;
+        },
+        select() {
+          projected = true;
+          return builder;
+        },
+        then(
+          resolve: (value: ReturnType<typeof run>) => unknown,
+          reject?: (reason: unknown) => unknown,
+        ) {
+          return Promise.resolve().then(run).then(resolve, reject);
+        },
+      };
+      return builder;
+    },
+    delete() {
+      const filters = makeFilters();
+      const builder = {
+        eq(column: string, value: unknown) {
+          filters.eq[column] = value;
+          return builder;
+        },
+        then(
+          resolve: (value: { error: null }) => unknown,
+          reject?: (reason: unknown) => unknown,
+        ) {
+          return Promise.resolve()
+            .then(() => {
+              for (const [mapKey] of matching(filters)) {
+                rows.delete(mapKey);
+              }
+              return { error: null as null };
+            })
+            .then(resolve, reject);
+        },
+      };
+      return builder;
+    },
+  };
+}
+
+function idempotencyClient(input: {
+  rows: IdempotencyStore;
+  outboxInserts: Record<string, unknown>[];
+  rpc?: () => Promise<{ data: unknown; error: unknown }>;
+}) {
+  return {
+    rpc: vi.fn(
+      input.rpc ??
+        (async () => ({
+          data: orderPayload(ORDER_ID, 'confirmed'),
+          error: null,
+        })),
+    ),
+    from(table: string) {
+      if (table === 'outbox_events') {
+        return outboxOnlyFrom(input.outboxInserts)(table);
+      }
+      if (table !== 'idempotency_keys') {
+        throw new Error(`unexpected table ${table}`);
+      }
+      return idempotencyKeysTable(input.rows);
+    },
+  } as unknown as SupabaseLike;
+}
+
+function seedIdempotencyRow(
+  rows: IdempotencyStore,
+  row: Record<string, unknown>,
+) {
+  const seeded = {
+    org_id: ORG_ID,
+    key: 'seeded-key',
+    method: 'POST',
+    path: `/v1/orders/${ORDER_ID}/confirm`,
+    ...row,
+  };
+  rows.set(`${seeded.org_id}:${seeded.key}`, seeded);
+  return seeded;
+}
+
+const PAST_ISO = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+const FUTURE_ISO = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+describe('OrdersService idempotency expiry', () => {
+  const confirmInput = (key: string) => ({
+    orgId: ORG_ID,
+    orderId: ORDER_ID,
+    actorUserId: USER_ID,
+    idempotencyKey: key,
+    path: `/v1/orders/${ORDER_ID}/confirm`,
+  });
+
+  it('reclaims a wedged pending row whose TTL has passed instead of conflicting forever', async () => {
+    const rows: IdempotencyStore = new Map();
+    const outboxInserts: Record<string, unknown>[] = [];
+    seedIdempotencyRow(rows, {
+      key: 'wedged-key',
+      status_code: 102,
+      response_json: { _pending: true },
+      expires_at: PAST_ISO,
+    });
+    const client = idempotencyClient({ rows, outboxInserts });
+    const audit = auditMock();
+    const service = new OrdersService(client, audit);
+
+    const result = await service.confirmOrder(confirmInput('wedged-key'));
+
+    expect(result).toMatchObject({ order: { id: ORDER_ID } });
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    expect(audit.writeAudit).toHaveBeenCalledTimes(1);
+    expect(outboxInserts).toHaveLength(1);
+
+    const stored = rows.get(`${ORG_ID}:wedged-key`);
+    expect(stored?.status_code).toBe(200);
+    expect(Date.parse(String(stored?.expires_at))).toBeGreaterThan(Date.now());
+  });
+
+  it('still rejects a pending row that has not expired yet', async () => {
+    const rows: IdempotencyStore = new Map();
+    const outboxInserts: Record<string, unknown>[] = [];
+    seedIdempotencyRow(rows, {
+      key: 'in-flight-key',
+      status_code: 102,
+      response_json: { _pending: true },
+      expires_at: FUTURE_ISO,
+    });
+    const client = idempotencyClient({ rows, outboxInserts });
+    const audit = auditMock();
+    const service = new OrdersService(client, audit);
+
+    await expect(
+      service.confirmOrder(confirmInput('in-flight-key')),
+    ).rejects.toMatchObject({
+      response: { code: 'idempotency_conflict' },
+    });
+    expect(client.rpc).not.toHaveBeenCalled();
+    expect(audit.writeAudit).not.toHaveBeenCalled();
+    expect(rows.get(`${ORG_ID}:in-flight-key`)).toMatchObject({
+      status_code: 102,
+      expires_at: FUTURE_ISO,
+    });
+  });
+
+  it('does not replay a completed row past its TTL', async () => {
+    const rows: IdempotencyStore = new Map();
+    const outboxInserts: Record<string, unknown>[] = [];
+    const stalePayload = orderPayload(SECOND_ORDER_ID, 'confirmed');
+    seedIdempotencyRow(rows, {
+      key: 'stale-key',
+      status_code: 200,
+      response_json: stalePayload,
+      expires_at: PAST_ISO,
+    });
+    const client = idempotencyClient({ rows, outboxInserts });
+    const audit = auditMock();
+    const service = new OrdersService(client, audit);
+
+    const result = await service.confirmOrder(confirmInput('stale-key'));
+
+    expect(result).toMatchObject({ order: { id: ORDER_ID } });
+    expect(result).not.toMatchObject({ order: { id: SECOND_ORDER_ID } });
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    expect(rows.get(`${ORG_ID}:stale-key`)?.response_json).toMatchObject({
+      order: { id: ORDER_ID },
+    });
+  });
+
+  it('replays a completed row that is still within its TTL', async () => {
+    const rows: IdempotencyStore = new Map();
+    const outboxInserts: Record<string, unknown>[] = [];
+    const storedPayload = orderPayload(SECOND_ORDER_ID, 'confirmed');
+    seedIdempotencyRow(rows, {
+      key: 'fresh-key',
+      status_code: 200,
+      response_json: storedPayload,
+      expires_at: FUTURE_ISO,
+    });
+    const client = idempotencyClient({ rows, outboxInserts });
+    const audit = auditMock();
+    const service = new OrdersService(client, audit);
+
+    const result = await service.confirmOrder(confirmInput('fresh-key'));
+
+    expect(result).toEqual(storedPayload);
+    expect(client.rpc).not.toHaveBeenCalled();
+    expect(audit.writeAudit).not.toHaveBeenCalled();
+    expect(outboxInserts).toHaveLength(0);
+  });
+
+  it('still rejects a reused key on a non-expired row with a different path', async () => {
+    const rows: IdempotencyStore = new Map();
+    const outboxInserts: Record<string, unknown>[] = [];
+    seedIdempotencyRow(rows, {
+      key: 'reused-key',
+      method: 'POST',
+      path: '/v1/orders',
+      status_code: 201,
+      response_json: orderPayload(SECOND_ORDER_ID, 'draft'),
+      expires_at: FUTURE_ISO,
+    });
+    const client = idempotencyClient({ rows, outboxInserts });
+    const service = new OrdersService(client, auditMock());
+
+    await expect(
+      service.confirmOrder(confirmInput('reused-key')),
+    ).rejects.toMatchObject({
+      response: { code: 'idempotency_key_reused' },
+    });
+    expect(client.rpc).not.toHaveBeenCalled();
+  });
+
+  it('lets only one of two concurrent requests reclaim the same expired key', async () => {
+    const rows: IdempotencyStore = new Map();
+    const outboxInserts: Record<string, unknown>[] = [];
+    seedIdempotencyRow(rows, {
+      key: 'race-key',
+      status_code: 102,
+      response_json: { _pending: true },
+      expires_at: PAST_ISO,
+    });
+    const client = idempotencyClient({ rows, outboxInserts });
+    const audit = auditMock();
+    const service = new OrdersService(client, audit);
+
+    const results = await Promise.allSettled([
+      service.confirmOrder(confirmInput('race-key')),
+      service.confirmOrder(confirmInput('race-key')),
+    ]);
+
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    const rejected = results.filter((result) => result.status === 'rejected');
+    expect(rejected).toHaveLength(1);
+    if (rejected[0]?.status === 'rejected') {
+      expect(rejected[0].reason).toMatchObject({
+        response: { code: 'idempotency_conflict' },
+      });
+    }
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    expect(audit.writeAudit).toHaveBeenCalledTimes(1);
+    expect(outboxInserts).toHaveLength(1);
+  });
+});
+
 describe('OrdersService idempotency', () => {
   it('does not double-audit concurrent confirm requests with the same idempotency key', async () => {
     let releaseRpc: (() => void) | undefined;
     const rpcGate = new Promise<void>((resolve) => {
       releaseRpc = resolve;
     });
-    const idempotencyRows = new Map<string, Record<string, unknown>>();
+    const idempotencyRows: IdempotencyStore = new Map();
     const outboxInserts: Record<string, unknown>[] = [];
-    const client = {
-      rpc: vi.fn(async () => {
+    const client = idempotencyClient({
+      rows: idempotencyRows,
+      outboxInserts,
+      rpc: async () => {
         await rpcGate;
         return {
           data: orderPayload(ORDER_ID, 'confirmed'),
           error: null,
         };
-      }),
-      from(table: string) {
-        if (table === 'outbox_events') {
-          return outboxOnlyFrom(outboxInserts)(table);
-        }
-        if (table !== 'idempotency_keys') {
-          throw new Error(`unexpected table ${table}`);
-        }
-
-        return {
-          insert(row: Record<string, unknown>) {
-            const mapKey = `${row.org_id}:${row.key}`;
-            if (idempotencyRows.has(mapKey)) {
-              return Promise.resolve({ error: { code: '23505' } });
-            }
-            idempotencyRows.set(mapKey, { ...row });
-            return Promise.resolve({ error: null });
-          },
-          select() {
-            return {
-              eq(column: string, value: string) {
-                const filters: Record<string, string> = { [column]: value };
-                return {
-                  eq(nextColumn: string, nextValue: string) {
-                    filters[nextColumn] = nextValue;
-                    return {
-                      maybeSingle: async () => {
-                        const row = idempotencyRows.get(
-                          `${filters.org_id}:${filters.key}`,
-                        );
-                        if (!row) {
-                          return { data: null, error: null };
-                        }
-                        return {
-                          data: {
-                            key: row.key,
-                            method: row.method,
-                            path: row.path,
-                            status_code: row.status_code,
-                            response_json: row.response_json,
-                          },
-                          error: null,
-                        };
-                      },
-                    };
-                  },
-                };
-              },
-            };
-          },
-          update(values: Record<string, unknown>) {
-            return {
-              eq(column: string, value: string) {
-                const filters: Record<string, string> = { [column]: value };
-                return {
-                  eq(nextColumn: string, nextValue: string) {
-                    filters[nextColumn] = nextValue;
-                    const mapKey = `${filters.org_id}:${filters.key}`;
-                    const row = idempotencyRows.get(mapKey);
-                    if (row) {
-                      idempotencyRows.set(mapKey, { ...row, ...values });
-                    }
-                    return Promise.resolve({ error: null });
-                  },
-                };
-              },
-            };
-          },
-          delete() {
-            return {
-              eq(column: string, value: string) {
-                const filters: Record<string, string> = { [column]: value };
-                return {
-                  eq(nextColumn: string, nextValue: string) {
-                    filters[nextColumn] = nextValue;
-                    idempotencyRows.delete(`${filters.org_id}:${filters.key}`);
-                    return Promise.resolve({ error: null });
-                  },
-                };
-              },
-            };
-          },
-        };
       },
-    } as unknown as SupabaseLike;
+    });
     const audit = auditMock();
     const service = new OrdersService(client, audit);
     const confirmInput = {

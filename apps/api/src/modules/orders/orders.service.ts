@@ -113,6 +113,7 @@ type IdempotencyRow = {
   path: string;
   status_code: number;
   response_json: JsonObject;
+  expires_at: string | null;
 };
 
 type OrderPayload = {
@@ -928,6 +929,15 @@ export class OrdersService {
     return row.status_code === IDEMPOTENCY_PENDING_STATUS;
   }
 
+  // `expires_at` is nullable: a row without an expiry never expires.
+  private isExpiredIdempotency(row: IdempotencyRow, now = Date.now()) {
+    if (!row.expires_at) {
+      return false;
+    }
+    const expiresAt = Date.parse(row.expires_at);
+    return Number.isFinite(expiresAt) && expiresAt <= now;
+  }
+
   private async claimIdempotencyKey(
     orgId: string,
     key: string,
@@ -936,20 +946,63 @@ export class OrdersService {
     const { error } = await this.supabase.from('idempotency_keys').insert({
       org_id: orgId,
       key,
-      method: input.method,
-      path: input.path,
-      status_code: IDEMPOTENCY_PENDING_STATUS,
-      response_json: { _pending: true },
-      expires_at: new Date(Date.now() + IDEMPOTENCY_TTL_MS).toISOString(),
+      ...this.buildIdempotencyClaim(input),
     });
 
     if (error?.code === '23505') {
-      return false;
+      // A row already exists. It may be a leftover from a request that never
+      // finished (process killed between the committed claim and
+      // complete/release) or a completed row past its TTL — both are stale and
+      // must be reclaimable, otherwise the key is wedged forever.
+      return this.reclaimExpiredIdempotencyKey(orgId, key, input);
     }
     if (error) {
       throwOrdersError(error, 'Could not claim idempotency key');
     }
     return true;
+  }
+
+  private buildIdempotencyClaim(input: { method: string; path: string }) {
+    return {
+      method: input.method,
+      path: input.path,
+      status_code: IDEMPOTENCY_PENDING_STATUS,
+      response_json: { _pending: true },
+      expires_at: new Date(Date.now() + IDEMPOTENCY_TTL_MS).toISOString(),
+    };
+  }
+
+  /**
+   * Take over an expired row as a fresh pending claim.
+   *
+   * The update is conditional on the row still being expired
+   * (`expires_at < now`), so when two requests race to reclaim the same key
+   * only one can match: Postgres re-evaluates the WHERE clause against the
+   * winner's committed row version, which by then carries a future
+   * `expires_at`. The loser matches zero rows and falls back to the normal
+   * replay/conflict path. Rows with a NULL `expires_at` never match and keep
+   * today's behaviour.
+   */
+  private async reclaimExpiredIdempotencyKey(
+    orgId: string,
+    key: string,
+    input: { method: string; path: string },
+  ) {
+    const nowIso = new Date().toISOString();
+
+    const { data, error } = await this.supabase
+      .from('idempotency_keys')
+      .update(this.buildIdempotencyClaim(input))
+      .eq('org_id', orgId)
+      .eq('key', key)
+      .lt('expires_at', nowIso)
+      .select('key');
+
+    if (error) {
+      throwOrdersError(error, 'Could not claim idempotency key');
+    }
+
+    return Array.isArray(data) && data.length > 0;
   }
 
   private async completeIdempotencyKey(
@@ -983,7 +1036,7 @@ export class OrdersService {
   private async getIdempotencyRow(orgId: string, key: string) {
     const { data, error } = await this.supabase
       .from('idempotency_keys')
-      .select('key, method, path, status_code, response_json')
+      .select('key, method, path, status_code, response_json, expires_at')
       .eq('org_id', orgId)
       .eq('key', key)
       .maybeSingle();
@@ -992,7 +1045,13 @@ export class OrdersService {
       throwOrdersError(error, 'Could not read idempotency key');
     }
 
-    return data as IdempotencyRow | null;
+    const row = data as IdempotencyRow | null;
+    // An expired row carries no idempotency guarantee any more: report it as
+    // absent so it is never replayed and never reported as "in progress".
+    if (!row || this.isExpiredIdempotency(row)) {
+      return null;
+    }
+    return row;
   }
 }
 

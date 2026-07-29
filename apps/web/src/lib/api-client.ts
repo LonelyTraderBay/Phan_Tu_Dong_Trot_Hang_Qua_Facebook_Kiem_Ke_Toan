@@ -1058,13 +1058,21 @@ export async function reconcileCodOrder(orderId: string) {
 }
 
 export async function reconcileCodBatch(orderIds?: string[]) {
-  return apiFetch<{ reconciled: number; results: unknown[] }>(
-    '/v1/cod/reconcile/batch',
-    {
-      method: 'POST',
-      body: JSON.stringify(orderIds ? { orderIds } : {}),
-    },
-  );
+  return apiFetch<{
+    reconciled: number;
+    results: unknown[];
+    /** Reconcilable open/discrepancy COD expectations left after this call,
+     * beyond the ones just reconciled. Always `0` when `orderIds` was named
+     * explicitly. When `orderIds` is omitted (reconcile all open COD), at
+     * most 100 are reconciled per call; call again with no `orderIds` to
+     * continue until `remaining` is `0`. */
+    remaining: number;
+    /** True when `remaining` is greater than zero. */
+    hasMore: boolean;
+  }>('/v1/cod/reconcile/batch', {
+    method: 'POST',
+    body: JSON.stringify(orderIds ? { orderIds } : {}),
+  });
 }
 
 export async function getPnlSummary(

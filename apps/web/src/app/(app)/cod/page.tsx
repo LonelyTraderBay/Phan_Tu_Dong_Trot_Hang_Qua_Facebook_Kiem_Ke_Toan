@@ -31,6 +31,18 @@ import {
   TableRow,
 } from '../../../components/ui';
 
+/**
+ * Safety cap on how many sequential `/v1/cod/reconcile/batch` calls
+ * `handleBatchReconcile` will make while auto-continuing through
+ * `hasMore` pages. Each call reconciles at most 100 orders (mirrors
+ * `RECONCILE_BATCH_LIMIT` in apps/api/src/modules/cod/cod.service.ts), so
+ * this allows up to 3,000 orders in a single click — generous for any real
+ * org — while still guarding against looping forever if `hasMore` were ever
+ * stuck `true`. Mirrors the runaway-guard philosophy of that same service's
+ * `RECONCILABLE_MAX_PAGES`: stop and say so, rather than hang.
+ */
+const MAX_BATCH_RECONCILE_CALLS = 30;
+
 export default function CodPage() {
   const [report, setReport] = useState<CodReport | null>(null);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
@@ -38,6 +50,10 @@ export default function CodPage() {
   const [loading, setLoading] = useState(true);
   const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
   const [batching, setBatching] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{
+    done: number;
+    remaining: number;
+  } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Bumped on every load; a resolved response is applied only while it is
@@ -126,15 +142,42 @@ export default function CodPage() {
     setBatching(true);
     setError(null);
     setMessage(null);
+    setBatchProgress(null);
+
+    // Reconciling "all open COD" only processes up to 100 orders per call
+    // (see CodReconcileBatchResponse in packages/contracts/openapi.yaml);
+    // auto-continue here (still with no explicit orderIds, so each call just
+    // picks up the next batch) instead of leaving the user to click the
+    // button again for every 100 orders, showing visible progress between
+    // calls so it never looks like the button silently did nothing.
+    let totalReconciled = 0;
 
     try {
-      const result = await reconcileCodBatch();
-      setMessage(`Đã đối soát ${result.reconciled} đơn COD.`);
+      for (let call = 0; call < MAX_BATCH_RECONCILE_CALLS; call += 1) {
+        const result = await reconcileCodBatch();
+        totalReconciled += result.reconciled;
+
+        if (!result.hasMore) {
+          setMessage(`Đã đối soát ${totalReconciled} đơn COD.`);
+          await loadReport();
+          return;
+        }
+
+        setBatchProgress({ done: totalReconciled, remaining: result.remaining });
+      }
+
+      // Runaway guard tripped: still more to do after MAX_BATCH_RECONCILE_CALLS
+      // calls. Stop and say so plainly instead of looping forever — clicking
+      // the button again resumes from wherever this left off.
+      setMessage(
+        `Đã đối soát ${totalReconciled} đơn COD, vẫn còn đơn COD chưa xử lý. Nhấn "Đối soát tất cả" để tiếp tục.`,
+      );
       await loadReport();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Không thể đối soát COD.'));
     } finally {
       setBatching(false);
+      setBatchProgress(null);
     }
   }
 
@@ -169,6 +212,11 @@ export default function CodPage() {
       </header>
 
       {error ? <ErrorText>{error}</ErrorText> : null}
+      {batchProgress ? (
+        <MutedText style={{ marginTop: 20 }}>
+          {`Đang đối soát... đã xong ${batchProgress.done}, còn ${batchProgress.remaining} đơn.`}
+        </MutedText>
+      ) : null}
       {message ? <SuccessText>{message}</SuccessText> : null}
 
       <section style={summaryGridStyle}>

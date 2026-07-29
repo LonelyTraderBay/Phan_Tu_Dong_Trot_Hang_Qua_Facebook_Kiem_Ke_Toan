@@ -266,7 +266,14 @@ export type CodReport = {
     deltaVnd: string;
   };
   expectations: CodExpectation[];
+  /** True when more open/discrepant expectations exist than `expectations`
+   * returned (capped at the newest 100); `summary` stays complete either way. */
+  expectationsTruncated: boolean;
   discrepancies: CodDiscrepancy[];
+  /** True when more open discrepancies exist than `discrepancies` returned
+   * (capped at the newest 100); `summary.discrepancyCount` stays complete
+   * either way. */
+  discrepanciesTruncated: boolean;
 };
 
 export type OrderItem = {

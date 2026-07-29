@@ -1,5 +1,7 @@
 import ExcelJS from 'exceljs';
 
+import { neutralizeSpreadsheetFormula } from '../../common/csv/csv-formula-guard';
+
 export type ExportOrderRow = {
   id: string;
   status: string;
@@ -59,10 +61,13 @@ function toCells(row: ExportOrderRow) {
 }
 
 function escapeCsvCell(value: string) {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // Neutralize first, quote second: the apostrophe has to land *inside* the
+  // quotes so the spreadsheet sees it as the cell's first character.
+  const safe = neutralizeSpreadsheetFormula(value);
+  if (/[",\n\r]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`;
   }
-  return value;
+  return safe;
 }
 
 export function buildOrdersCsv(rows: ExportOrderRow[]): Buffer {
@@ -73,6 +78,12 @@ export function buildOrdersCsv(rows: ExportOrderRow[]): Buffer {
   return Buffer.from(`${lines.join('\n')}\n`, 'utf8');
 }
 
+/**
+ * No formula neutralization here on purpose. ExcelJS only emits a formula cell
+ * when handed `{ formula: ... }`; a plain string is written as a shared string
+ * (`<c t="s">`, no `<f>` element), so `=cmd|'/c calc'!A0` stays inert text.
+ * Prefixing apostrophes would show them literally in the sheet.
+ */
 export async function buildOrdersXlsx(rows: ExportOrderRow[]): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Orders');

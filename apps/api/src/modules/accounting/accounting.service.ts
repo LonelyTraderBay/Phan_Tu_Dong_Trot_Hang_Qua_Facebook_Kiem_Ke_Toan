@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import { neutralizeSpreadsheetFormula } from '../../common/csv/csv-formula-guard';
 import { loadEnv } from '../../config/env';
 import type { AccountingExportQuery } from './dto';
 
@@ -296,8 +297,23 @@ function buildCsvExport(
       line.ref,
     ]),
   ];
+  // Wrapping a cell in quotes is *not* an injection defence -- Excel evaluates
+  // `"=1+1"` just the same -- so every cell goes through the formula guard. `ref`
+  // carries a customer-controlled `campaign_name`, which is the live vector.
+  //
+  // Trade-off: `amount_vnd` is legitimately negative for cogs/shipping/ad spend,
+  // so those cells come out as `'-1500` and land in the sheet as text rather than
+  // numbers. Values here are always server-generated `BigInt.toString()`, so a
+  // `/^-?\d+$/` carve-out would be safe if numeric typing matters more.
   const csv = rows
-    .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
+    .map((row) =>
+      row
+        .map(
+          (cell) =>
+            `"${neutralizeSpreadsheetFormula(cell).replace(/"/g, '""')}"`,
+        )
+        .join(','),
+    )
     .join('\n');
   const from = query.from ? dateOnly(query.from, 'from') : 'all';
   const to = query.to ? dateOnly(query.to, 'to') : 'all';

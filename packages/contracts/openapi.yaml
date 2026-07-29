@@ -3679,6 +3679,8 @@ components:
       required:
         - reconciled
         - results
+        - remaining
+        - hasMore
       properties:
         reconciled:
           type: integer
@@ -3687,6 +3689,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CodReconcileResponse'
+        remaining:
+          type: integer
+          minimum: 0
+          description: >-
+            Reconcilable open/discrepancy COD expectations left after this
+            call, beyond the ones just reconciled. Always `0` when the
+            request named `orderIds` explicitly. When the request omitted
+            `orderIds` (reconcile all open COD), at most 100 are reconciled
+            per call; call the endpoint again with no `orderIds` to continue
+            until `remaining` is `0`.
+        hasMore:
+          type: boolean
+          description: >-
+            True when `remaining` is greater than zero. `reconciled` used to
+            silently cap at 100 with nothing distinguishing "fully done" from
+            "there are more"; this makes that state explicit.
     AiProduct:
       type: object
       required:

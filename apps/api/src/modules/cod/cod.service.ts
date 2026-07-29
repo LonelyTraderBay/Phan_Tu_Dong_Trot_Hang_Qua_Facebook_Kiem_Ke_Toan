@@ -106,6 +106,23 @@ const ORDER_SELECT =
   'id, org_id, status, payment_method, customer_name, phone_e164, total_vnd, shipped_at, created_at';
 /** Rows the report returns in its `expectations` / `discrepancies` lists. */
 const REPORT_LIST_LIMIT = 100;
+/**
+ * Order ids `reconcileBatch` actually reconciles in one call when the caller
+ * doesn't name them explicitly. `reconcileBatch` awaits `reconcileOrder` in a
+ * plain sequential loop with no concurrency control (the abort-on-first-
+ * rejection contract pinned in cod.service.spec.ts depends on that), so
+ * reconciling an unbounded number of orders in one HTTP request risks a
+ * request that runs for minutes and gets cut off by a gateway timeout
+ * partway through. The batch stays capped at the size the endpoint already
+ * accepted for an explicit `orderIds` list; what changed is that the caller
+ * is now told exactly how many reconcilable orders are left instead of that
+ * count being silently discarded.
+ */
+const RECONCILE_BATCH_LIMIT = 100;
+/** Rows fetched per round-trip while paging every reconcilable order id. */
+const RECONCILABLE_PAGE_SIZE = 1_000;
+/** Runaway guard: paging past this many pages of reconcilable ids means something is wrong upstream. */
+const RECONCILABLE_MAX_PAGES = 1_000;
 
 @Injectable()
 export class CodService {
@@ -335,10 +352,25 @@ export class CodService {
     actorUserId: string;
     body: ReconcileCodBatchBody;
   }) {
-    const orderIds =
-      input.body.orderIds && input.body.orderIds.length > 0
-        ? input.body.orderIds
-        : await this.listReconcilableOrderIds(input.orgId);
+    const explicitOrderIds = input.body.orderIds;
+    const usingExplicitOrderIds = Boolean(
+      explicitOrderIds && explicitOrderIds.length > 0,
+    );
+
+    // `remaining` only means something when we picked the ids ourselves: an
+    // explicit `orderIds` list is a finite, caller-chosen set that either
+    // finishes or aborts in this call, not a page of a larger pool.
+    let orderIds: string[];
+    let remaining = 0;
+
+    if (usingExplicitOrderIds) {
+      orderIds = explicitOrderIds as string[];
+    } else {
+      const reconcilable = await this.listReconcilableOrderIds(input.orgId);
+      orderIds = reconcilable.slice(0, RECONCILE_BATCH_LIMIT);
+      remaining = Math.max(reconcilable.length - orderIds.length, 0);
+    }
+
     const results = [];
 
     for (const orderId of orderIds) {
@@ -354,6 +386,8 @@ export class CodService {
     return {
       reconciled: results.length,
       results,
+      remaining,
+      hasMore: remaining > 0,
     };
   }
 
@@ -609,21 +643,49 @@ export class CodService {
     return mapDiscrepancy(data as CodDiscrepancyRow);
   }
 
+  /**
+   * Every reconcilable (open/discrepancy) COD order id for the org, oldest
+   * first. Paged with `.range()` the same way `AccountingService.loadPaged`
+   * walks a full export range: push the filter into SQL and keep fetching
+   * pages until a short page proves the table is exhausted.
+   *
+   * This used to be a single `.limit(100)` call, so `reconcileBatch`'s
+   * "reconcile all open COD" action silently stopped at 100 orders with
+   * nothing telling the caller more were left -- the write-path twin of the
+   * bug `getReport`'s totals had. `reconcileBatch` still only *reconciles*
+   * `RECONCILE_BATCH_LIMIT` ids from what this returns -- seeing the whole
+   * reconcilable set doesn't mean the whole set gets written synchronously
+   * in one request -- but it now uses the true length to report an exact
+   * `remaining` count instead of guessing.
+   */
   private async listReconcilableOrderIds(orgId: string) {
-    const { data, error } = await this.supabase
-      .from('cod_expectations')
-      .select('order_id')
-      .eq('org_id', orgId)
-      .in('status', ['open', 'discrepancy'])
-      .limit(100);
+    const orderIds: string[] = [];
 
-    if (error) {
-      throwCodError(error, 'Could not list COD expectations');
+    for (let page = 0; page < RECONCILABLE_MAX_PAGES; page += 1) {
+      const offset = page * RECONCILABLE_PAGE_SIZE;
+      const { data, error } = await this.supabase
+        .from('cod_expectations')
+        .select('order_id')
+        .eq('org_id', orgId)
+        .in('status', ['open', 'discrepancy'])
+        .order('created_at', { ascending: true })
+        .range(offset, offset + RECONCILABLE_PAGE_SIZE - 1);
+
+      if (error) {
+        throwCodError(error, 'Could not list COD expectations');
+      }
+
+      const batch = (data ?? []) as Array<{ order_id: string }>;
+      orderIds.push(...batch.map((row) => row.order_id));
+      if (batch.length < RECONCILABLE_PAGE_SIZE) {
+        return orderIds;
+      }
     }
 
-    return ((data ?? []) as Array<{ order_id: string }>).map(
-      (row) => row.order_id,
-    );
+    throw new InternalServerErrorException({
+      code: 'cod_reconcile_range_too_large',
+      message: 'Too many reconcilable COD expectations to list in one request',
+    });
   }
 
   private async loadOrdersById(orgId: string, orderIds: string[]) {
